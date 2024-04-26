@@ -1,6 +1,6 @@
 [workspace]
-members = ["ewe"]
-#default-members = ["squid"]
+members = ["ewe", "squid"]
+default-members = ["squid"]
 resolver = "2"
 
 [profile.release]
@@ -10,7 +10,7 @@ panic = "abort"
 debug = true
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Patrick D."]
 edition = "2021"
 license-file = "LICENSE"

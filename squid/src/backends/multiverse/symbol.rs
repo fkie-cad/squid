@@ -1,0 +1,105 @@
+use std::collections::HashMap;
+
+use crate::frontend::{
+    ProcessImage,
+    VAddr,
+};
+
+#[derive(Debug, Clone)]
+pub enum SymbolType {
+    Function,
+    Data,
+}
+
+#[derive(Debug, Clone)]
+pub enum SymbolVisibility {
+    Public,
+    Private,
+}
+
+#[derive(Debug, Clone)]
+pub struct Symbol {
+    name: String,
+    visibility: SymbolVisibility,
+    address: VAddr,
+    size: usize,
+    typ: SymbolType,
+}
+
+impl Symbol {
+    pub fn is_function(&self) -> bool {
+        matches!(self.typ, SymbolType::Function)
+    }
+
+    pub fn is_data(&self) -> bool {
+        matches!(self.typ, SymbolType::Data)
+    }
+
+    pub fn address(&self) -> VAddr {
+        self.address
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_public(&self) -> bool {
+        matches!(self.visibility, SymbolVisibility::Public)
+    }
+
+    pub fn is_private(&self) -> bool {
+        matches!(self.visibility, SymbolVisibility::Private)
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn contains_address(&self, addr: VAddr) -> bool {
+        self.address <= addr && addr < self.address + self.size as VAddr
+    }
+}
+
+pub(crate) fn create_symbol_store(image: &ProcessImage) -> HashMap<String, Vec<Symbol>> {
+    let mut ret = HashMap::new();
+
+    for elf in image.iter_elfs() {
+        let file: &str = &elf.path().file_name().unwrap().to_string_lossy();
+
+        for section in elf.iter_sections() {
+            for symbol in section.iter_symbols() {
+                let end_addr = symbol.last_addr() + 1;
+
+                for public_name in symbol.public_names() {
+                    let address = symbol.public_name(public_name).unwrap();
+                    let size = (end_addr - address) as usize;
+                    let typ = if section.perms().is_executable() { SymbolType::Function } else { SymbolType::Data };
+
+                    ret.entry(file.to_string()).or_insert_with(Vec::new).push(Symbol {
+                        name: public_name.clone(),
+                        visibility: SymbolVisibility::Public,
+                        address,
+                        size,
+                        typ,
+                    });
+                }
+
+                for private_name in symbol.private_names() {
+                    let address = symbol.private_name(private_name).unwrap();
+                    let size = (end_addr - address) as usize;
+                    let typ = if section.perms().is_executable() { SymbolType::Function } else { SymbolType::Data };
+
+                    ret.entry(file.to_string()).or_insert_with(Vec::new).push(Symbol {
+                        name: private_name.clone(),
+                        visibility: SymbolVisibility::Private,
+                        address,
+                        size,
+                        typ,
+                    });
+                }
+            }
+        }
+    }
+
+    ret
+}
