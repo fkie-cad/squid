@@ -1,8 +1,7 @@
 FROM rust:latest AS ewe-builder
 WORKDIR ewe
-COPY ewe/Cargo.toml ./
-COPY ewe/src/ ./src/
-RUN cargo build --release --bins
+COPY . ./
+RUN cargo build -p ewe --release --bins
 
 FROM archlinux:latest AS toolchain-builder
 ARG jobs="1"
@@ -16,15 +15,19 @@ RUN git clone --progress https://github.com/pd-fkie/riscv-gnu-toolchain . && \
     git checkout squid-version
 RUN git submodule update --init --recursive --progress ./gcc && \
     git submodule update --init --recursive --progress ./glibc && \
-    git submodule update --init --recursive --progress ./binutils && \
-    git submodule update --init --recursive --progress ./gdb
+    git submodule update --init --recursive --progress ./binutils
 RUN autoreconf -i && \
     mkdir -p /riscv && \
-    ./configure --prefix=/riscv --with-arch=rv64iafdm --with-target-cflags="-fno-jump-tables -g" --with-target-cxxflags="-fno-jump-tables -g" && \
+    ./configure --prefix=/riscv --with-arch=rv64iafdm --disable-gdb --with-target-cflags="-fno-jump-tables -g" --with-target-cxxflags="-fno-jump-tables -g" && \
     make -j $jobs linux
 
 FROM archlinux:latest AS squid
-RUN mkdir -p /riscv && pacman -Sy --noconfirm glibc libisl libmpc flex python guile qemu-user
+RUN mkdir /riscv /ewe && pacman -Sy --noconfirm glibc libisl libmpc flex python guile qemu-user
 COPY --from=toolchain-builder /riscv /riscv/
-COPY --from=ewe-builder /ewe /ewe/
+COPY --from=ewe-builder /ewe/target/release/gcc \
+                        /ewe/target/release/ld \
+                        /ewe/target/release/wrapper \
+                        /ewe/target/release/as \
+                        /ewe/target/release/ar \
+                        /ewe/
 ENTRYPOINT /bin/bash -i
