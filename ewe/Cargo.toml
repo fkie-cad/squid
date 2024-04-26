@@ -1,0 +1,9 @@
+[package]
+name = "ewe"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+
+[dev-dependencies]
+goblin = { version = "0.6.0", features = ["std", "elf32", "elf64"]}
