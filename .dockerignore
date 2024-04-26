@@ -1,6 +1,3 @@
 *
 .*
-!ewe/src/
-!ewe/Cargo.toml
-!squid/src/
-!squid/Cargo.toml
+!ewe/
