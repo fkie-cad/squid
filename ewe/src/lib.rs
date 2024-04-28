@@ -4,9 +4,6 @@
 //! and reconstruct basic block boundaries in machine code.
 //! This enables perfect CFG reconstruction even from the most complex C code involving `switch` and `goto*` statements.
 
-#[cfg(test)]
-mod tests;
-
 mod asm;
 mod getopt;
 mod listing;

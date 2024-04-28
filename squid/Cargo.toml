@@ -30,9 +30,6 @@ mimalloc = { version = "0.1", default-features = false }
 [features]
 default = ["tui"]
 
-# Generate traps in JITed code
-breakpoints = []
-
 # Enables animations in the terminal
 tui = []
 

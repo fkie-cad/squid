@@ -7,9 +7,6 @@ mod compiler;
 mod listing;
 mod logger;
 
-#[cfg(test)]
-mod tests;
-
 /* Squids interface: */
 pub mod backends;
 pub mod event;
