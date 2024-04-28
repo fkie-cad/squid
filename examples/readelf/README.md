@@ -28,7 +28,13 @@ This creates our fuzz target at `binutils-gdb/binutils/readelf`.
 
 ## Prepare the fuzzer
 Create a folder called `binaries`, where we are gonna put the RISC-V binaries `readelf` and its dependencies `libdl.so.2` and `libc.so.6`.
-`libc.so.6` may be the [musl libc](../musl).
+`libdl.so.2` may come from [ant](../../ant) and `libc.so.6` may be the [musl libc](../musl).
+```
+mkdir binaries
+cp binutils-gdb/binutils/readelf ./binaries
+cp ../musl/musl/lib/libc.so ./binaries/libc.so.6
+cp ../../ant/libdl.so.2 ./binaries
+```
 
 Then, we create a corpus:
 ```
