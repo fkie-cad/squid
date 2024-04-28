@@ -1,5 +1,4 @@
 <h1 align="center">
-    <br/>
     <a href="">
         <img src="./logo.png" width="128" height="auto">
     </a>
