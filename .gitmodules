@@ -1,0 +1,4 @@
+[submodule "examples/musl/musl"]
+	path = examples/musl/musl
+	url = git://git.musl-libc.org/musl
+    ignore = dirty
