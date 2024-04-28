@@ -35,3 +35,8 @@ breakpoints = []
 
 # Enables animations in the terminal
 tui = []
+
+[[example]]
+name = "readelf_fuzzer"
+path = "../examples/readelf/readelf-fuzzer.rs"
+

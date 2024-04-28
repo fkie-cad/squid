@@ -2,3 +2,7 @@
 	path = examples/musl/musl
 	url = git://git.musl-libc.org/musl
     ignore = dirty
+[submodule "examples/readelf/binutils-gdb"]
+	path = examples/readelf/binutils-gdb
+	url = git://sourceware.org/git/binutils-gdb.git
+    ignore = dirty

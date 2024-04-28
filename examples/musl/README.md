@@ -15,7 +15,7 @@ cd ..
 ## Compile the code
 Enter the `squid-toolchain` container:
 ```
-docker run -it -v "$PWD:/io" squid-toolchain
+docker run --rm -it -v "$PWD:/io" squid-toolchain
 ```
 
 Inside the container execute:
