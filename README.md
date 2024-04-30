@@ -57,16 +57,16 @@ impl Pass for SQLiPass {
                     // before executing the function.
                     let chunk = symbol.iter_chunks_mut().first();
                     let ChunkContent::Code(function) = chunk.content_mut() else { unreachable!() };
-                    let old_entry = function.cfg().entry();
+                    let old_entry_id = function.cfg().entry();
                     let mut new_bb = BasicBlock::new();
 
-                    // Synthesize instructions in new BB, in this case only one instruction
+                    // Synthesize instructions in new BB. In this case it's only one instruction.
                     new_bb.fire_event(event_check_sql);
 
                     // Insert BB at beginning of CFG
-                    new_bb.add_edge(Edge::Next(old_entry));
-                    let new_entry = function.cfg_mut().add_basic_block(new_bb);
-                    function.cfg_mut().set_entry(new_entry);
+                    new_bb.add_edge(Edge::Next(old_entry_id));
+                    let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
+                    function.cfg_mut().set_entry(new_bb_id);
                 }
             }
         }
@@ -78,7 +78,7 @@ impl Pass for SQLiPass {
 fn main() {
     /* Prepare the target: load it, instrument it and AOT compile it */
     let mut compiler = Compiler::load_elf(
-        "fuzz_target",
+        "path/to/fuzz_target",
         ...
     );
     compiler.run_pass(&mut SQLiPass {});
@@ -90,7 +90,7 @@ fn main() {
         match runtime.run() {
             Ok(event) => {
                 if event == event_check_sql {
-                    // Get query
+                    // Get query (second argument to function)
                     let a1 = runtime.get_gp_register(GpRegister::a1);
                     let query = runtime.load_string(a1);
                     
@@ -99,6 +99,9 @@ fn main() {
                     if sqlparser::parser::Parser::parse_sql(&dialect, query).is_err() {
                         // SQLi !!!
                         break;
+                    } else {
+                        // continue execution ...
+                        continue;
                     }
                 }
             }
