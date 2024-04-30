@@ -28,12 +28,12 @@ While `squid` was built to enhance traditional greybox fuzzing, it has certain l
 
 However, it can only be used for Linux user-space applications that are written in C and compiled with a specific set of flags.
 
-## Quick Demo
-The snippet of code below demonstrates how to setup an SQL-injection sanitizer in less than 100 lines of code and less than 30 minutes. 
+## Demo
+The snippet of code below demonstrates how to setup an SQL-injection sanitizer in less than 100 lines of code / less than 30 minutes. 
 We detect SQL injections by hooking the `sqlite3_exec` function of the `libsqlite3.so.0` library and check that the query string
 has a valid syntax.    
-Note that a sanitizer written like this can be combined with a multitude of other sanitizers to catch a wide variety of bugs.   
-For clarity, the code leaves out a lot of `unwrap()`s and error handling.
+Note that a sanitizer written like this can be combined with other sanitizers to catch a wide variety of bugs.   
+For clarity, the code leaves out a lot of `unwrap()`'s and error handling.
 
 ```rs
 use squid::*;
@@ -99,9 +99,6 @@ fn main() {
                     if sqlparser::parser::Parser::parse_sql(&dialect, query).is_err() {
                         // SQLi !!!
                         break;
-                    } else {
-                        // continue execution ...
-                        continue;
                     }
                 }
             }
