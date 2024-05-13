@@ -33,7 +33,7 @@ The snippet of code below demonstrates how to setup an SQL-injection sanitizer i
 
 We detect SQL injections by hooking the `sqlite3_exec` function of the `libsqlite3.so.0` library and check that the query string
 has a valid syntax.    
-Note that a sanitizer written like this can be combined with a multitude of other sanitizers to catch a wide variety of bugs.   
+Note that a sanitizer written like this can be combined with a multitude of other sanitizers to catch a wide variety of bugs. 
 For clarity, the code leaves out a lot of `unwrap()`'s and error handling.
 
 ```rs
