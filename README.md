@@ -30,6 +30,7 @@ However, it can only be used for Linux user-space applications that are written 
 
 ## Demo
 The snippet of code below demonstrates how to setup an SQL-injection sanitizer in less than 100 lines of code / less than 30 minutes. 
+
 We detect SQL injections by hooking the `sqlite3_exec` function of the `libsqlite3.so.0` library and check that the query string
 has a valid syntax.    
 Note that a sanitizer written like this can be combined with a multitude of other sanitizers to catch a wide variety of bugs.   
