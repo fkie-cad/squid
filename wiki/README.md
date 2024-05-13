@@ -1,24 +1,30 @@
 # Overview over squid
 
-This page briefly gives you an overview over the most important aspects of `squid`.
-Usage of `squid` can be divided into 3 phases:
+This page gives a brief overview over the most important aspects of `squid`.   
+Since `squid` is a RISC-V emulator with AOT compilation its usage can be divided into 3 phases:
 
 1. Compile the target to RISC-V
-2. Load the binary with the emulator
-    1. Create a process image that contains the target and all its dependencies
-    2. Run passes that modify functions and data
-    3. Compile the code in the binary to your native ISA
-3. Run the target
+2. Do the AOT compilation
+    1. Load the binary and all its dependencies
+    2. Run passes to modify code or data
+    3. Compile the code to the native ISA
+3. Emulate the target by running the compiled code
 
 Each of these steps is explained in more detail below.
 
 ## Compiling the target
-Please follow the instructions in [TOOLCHAIN.md](./TOOLCHAIN.md) when compiling your target
-to RISC-V.
+Follow the instructions in [TOOLCHAIN.md](./TOOLCHAIN.md) to compile your target to RISC-V.
+Please note, that you also need to compile all of the targets dependencies to RISC-V.
 
 ## Loading the binary
-Once you have compiled the binary and all it's dependencies, the next step is to
-load the binary and create a process image:
+Once you have compiled the binary and all it's dependencies, the next step is to create the so-called "process image".   
+The process image is the result of ELF-loading the fuzz target, i.e. locating its dependencies, resolving
+symbol imports, etc.
+It is a data structure that contains all the code and data of the ELF files and makes them available
+for you to inspect / modify.
+This forms the basis for all further operations.
+
+Load your binary like so:
 ```rs
 use squid::Compiler;
 
@@ -38,16 +44,11 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-This creates a "symbolic process image" that is the basis for all further operations.
-All RISC-V instructions are lifted into a custom IR and all pointers are replaced with "symbolic references".
-A "symbolic reference" is like a pointer except that it does not contain a virtual address but a tuple 
-`(Elf, Section, Symbol, Offset)` that represents offsets into symbols of loaded ELF files.
-With such "symbolized" binaries we can now go ahead and modify their code and data without worrying about adjusting
-offsets or references.
+For more information about the process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
 
 ## Running Passes
-Once we have lifted all functions in the binary to our custom IR, we can run passes to modify the functions.
-A pass in `squid` is a simple struct that implements the trait `Pass` like this:
+Once the process image has been created, we can run passes to modify code or data.
+A pass in `squid` is anything that implements the `Pass` trait like this:
 ```rs
 use squid::{
     passes::Pass,
@@ -64,7 +65,7 @@ impl Pass for MyPass {
     }
 
     fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
-        // modify process image here
+        // modify functions or data in the process image here
     }
 }
 
@@ -73,44 +74,55 @@ compiler.run_pass(&mut MyPass {}).expect("Pass had an error");
 ```
 
 ## Creating a Runtime
-To emulate the code in a process image we create a runtime with the help of a backend.
-A backend takes the symbolic process image, compiles the functions from IR to native code
-and provides a runtime that can execute this code.
+The final step before emulation is to compile the code in the process image to the host ISA.
+This is the responsibility of the "backend".
+The backend receives a process image and produces a "runtime" that interfaces with the target program. 
+In a similar fashion like before, a backend is anything that implements the `Backend` trait and a runtime
+is anything that implements the `Runtime` trait.
 
-Currently, `squid` comes with the `MultiverseBackend`.
-Use it like so:
+Currently, `squid` comes with the `MultiverseBackend` and the `MultiverseRuntime`:
 ```rs
 use squid::backends::multiverse::MultiverseBackend;
 
 /* Create the backend responsible for compilation */
 let backend = MultiverseBackend::builder()
-    .heap_size(4 * 1024 * 1024)   // Size of the heap region
-    .stack_size(2 * 1024 * 1024)  // Size of the stack region
-    .source_file("generated_code.c") // See the docs for what this means...
+    .heap_size(4 * 1024 * 1024)             // Size of the heap region
+    .stack_size(2 * 1024 * 1024)            // Size of the stack region
+    .progname("my-fuzz-target")             // argv[0]
+    .arg("--with-bugs-pls")                 // argv[1]
     .build()
     .expect("Could not configure backend");
 
-/* Run the backend with the compiler */
+/* Start compilation with the given backend and get a runtime in return */
 let runtime = compiler.compile(backend).expect("Backend had an error");
 ```
 
 ## Running the target
+Once we have obtained a runtime, we can use that to run our target.
 To execute our target, we call the `Runtime::run` method. This will trigger certain events like
-system calls or breakpoints that we must handle. Passes can also define custom events
+system calls or breakpoints that we must handle.
+It is also possible to create custom events in passes.
 
+Run the target like so:
 ```rs
 loop {
     match runtime.run() {
-        Ok(event) => {
-            // handle event and continue execution
+        Ok(event) => match event {
+            EVENT_SYSCALL => {
+                // Emulate syscall
+            },
+            EVENT_BREAKPOINT => {
+                // Handle breakpoint
+            },
+            CUSTOM_EVENT => {
+                // Handle custom events from passes
+            },
         },
         Err(fault) => {
-            // handle fault, e.g. signal a crash to the fuzzer
-
+            // a fault (e.g. segfault) happened
             break;
         }
     }
 }
 ```
-
 
