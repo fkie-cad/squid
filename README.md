@@ -63,8 +63,9 @@ impl Pass for SQLiPass {
                     // Insert code that throws the CHECK_SQL_SYNTAX
                     // event before executing the function.
                     let chunk = symbol.iter_chunks_mut().first();
-                    let ChunkContent::Code(function) = chunk.content_mut() else { unreachable!() };
-                    let old_entry_id = function.cfg().entry();
+                    let ChunkContent::Code(function) = chunk.content_mut() else {
+                        unreachable!()
+                    };
 
                     // Synthesize instructions in new BB.
                     // In this case it's only one instruction.
@@ -72,7 +73,9 @@ impl Pass for SQLiPass {
                     new_bb.fire_event(event_check_sql);
 
                     // Insert new BB at beginning of CFG
+                    let old_entry_id = function.cfg().entry();
                     new_bb.add_edge(Edge::Next(old_entry_id));
+
                     let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
                     function.cfg_mut().set_entry(new_bb_id);
                 }
