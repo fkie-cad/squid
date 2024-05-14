@@ -43,7 +43,12 @@ use sqlparser;
 struct SQLiPass;
 
 impl Pass for SQLiPass {
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage, 
+        event_pool: &mut EventPool, 
+        logger: &Logger
+    ) -> Result<(), String> {
         // We are gonna throw this event at the beginning of sqlite3_exec
         let event_check_sql = event_pool.add_event("CHECK_SQL_SYNTAX");
 
@@ -54,17 +59,19 @@ impl Pass for SQLiPass {
         for section in libsqlite.iter_sections_mut() {
             for symbol in section.iter_symbols_mut() {
                 if symbol.name("sqlite3_exec").is_some() {
-                    // Found the sqlite3_exec function, insert code that throws the CHECK_SQL_SYNTAX event
-                    // before executing the function.
+                    // Found the sqlite3_exec function. 
+                    // Insert code that throws the CHECK_SQL_SYNTAX
+                    // event before executing the function.
                     let chunk = symbol.iter_chunks_mut().first();
                     let ChunkContent::Code(function) = chunk.content_mut() else { unreachable!() };
                     let old_entry_id = function.cfg().entry();
-                    let mut new_bb = BasicBlock::new();
 
-                    // Synthesize instructions in new BB. In this case it's only one instruction.
+                    // Synthesize instructions in new BB.
+                    // In this case it's only one instruction.
+                    let mut new_bb = BasicBlock::new();
                     new_bb.fire_event(event_check_sql);
 
-                    // Insert BB at beginning of CFG
+                    // Insert new BB at beginning of CFG
                     new_bb.add_edge(Edge::Next(old_entry_id));
                     let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
                     function.cfg_mut().set_entry(new_bb_id);
@@ -77,7 +84,7 @@ impl Pass for SQLiPass {
 }
 
 fn main() {
-    /* Prepare the target: load it, instrument it and AOT compile it */
+    // Prepare the target: load it, instrument it and AOT compile it
     let mut compiler = Compiler::load_elf(
         "path/to/fuzz_target",
         ...
@@ -86,7 +93,7 @@ fn main() {
     let event_check_sql = compiler.event_pool().get_event("CHECK_SQL_SYNTAX");
     let runtime = compiler.compile(...);
 
-    /* Then, run it and handle runtime events */
+    // Then, run it and handle runtime events
     loop {
         match runtime.run() {
             Ok(event) => {
