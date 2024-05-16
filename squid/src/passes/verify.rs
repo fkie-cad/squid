@@ -1,5 +1,7 @@
 use std::ops::Range;
+
 use thiserror::Error;
+
 use crate::{
     event::EventPool,
     frontend::{

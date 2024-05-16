@@ -4,7 +4,7 @@ use std::{
     marker::PhantomData,
     path::PathBuf,
 };
-use thiserror::Error;
+
 use clap::Parser;
 use libafl::prelude::{
     feedback_or,
@@ -124,6 +124,7 @@ use squid::{
     Compiler,
     Logger,
 };
+use thiserror::Error;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 

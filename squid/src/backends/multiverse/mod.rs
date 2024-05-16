@@ -22,6 +22,7 @@ pub(crate) use address::{
     AddressSpace,
 };
 pub(crate) use codegen::CLifter;
+pub use codegen::CLifterError;
 pub(crate) use concretize::concretize;
 pub(crate) use event::EventChannel;
 pub(crate) use exec::JITExecutor;
@@ -37,8 +38,6 @@ pub(crate) use preprocess::{
 };
 pub(crate) use registers::Registers;
 pub(crate) use variables::VariableStorage;
-
-pub use codegen::CLifterError;
 pub mod perms;
 pub use backend::{
     MultiverseBackend,

@@ -1,5 +1,7 @@
 use std::collections::HashSet;
+
 use thiserror::Error;
+
 use crate::{
     event::EventPool,
     frontend::{

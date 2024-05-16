@@ -9,12 +9,14 @@ use std::{
     },
     path::PathBuf,
 };
-use thiserror::Error;
+
 use ahash::RandomState;
+use thiserror::Error;
 
 use crate::{
     backends::{
         multiverse::{
+            codegen::CLifterError,
             concretize,
             get_entrypoint_address,
             insert_entrypoint,
@@ -23,7 +25,7 @@ use crate::{
             populate_stack,
             symbol::create_symbol_store,
             AddressLayouter,
-            CLifter, codegen::CLifterError,
+            CLifter,
             EventChannel,
             Memory,
             MultiverseRuntime,

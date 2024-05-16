@@ -37,4 +37,3 @@ pub enum LoaderError {
     #[error("Verification failed: {0}")]
     VerificationError(#[from] VerifyerPassError),
 }
-

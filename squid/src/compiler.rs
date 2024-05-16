@@ -2,7 +2,9 @@ use std::{
     convert::AsRef,
     path::Path,
 };
+
 use thiserror::Error;
+
 use crate::{
     backends::Backend,
     event::EventPool,
