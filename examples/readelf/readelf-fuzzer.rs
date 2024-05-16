@@ -81,7 +81,6 @@ use squid::{
         HeapError,
         MultiverseBackend,
         MultiverseRuntime,
-        MultiverseRuntimeEvent,
         MultiverseRuntimeFault,
     },
     event::EventPool,
@@ -696,259 +695,253 @@ where
 
         loop {
             match runtime.run()? {
-                MultiverseRuntimeEvent::Event(id) => match id {
-                    EVENT_ID_BREAKPOINT => {
-                        #[cfg(debug_assertions)]
-                        {
-                            let pc = runtime.get_pc();
-                            let symbols = runtime.lookup_symbol_from_address(pc);
-                            println!("Breakpoint {:?}", symbols);
-                        }
+                EVENT_ID_BREAKPOINT => {
+                    #[cfg(debug_assertions)]
+                    {
+                        let pc = runtime.get_pc();
+                        let symbols = runtime.lookup_symbol_from_address(pc);
+                        println!("Breakpoint {:?}", symbols);
+                    }
 
-                        #[cfg(not(debug_assertions))]
-                        {
-                            return Err(MultiverseRuntimeFault::InternalError("Breakpoint".to_string()));
-                        }
-                    },
-                    EVENT_ID_SYSCALL => {
-                        let a7 = runtime.get_gp_register(GpRegister::a7);
+                    #[cfg(not(debug_assertions))]
+                    {
+                        return Err(MultiverseRuntimeFault::InternalError("Breakpoint".to_string()));
+                    }
+                },
+                EVENT_ID_SYSCALL => {
+                    let a7 = runtime.get_gp_register(GpRegister::a7);
 
-                        match a7 {
-                            syscalls::set_tid_address => {
-                                runtime.set_gp_register(GpRegister::a0, 1);
-                            },
-                            syscalls::exit | syscalls::exit_group => {
-                                break;
-                            },
-                            syscalls::ioctl => {
-                                let cmd = runtime.get_gp_register(GpRegister::a1);
+                    match a7 {
+                        syscalls::set_tid_address => {
+                            runtime.set_gp_register(GpRegister::a0, 1);
+                        },
+                        syscalls::exit | syscalls::exit_group => {
+                            break;
+                        },
+                        syscalls::ioctl => {
+                            let cmd = runtime.get_gp_register(GpRegister::a1);
 
-                                match cmd {
-                                    libc::TIOCGWINSZ => {
+                            match cmd {
+                                libc::TIOCGWINSZ => {
+                                    runtime.set_gp_register(GpRegister::a0, 0);
+                                },
+                                _ => {
+                                    return Err(MultiverseRuntimeFault::InternalError(format!("ioctl: {}", cmd)));
+                                },
+                            }
+                        },
+                        syscalls::writev => {
+                            //let fd = runtime.get_gp_register(GpRegister::a0);
+                            let iov = runtime.get_gp_register(GpRegister::a1);
+                            let iovcnt = runtime.get_gp_register(GpRegister::a2);
+
+                            let mut ret = 0;
+
+                            for i in 0..iovcnt {
+                                let iov = iov + i * 16;
+                                let iov_base = runtime.load_dword(iov)? as VAddr;
+                                let iov_len = runtime.load_dword(iov + 8)? as usize;
+                                let data = runtime.load_slice(iov_base, iov_len)?;
+                                //ret += kernel.write(fd as i32, data)?;
+                                ret += data.len();
+                            }
+
+                            runtime.set_gp_register(GpRegister::a0, ret as u64);
+                        },
+                        syscalls::newfstatat => {
+                            let a0 = runtime.get_gp_register(GpRegister::a0);
+                            let a1 = runtime.get_gp_register(GpRegister::a1);
+                            let a2 = runtime.get_gp_register(GpRegister::a2);
+                            let a3 = runtime.get_gp_register(GpRegister::a3);
+
+                            let filename = runtime.load_string(a1)?;
+
+                            match std::str::from_utf8(filename) {
+                                Ok(filename) => match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
+                                    Ok(stat) => {
+                                        let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
+                                        let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                        runtime.store_slice(a2, contents)?;
                                         runtime.set_gp_register(GpRegister::a0, 0);
                                     },
-                                    _ => {
-                                        return Err(MultiverseRuntimeFault::InternalError(format!("ioctl: {}", cmd)));
-                                    },
-                                }
-                            },
-                            syscalls::writev => {
-                                //let fd = runtime.get_gp_register(GpRegister::a0);
-                                let iov = runtime.get_gp_register(GpRegister::a1);
-                                let iovcnt = runtime.get_gp_register(GpRegister::a2);
-
-                                let mut ret = 0;
-
-                                for i in 0..iovcnt {
-                                    let iov = iov + i * 16;
-                                    let iov_base = runtime.load_dword(iov)? as VAddr;
-                                    let iov_len = runtime.load_dword(iov + 8)? as usize;
-                                    let data = runtime.load_slice(iov_base, iov_len)?;
-                                    //ret += kernel.write(fd as i32, data)?;
-                                    ret += data.len();
-                                }
-
-                                runtime.set_gp_register(GpRegister::a0, ret as u64);
-                            },
-                            syscalls::newfstatat => {
-                                let a0 = runtime.get_gp_register(GpRegister::a0);
-                                let a1 = runtime.get_gp_register(GpRegister::a1);
-                                let a2 = runtime.get_gp_register(GpRegister::a2);
-                                let a3 = runtime.get_gp_register(GpRegister::a3);
-
-                                let filename = runtime.load_string(a1)?;
-
-                                match std::str::from_utf8(filename) {
-                                    Ok(filename) => match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
-                                        Ok(stat) => {
-                                            let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
-                                            let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
-                                            runtime.store_slice(a2, contents)?;
-                                            runtime.set_gp_register(GpRegister::a0, 0);
+                                    Err(err) => match err {
+                                        LinuxError::FsError(_) => {
+                                            runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
                                         },
-                                        Err(err) => match err {
-                                            LinuxError::FsError(_) => {
-                                                runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
-                                            },
-                                            _ => {
-                                                return Err(err.into());
-                                            },
+                                        _ => {
+                                            return Err(err.into());
                                         },
                                     },
-                                    Err(_) => {
-                                        runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
-                                    },
-                                }
-                            },
-                            syscalls::openat => {
-                                let a0 = runtime.get_gp_register(GpRegister::a0);
-                                let a1 = runtime.get_gp_register(GpRegister::a1);
-                                let a2 = runtime.get_gp_register(GpRegister::a2);
-                                let a3 = runtime.get_gp_register(GpRegister::a3);
-                                let pathname = runtime.load_string(a1)?;
-
-                                match std::str::from_utf8(pathname) {
-                                    Ok(pathname) => {
-                                        let fd = self.kernel.openat(a0 as i32, pathname, a2 as i32, a3 as i32)?;
-                                        runtime.set_gp_register(GpRegister::a0, fd as u64);
-                                    },
-                                    Err(_) => {
-                                        runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
-                                    },
-                                }
-                            },
-                            syscalls::readv => {
-                                let fd = runtime.get_gp_register(GpRegister::a0);
-                                let iov = runtime.get_gp_register(GpRegister::a1);
-                                let iovcnt = runtime.get_gp_register(GpRegister::a2);
-
-                                let mut ret = 0;
-
-                                for i in 0..iovcnt {
-                                    let iov = iov + i * 16;
-                                    let iov_base = runtime.load_dword(iov)? as VAddr;
-                                    let iov_len = runtime.load_dword(iov + 8)? as usize;
-                                    let data = self.kernel.read(fd as i32, iov_len)?;
-
-                                    runtime.store_slice(iov_base, data)?;
-                                    ret += data.len();
-
-                                    if data.len() < iov_len {
-                                        break;
-                                    }
-                                }
-
-                                runtime.set_gp_register(GpRegister::a0, ret as u64);
-                            },
-                            syscalls::lseek => {
-                                let fd = runtime.get_gp_register(GpRegister::a0);
-                                let offset = runtime.get_gp_register(GpRegister::a1);
-                                let whence = runtime.get_gp_register(GpRegister::a2);
-
-                                let offset = self.kernel.seek(fd as i32, offset as i64, whence as i32)?;
-
-                                runtime.set_gp_register(GpRegister::a0, offset as u64);
-                            },
-                            syscalls::read => {
-                                let fd = runtime.get_gp_register(GpRegister::a0);
-                                let buf = runtime.get_gp_register(GpRegister::a1);
-                                let len = runtime.get_gp_register(GpRegister::a2);
-
-                                let data = self.kernel.read(fd as i32, len as usize)?;
-                                runtime.store_slice(buf, data)?;
-
-                                runtime.set_gp_register(GpRegister::a0, data.len() as u64);
-                            },
-                            syscalls::close => {
-                                let fd = runtime.get_gp_register(GpRegister::a0);
-                                self.kernel.close(fd as i32)?;
-                                runtime.set_gp_register(GpRegister::a0, 0);
-                            },
-                            syscalls::readlinkat => {
-                                let fd = runtime.get_gp_register(GpRegister::a0) as i32;
-                                let a1 = runtime.get_gp_register(GpRegister::a1);
-                                let path = runtime.load_string(a1)?;
-                                let path = std::str::from_utf8(path).map_err(|_| MultiverseRuntimeFault::InternalError(format!("readlinkat() invalid path: {:?}", path)))?;
-
-                                assert_eq!(fd, libc::AT_FDCWD);
-
-                                match path {
-                                    "file" => {
-                                        runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
-                                    },
-                                    _ => {
-                                        return Err(MultiverseRuntimeFault::InternalError(format!("readlinkat: {}", path)));
-                                    },
-                                }
-                            },
-                            syscalls::getcwd => {
-                                let buf = runtime.get_gp_register(GpRegister::a0) as VAddr;
-                                let size = runtime.get_gp_register(GpRegister::a1) as usize;
-                                let cwd = b"/\x00";
-                                let ret_size = std::cmp::min(size, cwd.len());
-                                runtime.store_slice(buf, &cwd[..ret_size])?;
-                                runtime.set_gp_register(GpRegister::a0, ret_size as u64);
-                            },
-                            _ => {
-                                return Err(MultiverseRuntimeFault::InternalError(format!("syscall {}", a7)));
-                            },
-                        }
-                    },
-                    EVENT_ID_MALLOC => {
-                        let size = runtime.get_gp_register(GpRegister::a0) as usize;
-                        let addr = match runtime.dynstore_allocate(size) {
-                            Ok(addr) => addr,
-                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
-                            Err(e) => {
-                                return Err(e);
-                            },
-                        };
-                        runtime.set_gp_register(GpRegister::a0, addr);
-                    },
-                    EVENT_ID_FREE => {
-                        let addr = runtime.get_gp_register(GpRegister::a0);
-                        runtime.dynstore_deallocate(addr)?;
-                    },
-                    EVENT_ID_REALLOC => {
-                        let chunk = runtime.get_gp_register(GpRegister::a0) as VAddr;
-                        let size = runtime.get_gp_register(GpRegister::a1) as usize;
-
-                        if size == 0 {
-                            runtime.dynstore_deallocate(chunk)?;
-                            runtime.set_gp_register(GpRegister::a0, 0);
-                        } else if chunk == 0 {
-                            let addr = match runtime.dynstore_allocate(size) {
-                                Ok(addr) => addr,
-                                Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
-                                Err(e) => {
-                                    return Err(e);
                                 },
-                            };
-                            runtime.set_gp_register(GpRegister::a0, addr);
-                        } else {
-                            let new_chunk = match runtime.dynstore_reallocate(chunk, size) {
-                                Ok(addr) => addr,
-                                Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
-                                Err(e) => {
-                                    return Err(e);
+                                Err(_) => {
+                                    runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
                                 },
-                            };
-                            runtime.set_gp_register(GpRegister::a0, new_chunk);
-                        }
-                    },
-                    EVENT_ID_CALLOC => {
-                        let a = runtime.get_gp_register(GpRegister::a0) as usize;
-                        let b = runtime.get_gp_register(GpRegister::a1) as usize;
-                        let size = a.checked_mul(b).ok_or_else(|| MultiverseRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
-                        let addr = match runtime.dynstore_allocate(size) {
-                            Ok(addr) => addr,
-                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
-                            Err(e) => {
-                                return Err(e);
-                            },
-                        };
-
-                        if addr > 0 {
-                            for perm in runtime.permissions_mut(addr, size)? {
-                                *perm &= !PERM_UNINIT;
                             }
-                        }
+                        },
+                        syscalls::openat => {
+                            let a0 = runtime.get_gp_register(GpRegister::a0);
+                            let a1 = runtime.get_gp_register(GpRegister::a1);
+                            let a2 = runtime.get_gp_register(GpRegister::a2);
+                            let a3 = runtime.get_gp_register(GpRegister::a3);
+                            let pathname = runtime.load_string(a1)?;
 
+                            match std::str::from_utf8(pathname) {
+                                Ok(pathname) => {
+                                    let fd = self.kernel.openat(a0 as i32, pathname, a2 as i32, a3 as i32)?;
+                                    runtime.set_gp_register(GpRegister::a0, fd as u64);
+                                },
+                                Err(_) => {
+                                    runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
+                                },
+                            }
+                        },
+                        syscalls::readv => {
+                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            let iov = runtime.get_gp_register(GpRegister::a1);
+                            let iovcnt = runtime.get_gp_register(GpRegister::a2);
+
+                            let mut ret = 0;
+
+                            for i in 0..iovcnt {
+                                let iov = iov + i * 16;
+                                let iov_base = runtime.load_dword(iov)? as VAddr;
+                                let iov_len = runtime.load_dword(iov + 8)? as usize;
+                                let data = self.kernel.read(fd as i32, iov_len)?;
+
+                                runtime.store_slice(iov_base, data)?;
+                                ret += data.len();
+
+                                if data.len() < iov_len {
+                                    break;
+                                }
+                            }
+
+                            runtime.set_gp_register(GpRegister::a0, ret as u64);
+                        },
+                        syscalls::lseek => {
+                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            let offset = runtime.get_gp_register(GpRegister::a1);
+                            let whence = runtime.get_gp_register(GpRegister::a2);
+
+                            let offset = self.kernel.seek(fd as i32, offset as i64, whence as i32)?;
+
+                            runtime.set_gp_register(GpRegister::a0, offset as u64);
+                        },
+                        syscalls::read => {
+                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            let buf = runtime.get_gp_register(GpRegister::a1);
+                            let len = runtime.get_gp_register(GpRegister::a2);
+
+                            let data = self.kernel.read(fd as i32, len as usize)?;
+                            runtime.store_slice(buf, data)?;
+
+                            runtime.set_gp_register(GpRegister::a0, data.len() as u64);
+                        },
+                        syscalls::close => {
+                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            self.kernel.close(fd as i32)?;
+                            runtime.set_gp_register(GpRegister::a0, 0);
+                        },
+                        syscalls::readlinkat => {
+                            let fd = runtime.get_gp_register(GpRegister::a0) as i32;
+                            let a1 = runtime.get_gp_register(GpRegister::a1);
+                            let path = runtime.load_string(a1)?;
+                            let path = std::str::from_utf8(path).map_err(|_| MultiverseRuntimeFault::InternalError(format!("readlinkat() invalid path: {:?}", path)))?;
+
+                            assert_eq!(fd, libc::AT_FDCWD);
+
+                            match path {
+                                "file" => {
+                                    runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
+                                },
+                                _ => {
+                                    return Err(MultiverseRuntimeFault::InternalError(format!("readlinkat: {}", path)));
+                                },
+                            }
+                        },
+                        syscalls::getcwd => {
+                            let buf = runtime.get_gp_register(GpRegister::a0) as VAddr;
+                            let size = runtime.get_gp_register(GpRegister::a1) as usize;
+                            let cwd = b"/\x00";
+                            let ret_size = std::cmp::min(size, cwd.len());
+                            runtime.store_slice(buf, &cwd[..ret_size])?;
+                            runtime.set_gp_register(GpRegister::a0, ret_size as u64);
+                        },
+                        _ => {
+                            return Err(MultiverseRuntimeFault::InternalError(format!("syscall {}", a7)));
+                        },
+                    }
+                },
+                EVENT_ID_MALLOC => {
+                    let size = runtime.get_gp_register(GpRegister::a0) as usize;
+                    let addr = match runtime.dynstore_allocate(size) {
+                        Ok(addr) => addr,
+                        Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                        Err(e) => {
+                            return Err(e);
+                        },
+                    };
+                    runtime.set_gp_register(GpRegister::a0, addr);
+                },
+                EVENT_ID_FREE => {
+                    let addr = runtime.get_gp_register(GpRegister::a0);
+                    runtime.dynstore_deallocate(addr)?;
+                },
+                EVENT_ID_REALLOC => {
+                    let chunk = runtime.get_gp_register(GpRegister::a0) as VAddr;
+                    let size = runtime.get_gp_register(GpRegister::a1) as usize;
+
+                    if size == 0 {
+                        runtime.dynstore_deallocate(chunk)?;
+                        runtime.set_gp_register(GpRegister::a0, 0);
+                    } else if chunk == 0 {
+                        let addr = match runtime.dynstore_allocate(size) {
+                            Ok(addr) => addr,
+                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                            Err(e) => {
+                                return Err(e);
+                            },
+                        };
                         runtime.set_gp_register(GpRegister::a0, addr);
-                    },
-                    EVENT_ID_TAKE_SNAPSHOT => {
-                        runtime.take_snapshot(0);
-                        num_instrs = 0;
-                    },
-                    EVENT_ID_RESTORE_SNAPSHOT => {
-                        break;
-                    },
-                    _ => unreachable!(),
+                    } else {
+                        let new_chunk = match runtime.dynstore_reallocate(chunk, size) {
+                            Ok(addr) => addr,
+                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                            Err(e) => {
+                                return Err(e);
+                            },
+                        };
+                        runtime.set_gp_register(GpRegister::a0, new_chunk);
+                    }
                 },
-                MultiverseRuntimeEvent::End => break,
-                MultiverseRuntimeEvent::Timeout => {
-                    return Err(MultiverseRuntimeFault::InternalError("Timeout".to_string()));
+                EVENT_ID_CALLOC => {
+                    let a = runtime.get_gp_register(GpRegister::a0) as usize;
+                    let b = runtime.get_gp_register(GpRegister::a1) as usize;
+                    let size = a.checked_mul(b).ok_or_else(|| MultiverseRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
+                    let addr = match runtime.dynstore_allocate(size) {
+                        Ok(addr) => addr,
+                        Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                        Err(e) => {
+                            return Err(e);
+                        },
+                    };
+
+                    if addr > 0 {
+                        for perm in runtime.permissions_mut(addr, size)? {
+                            *perm &= !PERM_UNINIT;
+                        }
+                    }
+
+                    runtime.set_gp_register(GpRegister::a0, addr);
                 },
+                EVENT_ID_TAKE_SNAPSHOT => {
+                    runtime.take_snapshot(0);
+                    num_instrs = 0;
+                },
+                EVENT_ID_RESTORE_SNAPSHOT => {
+                    break;
+                },
+                _ => unreachable!(),
             }
 
             num_instrs += runtime.get_executed_instructions();

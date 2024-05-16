@@ -39,13 +39,6 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
-pub enum MultiverseRuntimeEvent {
-    Timeout,
-    End,
-    Event(usize),
-}
-
 #[derive(Error, Debug, Clone)]
 pub enum MultiverseRuntimeFault {
     #[error("There was an error with the internal state of the JIT: {0}")]
@@ -77,6 +70,12 @@ pub enum MultiverseRuntimeFault {
 
     #[error("LinuxError: {0}")]
     LinuxError(#[from] LinuxError),
+
+    #[error("Timeout")]
+    Timeout,
+
+    #[error("Execution cannot continue")]
+    End,
 }
 
 pub(crate) trait RiscvType: Sized + Copy {
@@ -353,7 +352,7 @@ impl MultiverseRuntime {
 
 impl Runtime for MultiverseRuntime {
     type Error = MultiverseRuntimeFault;
-    type Event = MultiverseRuntimeEvent;
+    type Event = usize;
 
     fn set_pc(&mut self, pc: VAddr) {
         self.registers.set_pc(pc);
@@ -402,7 +401,7 @@ impl Runtime for MultiverseRuntime {
         match self.executor.return_code() {
             JITReturnCode::Event => {
                 let id = self.executor.return_arg0();
-                Ok(MultiverseRuntimeEvent::Event(id))
+                Ok(id)
             },
             JITReturnCode::InvalidState => Err(MultiverseRuntimeFault::InternalError("JIT code returned but did not set an event or fault".to_string())),
             JITReturnCode::InvalidJumpTarget => {
@@ -414,7 +413,7 @@ impl Runtime for MultiverseRuntime {
                 let size = self.executor.return_arg1();
                 Err(MultiverseRuntimeFault::MemoryReadError(addr, size))
             },
-            JITReturnCode::End => Ok(MultiverseRuntimeEvent::End),
+            JITReturnCode::End => Err(MultiverseRuntimeFault::End),
             JITReturnCode::InvalidWrite => {
                 let addr = self.executor.return_arg0() as VAddr;
                 let size = self.executor.return_arg1();
@@ -426,7 +425,7 @@ impl Runtime for MultiverseRuntime {
                 Err(MultiverseRuntimeFault::InvalidEventChannel(req_size, act_size))
             },
             JITReturnCode::DivByZero => Err(MultiverseRuntimeFault::DivisionByZero),
-            JITReturnCode::Timeout => Ok(MultiverseRuntimeEvent::Timeout),
+            JITReturnCode::Timeout => Err(MultiverseRuntimeFault::Timeout),
         }
     }
 

@@ -52,7 +52,6 @@ pub use heap::{
 };
 pub use runtime::{
     MultiverseRuntime,
-    MultiverseRuntimeEvent,
     MultiverseRuntimeFault,
 };
 pub use symbol::{
