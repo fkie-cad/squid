@@ -2,7 +2,7 @@ use std::{
     convert::AsRef,
     path::Path,
 };
-
+use thiserror::Error;
 use crate::{
     backends::Backend,
     event::EventPool,
@@ -19,8 +19,18 @@ use crate::{
     passes::{
         Pass,
         VerifyerPass,
+        VerifyerPassError,
     },
 };
+
+#[derive(Error, Debug)]
+pub enum CompilationError<E: std::error::Error> {
+    #[error("The backend had an error: {0}")]
+    BackendError(E),
+
+    #[error("Verification failed: {0}")]
+    VerificationError(#[from] VerifyerPassError),
+}
 
 #[derive(Debug)]
 pub struct Compiler {
@@ -47,17 +57,13 @@ impl Compiler {
             event_pool,
             modified: false,
         };
-
         drop(logger);
 
-        if let Err(msg) = compiler.verify() {
-            return Err(LoaderError::InvalidProcessImage(msg));
-        }
-
+        compiler.verify()?;
         Ok(compiler)
     }
 
-    pub fn run_pass<P>(&mut self, pass: &mut P) -> Result<(), String>
+    pub fn run_pass<P>(&mut self, pass: &mut P) -> Result<(), P::Error>
     where
         P: Pass,
     {
@@ -73,14 +79,14 @@ impl Compiler {
         ret
     }
 
-    fn verify(&mut self) -> Result<(), String> {
+    fn verify(&mut self) -> Result<(), VerifyerPassError> {
         let mut verifyer = VerifyerPass::new(false);
         self.run_pass(&mut verifyer)?;
         self.modified = false;
         Ok(())
     }
 
-    pub fn compile<B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, String> {
+    pub fn compile<B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, CompilationError<B::Error>> {
         if self.modified {
             self.verify()?;
         }
@@ -89,7 +95,10 @@ impl Compiler {
         logger.set_title(format!("Compiling with backend: {}", backend.name()));
         logger.set_prefix(backend.name());
 
-        let ret = backend.create_runtime(self.image, self.event_pool, &logger)?;
+        let ret = match backend.create_runtime(self.image, self.event_pool, &logger) {
+            Ok(runtime) => runtime,
+            Err(err) => return Err(CompilationError::BackendError(err)),
+        };
 
         logger.clear_prefix();
         logger.info("Compilation successful");

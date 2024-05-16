@@ -66,7 +66,7 @@ use crate::{
 };
 
 #[derive(Error, Debug)]
-pub(crate) enum CLifterError {
+pub enum CLifterError {
     #[error("The engine exploded: {0}")]
     Engine(#[from] engine::EngineError),
 

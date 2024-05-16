@@ -1,4 +1,4 @@
 mod lifter;
 mod subcfg;
 
-pub(crate) use lifter::*;
+pub use lifter::*;

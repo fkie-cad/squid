@@ -1,5 +1,5 @@
 use std::ops::Range;
-
+use thiserror::Error;
 use crate::{
     event::EventPool,
     frontend::{
@@ -242,6 +242,10 @@ fn verify_pointer(image: &ProcessImage, pointer: &Pointer) {
     }
 }
 
+#[derive(Error, Debug)]
+#[error("VerifyerPassError")]
+pub struct VerifyerPassError;
+
 pub struct VerifyerPass {
     verify_vaddr: bool,
 }
@@ -256,11 +260,13 @@ impl VerifyerPass {
 }
 
 impl Pass for VerifyerPass {
+    type Error = VerifyerPassError;
+
     fn name(&self) -> String {
         "VerifyerPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), VerifyerPassError> {
         verify_pointer(image, &Pointer::Function(image.entrypoint().clone()));
 
         for constructor in image.constructors() {

@@ -128,12 +128,14 @@ impl ImageDOTPass {
 }
 
 impl Pass for ImageDOTPass {
+    type Error = std::io::Error;
+
     fn name(&self) -> String {
         "ImageDOTPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), String> {
-        self.create_dot(image).map_err(|err| format!("IOError: {}", err))
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
+        self.create_dot(image)
     }
 }
 
@@ -208,11 +210,13 @@ impl FunctionDOTPass {
 }
 
 impl Pass for FunctionDOTPass {
+    type Error = std::io::Error;
+
     fn name(&self) -> String {
         "FunctionDOTPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
         for elf in image.iter_elfs() {
             for section in elf.iter_sections() {
                 for symbol in section.iter_symbols() {
@@ -227,7 +231,7 @@ impl Pass for FunctionDOTPass {
 
                         if found {
                             if let ChunkContent::Code(func) = chunk.content() {
-                                self.create_dot(func).map_err(|err| format!("IOError: {}", err))?;
+                                self.create_dot(func)?;
                             }
                         }
                     }

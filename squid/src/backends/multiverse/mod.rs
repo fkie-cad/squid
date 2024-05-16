@@ -38,10 +38,12 @@ pub(crate) use preprocess::{
 pub(crate) use registers::Registers;
 pub(crate) use variables::VariableStorage;
 
+pub use codegen::CLifterError;
 pub mod perms;
 pub use backend::{
     MultiverseBackend,
     MultiverseBackendBuilder,
+    MultiverseBackendError,
 };
 pub use exec::JITReturnCode;
 pub use heap::{

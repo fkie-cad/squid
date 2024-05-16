@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-
+use thiserror::Error;
 use crate::{
     event::EventPool,
     frontend::{
@@ -16,6 +16,10 @@ use crate::{
     logger::Logger,
     passes::Pass,
 };
+
+#[derive(Error, Debug)]
+#[error("BreakpointPassError")]
+pub struct BreakpointPassError;
 
 pub struct BreakpointPass {
     private_names: HashSet<String>,
@@ -72,11 +76,13 @@ impl BreakpointPass {
 }
 
 impl Pass for BreakpointPass {
+    type Error = BreakpointPassError;
+
     fn name(&self) -> String {
         "BreakpointPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
         let mut count = 0;
 
         for elf in image.iter_elfs_mut() {

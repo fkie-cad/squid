@@ -5,6 +5,8 @@ use crate::{
 };
 
 pub trait Pass {
+    type Error: std::error::Error;
+
     fn name(&self) -> String;
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String>;
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error>;
 }

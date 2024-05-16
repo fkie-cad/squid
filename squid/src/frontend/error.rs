@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use crate::frontend::ao::AoError;
+use crate::{
+    frontend::ao::AoError,
+    passes::VerifyerPassError,
+};
 
 #[derive(Error, Debug)]
 pub enum LoaderError {
@@ -30,4 +33,8 @@ pub enum LoaderError {
 
     #[error("The symbolic ELF loader produced an invalid process image: {0}")]
     InvalidProcessImage(String),
+
+    #[error("Verification failed: {0}")]
+    VerificationError(#[from] VerifyerPassError),
 }
+

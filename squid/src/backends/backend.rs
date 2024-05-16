@@ -7,7 +7,8 @@ use crate::{
 
 pub trait Backend {
     type Runtime: Runtime;
+    type Error: std::error::Error;
 
     fn name(&self) -> String;
-    fn create_runtime(&mut self, image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, String>;
+    fn create_runtime(&mut self, image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error>;
 }

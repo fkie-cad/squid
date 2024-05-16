@@ -9,7 +9,7 @@ use std::{
     },
     path::PathBuf,
 };
-
+use thiserror::Error;
 use ahash::RandomState;
 
 use crate::{
@@ -23,7 +23,7 @@ use crate::{
             populate_stack,
             symbol::create_symbol_store,
             AddressLayouter,
-            CLifter,
+            CLifter, codegen::CLifterError,
             EventChannel,
             Memory,
             MultiverseRuntime,
@@ -166,6 +166,18 @@ impl MultiverseBackendBuilder {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum MultiverseBackendError {
+    #[error("One of the ELF files makes use of thread local storage, which is not supported by this backend")]
+    HasTls,
+
+    #[error("Codegen failed: {0}")]
+    CodegenError(#[from] CLifterError),
+
+    #[error("Could not populate stack (not enough memory?)")]
+    StackError,
+}
+
 pub struct MultiverseBackend {
     source_file: PathBuf,
     heap_size: usize,
@@ -221,16 +233,17 @@ impl MultiverseBackend {
 
 impl Backend for MultiverseBackend {
     type Runtime = MultiverseRuntime;
+    type Error = MultiverseBackendError;
 
     fn name(&self) -> String {
         "MultiverseBackend".to_string()
     }
 
-    fn create_runtime(&mut self, mut image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, String> {
+    fn create_runtime(&mut self, mut image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error> {
         /* Check if there is TLS anywhere */
         for elf in image.iter_elfs() {
             if elf.tls().num_thread_locals() > 0 {
-                return Err("TLS is not supported by MultiverseBackend".to_string());
+                return Err(MultiverseBackendError::HasTls);
             }
         }
 
@@ -262,7 +275,7 @@ impl Backend for MultiverseBackend {
         /* Compile the code */
         let config_hash = self.config_hash();
         let mut clifter = CLifter::new(self.source_file.clone(), self.update_pc, self.update_last_instr, self.timeout, self.count_instructions, config_hash, layouter.code_size());
-        let executor = clifter.lift(&image, &globals, &heap, &stack, &varstore, logger, &self.cflags, &self.cc).map_err(|err| format!("C lifter error: {}", err))?;
+        let executor = clifter.lift(&image, &globals, &heap, &stack, &varstore, logger, &self.cflags, &self.cc)?;
 
         /* Print some stats */
         logger.info(format!("Size of global variables: {} bytes", globals.size()));
@@ -276,7 +289,7 @@ impl Backend for MultiverseBackend {
         registers.set_pc(entrypoint);
 
         /* Create stack */
-        let sp = populate_stack(&mut stack, &self.args, &self.env).ok_or_else(|| "Stack too small to populate".to_string())?;
+        let sp = populate_stack(&mut stack, &self.args, &self.env).ok_or(MultiverseBackendError::StackError)?;
         registers.set_gp(GpRegister::sp as usize, sp);
         stack.clear_dirty_stack();
 

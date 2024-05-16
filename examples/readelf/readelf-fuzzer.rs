@@ -4,7 +4,7 @@ use std::{
     marker::PhantomData,
     path::PathBuf,
 };
-
+use thiserror::Error;
 use clap::Parser;
 use libafl::prelude::{
     feedback_or,
@@ -165,11 +165,13 @@ impl DislocatorPass {
 }
 
 impl Pass for DislocatorPass {
+    type Error = AoError;
+
     fn name(&self) -> String {
         "DislocatorPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), AoError> {
         for elf in image.iter_elfs_mut() {
             if elf.path().ends_with("libc.so.6") {
                 for section in elf.iter_sections_mut() {
@@ -180,7 +182,7 @@ impl Pass for DislocatorPass {
 
                             for chunk in symbol.iter_chunks_mut() {
                                 let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_MALLOC).map_err(|e| format!("{}", e))?;
+                                self.replace_function(func, event_pool, Self::EVENT_NAME_MALLOC)?;
                             }
                         } else if let Some(addr) = symbol.private_name("__libc_free") {
                             logger.info(format!("Replacing free() @ {:#x}", addr));
@@ -188,7 +190,7 @@ impl Pass for DislocatorPass {
 
                             for chunk in symbol.iter_chunks_mut() {
                                 let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_FREE).map_err(|e| format!("{}", e))?;
+                                self.replace_function(func, event_pool, Self::EVENT_NAME_FREE)?;
                             }
                         } else if let Some(addr) = symbol.private_name("__libc_realloc") {
                             logger.info(format!("Replacing realloc() @ {:#x}", addr));
@@ -196,7 +198,7 @@ impl Pass for DislocatorPass {
 
                             for chunk in symbol.iter_chunks_mut() {
                                 let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_REALLOC).map_err(|e| format!("{}", e))?;
+                                self.replace_function(func, event_pool, Self::EVENT_NAME_REALLOC)?;
                             }
                         } else if let Some(addr) = symbol.private_name("__libc_calloc") {
                             logger.info(format!("Replacing calloc() @ {:#x}", addr));
@@ -204,7 +206,7 @@ impl Pass for DislocatorPass {
 
                             for chunk in symbol.iter_chunks_mut() {
                                 let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC).map_err(|e| format!("{}", e))?;
+                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC)?;
                             }
                         } else if let Some(addr) = symbol.public_name("calloc") {
                             logger.info(format!("Replacing calloc() @ {:#x}", addr));
@@ -212,7 +214,7 @@ impl Pass for DislocatorPass {
 
                             for chunk in symbol.iter_chunks_mut() {
                                 let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC).map_err(|e| format!("{}", e))?;
+                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC)?;
                             }
                         }
                     }
@@ -223,6 +225,10 @@ impl Pass for DislocatorPass {
         Ok(())
     }
 }
+
+#[derive(Error, Debug)]
+#[error("")]
+struct NoError;
 
 struct RedzonePass {}
 
@@ -242,11 +248,13 @@ fn build_redzone(size: usize) -> Symbol {
 }
 
 impl Pass for RedzonePass {
+    type Error = NoError;
+
     fn name(&self) -> String {
         "RedzonePass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
         let mut total = 0;
         let mut count = 0;
         let mut last_size = None;
@@ -338,11 +346,13 @@ fn rewire(func: &mut Function, target: &Pointer) {
 }
 
 impl Pass for PiranhaPass {
+    type Error = NoError;
+
     fn name(&self) -> String {
         "PiranhaPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
         /* Collect exported piranha functions */
         for elf in image.iter_elfs() {
             if elf.path().ends_with("piranha.so") {
@@ -408,11 +418,13 @@ impl CoveragePass {
 }
 
 impl Pass for CoveragePass {
+    type Error = NoError;
+
     fn name(&self) -> String {
         "CoveragePass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
         /* Find id of binary */
         let mut target_id = None;
 
@@ -508,11 +520,13 @@ impl SnapshotPass {
 }
 
 impl Pass for SnapshotPass {
+    type Error = NoError;
+
     fn name(&self) -> String {
         "SnapshotPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, _logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
         let event_take_snapshot = event_pool.add_event(Self::EVENT_NAME_TAKE_SNAPSHOT);
         let event_restore_snapshot = event_pool.add_event(Self::EVENT_NAME_RESTORE_SNAPSHOT);
 
