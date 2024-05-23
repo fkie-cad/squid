@@ -1,16 +1,16 @@
 # Overview over squid
 
-This page gives a brief overview over the most important aspects of `squid`.   
+This page briefly introduces the most important aspects of `squid`.   
 Since `squid` is a RISC-V emulator with AOT compilation its usage can be divided into 3 phases:
 
-1. Compile the target to RISC-V
-2. Do the AOT compilation
-    1. Load the binary and all its dependencies
-    2. Run passes to modify code or data
-    3. Compile the code to the native ISA
-3. Emulate the target by running the compiled code
+1. Compiling the target to RISC-V
+2. Doing the AOT compilation
+    1. Loading the binary and all its dependencies
+    2. Running passes to modify code or data
+    3. Compiling the code to the native ISA
+3. Emulating the target by running the compiled code
 
-Each of these steps is explained in more detail below.
+Each phase is explained in more detail below.
 
 ## Compiling the target
 Follow the instructions in [TOOLCHAIN.md](./TOOLCHAIN.md) to compile your target to RISC-V.
@@ -20,35 +20,35 @@ Please note, that you also need to compile all of the targets dependencies to RI
 Once you have compiled the binary and all it's dependencies, the next step is to create the so-called "process image".   
 The process image is the result of ELF-loading the fuzz target, i.e. locating its dependencies, resolving
 symbol imports, etc.
-It is a data structure that contains all the code and data of the ELF files and makes them available
+This creates an in-memory data structure that contains all the code and data of the ELF files and makes them available
 for you to inspect / modify.
-This forms the basis for all further operations.
 
 Load your binary like so:
 ```rs
 use squid::Compiler;
 
 let mut compiler = Compiler::load_elf(
-    /* The binary that we want to emulate */
+    // The binary that we want to emulate
     "/path/to/binary",
     
-    /* Directories that contain the dependencies of the binary similar to LD_LIBRARY_PATH */
+    // Directories that contain the dependencies of the binary similar to LD_LIBRARY_PATH
     &[
         "/path/with/deps",
     ],
     
-    /* List of shared objects to preload. Similar to LD_PRELOAD */
+    // List of shared objects to preload similar to LD_PRELOAD
     &[
         "/path/to/library.so",
     ]
 ).expect("Loading binary failed");
 ```
 
-For more information about the process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
+For more information about the resulting process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
 
 ## Running Passes
-Once the process image has been created, we can run passes to modify code or data.
+Once the process image has been created, we can run passes to modify functions or data.
 A pass in `squid` is anything that implements the `Pass` trait like this:
+
 ```rs
 use squid::{
     passes::Pass,
@@ -69,7 +69,7 @@ impl Pass for MyPass {
     }
 }
 
-/* Run the pass with the compiler */
+// Run the pass with the compiler
 compiler.run_pass(&mut MyPass {}).expect("Pass had an error");
 ```
 
@@ -84,16 +84,16 @@ Currently, `squid` comes with the `MultiverseBackend` and the `MultiverseRuntime
 ```rs
 use squid::backends::multiverse::MultiverseBackend;
 
-/* Create the backend responsible for compilation */
+// Create the backend responsible for compilation
 let backend = MultiverseBackend::builder()
-    .heap_size(4 * 1024 * 1024)             // Size of the heap region
-    .stack_size(2 * 1024 * 1024)            // Size of the stack region
+    .heap_size(1 * 1024 * 1024)             // Size of the heap region
+    .stack_size(1 * 1024 * 1024)            // Size of the stack region
     .progname("my-fuzz-target")             // argv[0]
     .arg("--with-bugs-pls")                 // argv[1]
     .build()
     .expect("Could not configure backend");
 
-/* Start compilation with the given backend and get a runtime in return */
+// Start compilation with the given backend and get a runtime in return
 let runtime = compiler.compile(backend).expect("Backend had an error");
 ```
 
@@ -109,7 +109,7 @@ loop {
     match runtime.run() {
         Ok(event) => match event {
             EVENT_SYSCALL => {
-                // Emulate syscall
+                // Handle syscall
             },
             EVENT_BREAKPOINT => {
                 // Handle breakpoint
@@ -125,4 +125,3 @@ loop {
     }
 }
 ```
-
