@@ -25,8 +25,6 @@ for you to inspect / modify.
 
 Load your binary like so:
 ```rs
-use squid::Compiler;
-
 let mut compiler = Compiler::load_elf(
     // The binary that we want to emulate
     "/path/to/binary",
@@ -50,13 +48,6 @@ Once the process image has been created, we can run passes to modify functions o
 A pass in `squid` is anything that implements the `Pass` trait like this:
 
 ```rs
-use squid::{
-    passes::Pass,
-    frontend::ProcessImage,
-    event::EventPool,
-    Logger,
-};
-
 struct MyPass;
 
 impl Pass for MyPass {
@@ -82,8 +73,6 @@ is anything that implements the `Runtime` trait.
 
 Currently, `squid` comes with the `MultiverseBackend` and the `MultiverseRuntime`:
 ```rs
-use squid::backends::multiverse::MultiverseBackend;
-
 // Create the backend responsible for compilation
 let backend = MultiverseBackend::builder()
     .heap_size(1 * 1024 * 1024)             // Size of the heap region
