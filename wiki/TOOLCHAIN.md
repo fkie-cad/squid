@@ -1,4 +1,4 @@
-# squids toolchain
+# Toolchain
 
 `squid` is a RISC-V emulator, so you have to compile every target you want to fuzz to RISC-V.
 This can be done in the docker container that comes with `squid` and provides you with a RISC-V gcc toolchain.

@@ -1,4 +1,4 @@
-# Overview over squid
+# Overview
 
 This page briefly introduces the most important aspects of `squid`.   
 Since `squid` is a RISC-V emulator with AOT compilation its usage can be divided into 3 phases:
