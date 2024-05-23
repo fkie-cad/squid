@@ -22,8 +22,8 @@ While `squid` was built to enhance traditional greybox fuzzing, it has certain l
 `squid` offers
 - Fast snapshots
 - Byte-level permissions on memory
-- Custom instrumentation by custom passes
 - Good perf due to AOT compilation
+- Custom instrumentation by custom passes
 - Integration into LibAFL for the creation of fully-fledged fuzzers
 
 However, it can only be used for Linux user-space applications that are written in C and compiled with a specific set of flags.
