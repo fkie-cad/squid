@@ -23,7 +23,7 @@ All dependencies of the program are collected, symbol imports are being resolved
 a manner similar to [RetroWrite](https://github.com/HexHive/RetroWrite).
 This creates an in-memory data structure that makes all functions and global variables of the loaded ELF files available for
 inspection and modification. Because of the symbolization we can freely modify everything without having to worry about
-invalidating pointers or offsets.
+invalidating references or offsets.
 
 Load your binary like so:
 ```rs
@@ -46,8 +46,9 @@ let mut compiler = Compiler::load_elf(
 For more information about the process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
 
 ## Running Passes
-Once the process image has been created, we can run passes to modify functions or data.
-A pass in `squid` is anything that implements the `Pass` trait like this:
+Once the process image has been created, we can run passes to modify functions or data. 
+A pass in `squid` is anything that implements the `Pass` trait. Otherwise, it functions exactly
+like an LLVM pass.
 
 ```rs
 struct MyPass;
@@ -89,9 +90,9 @@ let runtime = compiler.compile(backend).expect("Backend had an error");
 ```
 
 ## Running the target
-Once we have obtained a runtime, we can start interfacing with the program.    
-The runtime gives us access to the registers and the memory, we can create and restore
-snapshots and of course we can run our target with the `Runtime::run` method.   
+Once we have obtained the runtime, we can start interacting with the program.    
+The runtime gives us access to the registers and memory, it lets us create snapshots, restore
+snapshots and of course run our target with the `Runtime::run` method.   
 Running the target will throw certain events like system calls or breakpoints that
 must be handled by the harness.
 It is also possible to throw custom events that can be created inside passes.
