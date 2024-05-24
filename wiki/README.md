@@ -1,7 +1,7 @@
 # Overview
 
 This page briefly introduces the most important aspects of `squid`.   
-Since `squid` is a RISC-V emulator with AOT compilation its usage can be divided into 3 phases:
+Since `squid` is a RISC-V emulator with AOT-compilation its usage can be divided into 3 phases:
 
 1. Compiling the target to RISC-V
 2. Doing the AOT compilation
@@ -17,11 +17,13 @@ Follow the instructions in [TOOLCHAIN.md](./TOOLCHAIN.md) to compile your target
 Please note, that you also need to compile all of the targets dependencies to RISC-V.
 
 ## Loading the binary
-Once you have compiled the binary and all it's dependencies, the next step is to create the so-called "process image".   
-The process image is the result of ELF-loading the fuzz target, i.e. locating its dependencies, resolving
-symbol imports, etc.
-This creates an in-memory data structure that contains all the code and data of the ELF files and makes them available
-for you to inspect / modify.
+Once you have compiled the binary and all it's dependencies to RISC-V, the next step is to create the so-called "process image".   
+The process image is the result of ELF-loading the fuzz target and lifting all functions into an IR.
+All dependencies of the program are collected, symbol imports are being resolved and all pointers are "symbolized" in
+a manner similar to [RetroWrite](https://github.com/HexHive/RetroWrite).
+This creates an in-memory data structure that makes all functions and global variables of the loaded ELF files available for
+inspection and modification. Because of the symbolization we can freely modify everything without having to worry about
+invalidating pointers or offsets.
 
 Load your binary like so:
 ```rs
@@ -41,7 +43,7 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-For more information about the resulting process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
+For more information about the process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
 
 ## Running Passes
 Once the process image has been created, we can run passes to modify functions or data.
@@ -65,8 +67,8 @@ compiler.run_pass(&mut MyPass {}).expect("Pass had an error");
 ```
 
 ## Creating a Runtime
-The final step before emulation is to compile the code in the process image to the host ISA.
-This is the responsibility of the "backend".
+The final step before emulation is to AOT-compile all functions to the host ISA.
+This is the responsibility of a "backend".
 The backend receives a process image and produces a "runtime" that interfaces with the target program. 
 In a similar fashion like before, a backend is anything that implements the `Backend` trait and a runtime
 is anything that implements the `Runtime` trait.
@@ -82,15 +84,17 @@ let backend = MultiverseBackend::builder()
     .build()
     .expect("Could not configure backend");
 
-// Start compilation with the given backend and get a runtime in return
+// Start AOT-compilation with the given backend and get a runtime in return
 let runtime = compiler.compile(backend).expect("Backend had an error");
 ```
 
 ## Running the target
-Once we have obtained a runtime, we can use that to run our target.
-To execute our target, we call the `Runtime::run` method. This will trigger certain events like
-system calls or breakpoints that we must handle.
-It is also possible to create custom events in passes.
+Once we have obtained a runtime, we can start interfacing with the program.    
+The runtime gives us access to the registers and the memory, we can create and restore
+snapshots and of course we can run our target with the `Runtime::run` method.   
+Running the target will throw certain events like system calls or breakpoints that
+must be handled by the harness.
+It is also possible to throw custom events that can be created inside passes.
 
 Run the target like so:
 ```rs
