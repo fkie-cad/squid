@@ -1,11 +1,10 @@
 # Process Image
 
-The process image is a data structure that contains the code and data of ELF files.   
+The process image is a data structure that contains code and data of ELF files.   
 Its primary purpose is to make manipulation of code and data easy and accessible.   
 The ELF files that appear in a process image are an executable - e.g. our fuzz target - and all its depedencies.
 Think of it as an ELF loader except that the result is a hierachical tree structure instead of a
-linear memory image. This hierachical approach makes it is easy to modify 
-and/or rearrange the contents of ELF files.
+linear memory image. This hierachical approach makes modifications easy.
 
 Creating a process image is the first step in using `squid` and can be done with `Compiler::load_elf`:
 ```rs
