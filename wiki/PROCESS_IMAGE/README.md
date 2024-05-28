@@ -25,8 +25,9 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-The resulting process image may look something like this (full graph [here](./symimg.svg)):
+The resulting process image may look something like this:
 ![](./symimg.png)
+This is an excerpt. The full graph can be found [here](./symimg.svg).
 
 As you can see the process image is a tree.   
 The root points to all loaded ELF files. In this case these are a "helloworld" executable and its dependency "libc.so.6".
