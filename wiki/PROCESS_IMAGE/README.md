@@ -1,8 +1,7 @@
 # Process Image
 
 The process image is a data structure that contains code and data of ELF files.   
-Its primary purpose is to make manipulation of code and data easy and accessible.   
-The ELF files that appear in a process image are an executable - e.g. our fuzz target - and all its depedencies.
+Its primary purpose is to enable manipulations of the ELF files' content.   
 Think of it as an ELF loader except that the result is a hierachical tree structure instead of a
 linear memory image. This hierachical approach makes modifications easy.
 
@@ -29,7 +28,7 @@ This produces a process image that looks something like this:
 This image is an excerpt. The full graph can be found [here](./symimg.svg).
 
 As you can see the process image is a tree.   
-The root points to all loaded ELF files. In this case these are a "helloworld" executable and its dependency "libc.so.6".
+The root points to loaded ELF files. In this case these are a "helloworld" executable and its dependency "libc.so.6".
 The children of the ELF files are their allocatable sections (here identified by their
 permission bits "rwx").
 The children of the sections are all ELF symbols that are inside these sections. For example the symbol
@@ -67,13 +66,13 @@ To add new nodes call their respective builder objects, e.g. `Elf::builder()` or
 methods like `elf.insert_section(...)` or `section.insert_symbol(...)`.
 
 ## Symbolization
-One key thing that we have left out so far is how `squid` handles code in ELF files.   
+One key thing that has been left out so far is how `squid` handles code.   
 Since the point of the process image is to manipulate binaries, we run into one particular problem.
 Whenever there are pointers to objects inside an ELF file, these pointers become invalid as soon as
 the ELF file gets rearranged.   
 The way `squid` handles this problem is that it abstracts pointers with concrete values away to higher-level
 "symbolic pointers".
-A symbolic pointer is also a pointer but it points to a chunk in the process image instead of a concrete memory location.
+A symbolic pointer also is a pointer but it points to a chunk in the process image instead of a concrete memory location.
 You may have noticed that in the image above each node in the tree is prefixed with a number in square brackets.
 This is the ID of the element. Each child of each node gets a unique ID such that we can identify chunks with a
 5-tuple of IDs: `(elf_id, section_id, symbol_id, chunk_id)`.
@@ -81,8 +80,5 @@ For example, every concrete pointer to the `main()` function has the value `0x4c
 in the process image.
 
 In order to do this symbolization technique, the RISC-V code has to be lifted into an IR that is specifically designed
-to make such symbolizations easy. This also means that when you want to manipulate the code of a function, you have to
+to make symbolization easy. This also means that when you want to modify functions, you have to
 do it on the higher-level IR instead of the raw RISC-V code.
-
-You also might want to have a look at [RetroWrite](https://github.com/HexHive/RetroWrite), a tool that employs a similar symbolization technique but in the context of blackbox fuzzing.
-
