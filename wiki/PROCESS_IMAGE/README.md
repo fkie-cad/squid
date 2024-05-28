@@ -67,7 +67,7 @@ To add new nodes call their respective builder objects, e.g. `Elf::builder()` or
 methods like `elf.insert_section(...)` or `section.insert_symbol(...)`.
 
 ## Symbolization
-One key thing that we have left out so far is how `squid` handles the code in ELF files.   
+One key thing that we have left out so far is how `squid` handles code in ELF files.   
 Since the point of the process image is to manipulate binaries, we run into one particular problem.
 Whenever there are pointers to objects inside an ELF file, these pointers become invalid as soon as
 the ELF file gets rearranged.   

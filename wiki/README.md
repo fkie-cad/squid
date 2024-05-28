@@ -13,7 +13,7 @@ Since `squid` is a RISC-V emulator with AOT-compilation its usage can be divided
 Each phase is explained in more detail below.
 
 ## Compiling the target
-Follow the instructions in [TOOLCHAIN.md](./TOOLCHAIN.md) to compile your target to RISC-V.
+Follow the instructions in [TOOLCHAIN](./TOOLCHAIN.md) to compile your target to RISC-V.
 Please note, that you also need to compile all of the targets dependencies to RISC-V.
 
 ## Loading the binary
