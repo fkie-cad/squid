@@ -21,9 +21,9 @@ Inside the container, you can find the cross-compiler at `/riscv/bin/riscv64-unk
 Please note that `squid` has certain requirements for the binaries it can emulate.
 The binaries __must__ be compiled with the flags
 ```
--fPIE -pie -O0 -g -fno-jump-tables -mno-relax
+-fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
 ```
-otherwise they won't work with `squid`.
+and must not use thread-local storage, otherwise they won't work with `squid`.
 
 If your target makes use of the C extension that enables `goto*` statements and references to labels,
 use `/ewe/gcc` instead of `riscv64-unknown-linux-gnu-gcc`.
