@@ -10,10 +10,10 @@ and/or rearrange the contents of ELF files.
 Creating a process image is the first step in using `squid` and can be done with `Compiler::load_elf`:
 ```rs
 let mut compiler = Compiler::load_elf(
-    // The binary that we want to load
+    // The executable that we want to load
     "/path/to/binary",
     
-    // Directories that contain the dependencies of the binary similar to LD_LIBRARY_PATH
+    // Directories that contain the dependencies of the executable similar to LD_LIBRARY_PATH
     &[
         "/path/with/deps",
     ],
@@ -25,9 +25,9 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-The resulting process image may look something like this:
+This produces a process image that looks something like this:
 ![](./symimg.png)
-This is an excerpt. The full graph can be found [here](./symimg.svg).
+This image is an excerpt. The full graph can be found [here](./symimg.svg).
 
 As you can see the process image is a tree.   
 The root points to all loaded ELF files. In this case these are a "helloworld" executable and its dependency "libc.so.6".
