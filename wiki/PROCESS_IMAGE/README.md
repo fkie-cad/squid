@@ -62,11 +62,28 @@ for elf in compiler.process_image().iter_elfs() {
 }
 ```
 
-You can also add new elements, delete elements or modify existing elements.
-To add new elements call their respective builder objects, e.g. `Elf::builder()` or
-`Section::builder()` and insert the newly created elements via the `insert_*`
+You can also add new nodes, delete nodes or modify existing nodes.   
+To add new nodes call their respective builder objects, e.g. `Elf::builder()` or
+`Section::builder()` and insert the newly created nodes via the `insert_*`
 methods like `elf.insert_section(...)` or `section.insert_symbol(...)`.
 
 ## Symbolization
+One key thing that we have left out so far is how `squid` handles the code in ELF files.   
+Since the point of the process image is to manipulate binaries, we run into one particular problem.
+Whenever there are pointers to objects inside an ELF file, these pointers become invalid as soon as
+the ELF file gets rearranged.   
+The way `squid` handles this problem is that it abstracts pointers with concrete values away to higher-level
+"symbolic pointers".
+A symbolic pointer is also a pointer but it points to a chunk in the process image instead of a concrete memory location.
+You may have noticed that in the image above each node in the tree is prefixed with a number in square brackets.
+This is the ID of the element. Each child of each node gets a unique ID such that we can identify chunks with a
+5-tuple of IDs: `(elf_id, section_id, symbol_id, chunk_id)`.
+For example, every concrete pointer to the `main()` function has the value `0x4c0` in the ELF file but gets replaced with `(1, 2, 5, 1)`
+in the process image.
 
+In order to do this symbolization technique, the RISC-V code has to be lifted into an IR that is specifically designed
+to make such symbolizations easy. This also means that when you want to manipulate the code of a function, you have to
+do it on the higher-level IR instead of the raw RISC-V code.
+
+You also might want to have a look at [RetroWrite](https://github.com/HexHive/RetroWrite), a tool that employs a similar symbolization technique but in the context of blackbox fuzzing.
 
