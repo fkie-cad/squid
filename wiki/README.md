@@ -43,7 +43,7 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-For more information about the process image, see [PROCESS\_IMAGE.md](./PROCESS_IMAGE.md).
+For more information about the process image, see [PROCESS\_IMAGE/](./PROCESS_IMAGE/).
 
 ## Running Passes
 Once the process image has been created, we can run passes to modify functions or data. 
