@@ -25,8 +25,8 @@ let mut compiler = Compiler::load_elf(
 ).expect("Loading binary failed");
 ```
 
-The resulting process image may look something like this:
-![](./symimg.svg)
+The resulting process image may look something like this (full graph [here](./symimg.svg)):
+![](./symimg.png)
 
 As you can see the process image is a tree.   
 The root points to all loaded ELF files. In this case these are a "helloworld" executable and its dependency "libc.so.6".
@@ -62,8 +62,8 @@ for elf in compiler.process_image().iter_elfs() {
 ```
 
 You can also add new elements, delete elements or modify existing elements.
-To add new elements call their respective builder objects, e.g. `Elf::builder()`,
-`Section::builder()`, etc. and insert the newly created elements via the `insert_*`
+To add new elements call their respective builder objects, e.g. `Elf::builder()` or
+`Section::builder()` and insert the newly created elements via the `insert_*`
 methods like `elf.insert_section(...)` or `section.insert_symbol(...)`.
 
 ## Symbolization
