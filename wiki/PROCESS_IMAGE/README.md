@@ -1,9 +1,9 @@
 # Process Image
 
 The process image is a data structure that holds the code and data of ELF files.   
-It is created by a dynamic linking process where all dependencies are collected,
+It is the result of a dynamic linking process where all dependencies are collected,
 allocatable sections are allocated, symbols are resolved, etc.
-The only difference to classical dynamic linking is that a process image is a hierachical tree structure and not a linear memory image.
+The only difference to traditional dynamic linking is that a process image is a hierachical tree structure and not a linear memory image.
 This hierachical approach enables us to modify the ELF files' content without messing up its overall structure.
 Its primary purpose is to make manipulations of global variables and functions easy.
 
@@ -37,7 +37,7 @@ The leafs of the process image are so-called "chunks".
 Chunks hold the actual contents of a symbol and tell us how to interpret the stream of bytes.
 It can either be code, data or a pointer.
 
-One of the main things you're gonna do with a process image is traverse it.
+One of the things you're gonna do most frequently with a process image is traversing it.
 This can be done like so:
 ```rs
 for elf in compiler.process_image().iter_elfs() {
