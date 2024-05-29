@@ -15,7 +15,6 @@ use libafl::prelude::{
     CalibrationStage,
     CanTrack,
     CrashFeedback,
-    Evaluator,
     EventConfig,
     EventFirer,
     Executor,
@@ -73,7 +72,6 @@ use libafl_bolts::prelude::{
     UnixShMemProvider,
 };
 use mimalloc::MiMalloc;
-#[cfg(debug_assertions)]
 use squid::passes::BreakpointPass;
 use squid::{
     backends::multiverse::{
@@ -597,7 +595,7 @@ const EVENT_ID_REALLOC: usize = 5;
 const EVENT_ID_TAKE_SNAPSHOT: usize = 6;
 const EVENT_ID_RESTORE_SNAPSHOT: usize = 7;
 
-fn create_runtime(binaries: &str, output: &str) -> MultiverseRuntime {
+fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> MultiverseRuntime {
     let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[format!("{}/piranha.so", &binaries)]).unwrap();
 
     compiler.run_pass(&mut PiranhaPass::new()).unwrap();
@@ -606,8 +604,9 @@ fn create_runtime(binaries: &str, output: &str) -> MultiverseRuntime {
     compiler.run_pass(&mut CoveragePass::new()).unwrap();
     compiler.run_pass(&mut SnapshotPass::new()).unwrap();
 
-    #[cfg(debug_assertions)]
-    compiler.run_pass(BreakpointPass::new().all()).unwrap();
+    if breakpoints {
+        compiler.run_pass(BreakpointPass::new().all()).unwrap();
+    }
 
     assert_eq!(compiler.event_pool().get_event(EVENT_SYSCALL).map(|x| x.id()), Some(EVENT_ID_SYSCALL));
     assert_eq!(compiler.event_pool().get_event(EVENT_BREAKPOINT).map(|x| x.id()), Some(EVENT_ID_BREAKPOINT));
@@ -619,9 +618,9 @@ fn create_runtime(binaries: &str, output: &str) -> MultiverseRuntime {
     assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_RESTORE_SNAPSHOT));
     assert_eq!(compiler.event_pool().len(), 8);
 
-    let backend = MultiverseBackend::builder()
-        .heap_size(4 * 1024 * 1024)
-        .stack_size(1024 * 1024)
+    let mut builder = MultiverseBackend::builder()
+        .heap_size(8 * 1024 * 1024)
+        .stack_size(2 * 1024 * 1024)
         .progname("readelf")
         .arg("-W")
         .arg("-L")
@@ -632,17 +631,25 @@ fn create_runtime(binaries: &str, output: &str) -> MultiverseRuntime {
         .update_pc(cfg!(debug_assertions))
         .update_last_instruction(cfg!(debug_assertions))
         .count_instructions(true)
-        .source_file(format!("{}/jit.c", output))
-        .cflag("-Ofast")
-        .cflag("-ffast-math")
-        .cflag("-flto")
-        .cflag("-s")
-        .cflag("-fno-stack-protector")
-        .cflag("-march=native")
-        .cflag("-fomit-frame-pointer")
-        .build()
-        .unwrap();
+        .source_file(format!("{}/jit.c", output));
 
+    if cfg!(debug_assertions) {
+        builder = builder
+            .cflag("-O0")
+            .cflag("-g")
+            .cflag("-fno-omit-frame-pointer");
+    } else {
+        builder = builder
+            .cflag("-Ofast")
+            .cflag("-ffast-math")
+            .cflag("-flto")
+            .cflag("-s")
+            .cflag("-fno-stack-protector")
+            .cflag("-march=native")
+            .cflag("-fomit-frame-pointer");
+    }
+        
+    let backend = builder.build().unwrap();
     compiler.compile(backend).unwrap()
 }
 
@@ -660,7 +667,6 @@ where
     OT: ObserversTuple<S>,
 {
     kernel: Linux<8>,
-    input_file: fs::FileHandle,
     observers: OT,
     runtime: &'a mut MultiverseRuntime,
     phantom: PhantomData<S>,
@@ -672,9 +678,7 @@ where
     OT: ObserversTuple<S>,
 {
     fn new(observers: OT, runtime: &'a mut MultiverseRuntime) -> Self {
-        let mut disk = fs::Fs::new();
-        let input_file = disk.touch(disk.cwd(), "file", fs::PERM_R).unwrap();
-        disk.file_mut(input_file).unwrap().content_mut().reserve(1024 * 1024);
+        let disk = fs::Fs::new();
         let mut kernel = Linux::new(disk, 0);
 
         kernel.take_snapshot(0);
@@ -682,7 +686,6 @@ where
 
         Self {
             kernel,
-            input_file,
             observers,
             runtime,
             phantom: PhantomData,
@@ -690,7 +693,7 @@ where
     }
 
     #[inline]
-    fn run(&mut self) -> Result<usize, MultiverseRuntimeFault> {
+    fn run(&mut self, fuzz_input: &[u8]) -> Result<usize, MultiverseRuntimeFault> {
         let mut num_instrs = 0;
         let runtime = &mut self.runtime;
 
@@ -732,7 +735,9 @@ where
                             }
                         },
                         syscalls::writev => {
-                            //let fd = runtime.get_gp_register(GpRegister::a0);
+                            #[cfg(debug_assertions)]
+                            let fd = runtime.get_gp_register(GpRegister::a0);
+
                             let iov = runtime.get_gp_register(GpRegister::a1);
                             let iovcnt = runtime.get_gp_register(GpRegister::a2);
 
@@ -743,8 +748,14 @@ where
                                 let iov_base = runtime.load_dword(iov)? as VAddr;
                                 let iov_len = runtime.load_dword(iov + 8)? as usize;
                                 let data = runtime.load_slice(iov_base, iov_len)?;
-                                //ret += kernel.write(fd as i32, data)?;
-                                ret += data.len();
+
+                                #[cfg(debug_assertions)] {
+                                    ret += self.kernel.write(fd as i32, data)?;
+                                }
+
+                                #[cfg(not(debug_assertions))] {
+                                    ret += data.len();
+                                }
                             }
 
                             runtime.set_gp_register(GpRegister::a0, ret as u64);
@@ -757,47 +768,59 @@ where
 
                             let filename = runtime.load_string(a1)?;
 
-                            match std::str::from_utf8(filename) {
-                                Ok(filename) => match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
-                                    Ok(stat) => {
-                                        let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
-                                        let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
-                                        runtime.store_slice(a2, contents)?;
-                                        runtime.set_gp_register(GpRegister::a0, 0);
-                                    },
-                                    Err(err) => match err {
-                                        LinuxError::FsError(_) => {
-                                            runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
-                                        },
-                                        _ => {
-                                            return Err(err.into());
-                                        },
-                                    },
+                            match filename {
+                                b"file" => {
+                                    let stat = self.kernel.fstatat_fuzz_input(fuzz_input.len());
+                                    let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
+                                    let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                    runtime.store_slice(a2, contents)?;
+                                    runtime.set_gp_register(GpRegister::a0, 0);
                                 },
-                                Err(_) => {
-                                    runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
+                                _ => {
+                                    let filename = std::str::from_utf8(filename).map_err(|_| MultiverseRuntimeFault::InternalError("string conversion failed".to_string()))?;
+
+                                    match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
+                                        Ok(stat) => {
+                                            let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
+                                            let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                            runtime.store_slice(a2, contents)?;
+                                            runtime.set_gp_register(GpRegister::a0, 0);
+                                        },
+                                        Err(err) => match err {
+                                            LinuxError::FsError(_) => {
+                                                runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
+                                            },
+                                            _ => {
+                                                return Err(err.into());
+                                            },
+                                        },
+                                    }
                                 },
                             }
                         },
                         syscalls::openat => {
-                            let a0 = runtime.get_gp_register(GpRegister::a0);
+                            //let a0 = runtime.get_gp_register(GpRegister::a0);
                             let a1 = runtime.get_gp_register(GpRegister::a1);
-                            let a2 = runtime.get_gp_register(GpRegister::a2);
-                            let a3 = runtime.get_gp_register(GpRegister::a3);
+                            //let a2 = runtime.get_gp_register(GpRegister::a2);
+                            //let a3 = runtime.get_gp_register(GpRegister::a3);
                             let pathname = runtime.load_string(a1)?;
 
-                            match std::str::from_utf8(pathname) {
+                            match pathname {
+                                b"file" => {
+                                    let fd = self.kernel.open_fuzz_input(fuzz_input.len())?;
+                                    runtime.set_gp_register(GpRegister::a0, fd as u64);
+                                },
+                                _ => unreachable!(),
+                                /*
                                 Ok(pathname) => {
                                     let fd = self.kernel.openat(a0 as i32, pathname, a2 as i32, a3 as i32)?;
                                     runtime.set_gp_register(GpRegister::a0, fd as u64);
                                 },
-                                Err(_) => {
-                                    runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
-                                },
+                                */
                             }
                         },
                         syscalls::readv => {
-                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            let fd = runtime.get_gp_register(GpRegister::a0) as i32;
                             let iov = runtime.get_gp_register(GpRegister::a1);
                             let iovcnt = runtime.get_gp_register(GpRegister::a2);
 
@@ -807,7 +830,12 @@ where
                                 let iov = iov + i * 16;
                                 let iov_base = runtime.load_dword(iov)? as VAddr;
                                 let iov_len = runtime.load_dword(iov + 8)? as usize;
-                                let data = self.kernel.read(fd as i32, iov_len)?;
+                                let data = if self.kernel.is_fuzz_input(fd) { 
+                                    let r = self.kernel.read_fuzz_input(fd, iov_len)?;
+                                    &fuzz_input[r]
+                                } else {
+                                    self.kernel.read(fd, iov_len)?
+                                };
 
                                 runtime.store_slice(iov_base, data)?;
                                 ret += data.len();
@@ -829,11 +857,16 @@ where
                             runtime.set_gp_register(GpRegister::a0, offset as u64);
                         },
                         syscalls::read => {
-                            let fd = runtime.get_gp_register(GpRegister::a0);
+                            let fd = runtime.get_gp_register(GpRegister::a0) as i32;
                             let buf = runtime.get_gp_register(GpRegister::a1);
-                            let len = runtime.get_gp_register(GpRegister::a2);
+                            let len = runtime.get_gp_register(GpRegister::a2) as usize;
 
-                            let data = self.kernel.read(fd as i32, len as usize)?;
+                            let data = if self.kernel.is_fuzz_input(fd) {
+                                let r = self.kernel.read_fuzz_input(fd, len)?;
+                                &fuzz_input[r]
+                            } else {
+                                self.kernel.read(fd, len)?
+                            };
                             runtime.store_slice(buf, data)?;
 
                             runtime.set_gp_register(GpRegister::a0, data.len() as u64);
@@ -847,16 +880,14 @@ where
                             let fd = runtime.get_gp_register(GpRegister::a0) as i32;
                             let a1 = runtime.get_gp_register(GpRegister::a1);
                             let path = runtime.load_string(a1)?;
-                            let path = std::str::from_utf8(path).map_err(|_| MultiverseRuntimeFault::InternalError(format!("readlinkat() invalid path: {:?}", path)))?;
-
-                            assert_eq!(fd, libc::AT_FDCWD);
+                            debug_assert_eq!(fd, libc::AT_FDCWD);
 
                             match path {
-                                "file" => {
+                                b"file" => {
                                     runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
                                 },
                                 _ => {
-                                    return Err(MultiverseRuntimeFault::InternalError(format!("readlinkat: {}", path)));
+                                    return Err(MultiverseRuntimeFault::InternalError(format!("readlinkat: {:?}", path)));
                                 },
                             }
                         },
@@ -975,10 +1006,7 @@ where
         self.kernel.restore_snapshot(0);
         let _ = self.runtime.restore_snapshot(0);
 
-        //TODO: memcpy bad
-        self.kernel.fs_mut().file_mut(self.input_file).unwrap().content_mut().extend_from_slice(input.bytes());
-
-        match self.run() {
+        match self.run(input.bytes()) {
             Ok(num_instrs) => {
                 let observer = self.observers.match_name_mut::<SquidObserver>("instructions").unwrap();
                 observer.update_runtime(num_instrs);
@@ -1157,6 +1185,9 @@ enum Subcommand {
 
         #[arg(long)]
         file: String,
+
+        #[arg(long, default_value_t = false)]
+        breakpoints: bool,
     },
 }
 
@@ -1187,7 +1218,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
     let native_binary = if exploitation_cores.len() < cores.ids.len() { native_binary.expect("Must supply native binary for that") } else { String::new() };
 
     let _ = std::fs::create_dir_all(&output);
-    let mut runtime = create_runtime(&riscv_binaries, &output);
+    let mut runtime = create_runtime(&riscv_binaries, &output, false);
 
     let mut run_exploit = |state: Option<_>, mut mgr: LlmpRestartingEventManager<_, _, _>, core_id: CoreId| {
         let powerschedule = pick_exploit_powerschedule(core_id.0);
@@ -1324,8 +1355,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
     }
 }
 
-fn replay(binaries: String, file: String) -> Result<(), Error> {
-    let mut runtime = create_runtime(&binaries, "/tmp");
+fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error> {
     let input = BytesInput::from_file(file)?;
 
     let monitor = NopMonitor::new();
@@ -1340,11 +1370,17 @@ fn replay(binaries: String, file: String) -> Result<(), Error> {
 
     let scheduler = StdScheduler::new();
 
-    let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
+    let mut fuzzer: StdFuzzer<_, _, _, (SquidObserver, ())> = StdFuzzer::new(scheduler, feedback, objective);
 
+    let mut runtime = create_runtime(&binaries, "/tmp", breakpoints);
     let mut executor = SquidExecutor::new(tuple_list!(squid_observer), &mut runtime);
 
-    fuzzer.evaluate_input(&mut state, &mut executor, &mut mgr, input)?;
+    executor.run_target(
+        &mut fuzzer,
+        &mut state,
+        &mut mgr,
+        &input
+    )?;
 
     Ok(())
 }
@@ -1364,6 +1400,7 @@ fn main() -> Result<(), Error> {
         Subcommand::Replay {
             binaries,
             file,
-        } => replay(binaries, file),
+            breakpoints,
+        } => replay(binaries, file, breakpoints),
     }
 }

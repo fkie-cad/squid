@@ -1,6 +1,7 @@
 use libc;
 use rustc_hash::FxHashMap;
 use thiserror::Error;
+use std::ops::Range;
 
 use crate::{
     kernel::{
@@ -45,6 +46,9 @@ pub enum LinuxError {
 
     #[error("fs error: {0:?}")]
     FsError(#[from] FileSystemError),
+
+    #[error("Attempted invalid operation on the fuzz input")]
+    InvalidFuzzInputOperation,
 }
 
 #[derive(Clone)]
@@ -53,6 +57,9 @@ enum FileType {
     Stdout,
     Stderr,
     File(FileHandle),
+    FuzzInput {
+        size: usize,
+    },
     //Dir(DirHandle),
 }
 
@@ -250,6 +257,36 @@ impl<const FDS: usize> Linux<FDS> {
         }
     }
 
+    pub fn fstatat_fuzz_input(&mut self, size: usize) -> Stat {
+        let st_mode = libc::S_IFREG | ((fs::PERM_R as u32) << 6);
+        Stat {
+            st_dev: 65026,
+            st_ino: 1,
+            st_mode,
+            st_nlink: 0,
+            st_uid: self.uid as u32,
+            st_gid: self.gid as u32,
+            st_rdev: 0,
+            st_size: size as u64,
+            st_blksize: 512,
+            st_blocks: (size / 512) as u64 + (size % 512 != 0) as u64,
+            unknown: 0,
+            st_atime: Timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            st_mtime: Timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            st_ctime: Timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            pad: 0,
+        }
+    }
+
     pub fn fstatat(&mut self, dirfd: Fd, filename: &str, flags: i32) -> Result<Stat, LinuxError> {
         assert_eq!(dirfd, libc::AT_FDCWD);
         assert_eq!(flags & !libc::AT_NO_AUTOMOUNT, 0);
@@ -319,10 +356,18 @@ impl<const FDS: usize> Linux<FDS> {
 
                     Ok(data.len())
                 },
+                FileType::FuzzInput { .. } => {
+                    Err(LinuxError::InvalidFuzzInputOperation)
+                },
             }
         } else {
             Err(LinuxError::ClosedFd)
         }
+    }
+
+    #[inline]
+    pub fn open_fuzz_input(&mut self, size: usize) -> Result<Fd, LinuxError> {
+        self.open_file(FileType::FuzzInput { size }, 0, true, false)
     }
 
     pub fn openat(&mut self, dirfd: Fd, pathname: &str, flags: i32, mode: i32) -> Result<Fd, LinuxError> {
@@ -361,6 +406,30 @@ impl<const FDS: usize> Linux<FDS> {
         self.open_file(FileType::File(handle), offset, is_read, is_write)
     }
 
+    pub fn read_fuzz_input(&mut self, fd: Fd, len: usize) -> Result<Range<usize>, LinuxError> {
+        if let Some(file) = self.get_file(fd)? {
+            let entry = &mut self.files[file];
+            let FileType::FuzzInput { size } = &entry.typ else { unreachable!() };
+            let offset = entry.offset;
+
+            if offset >= *size {
+                return Ok(Range {
+                    start: *size,
+                    end: *size,
+                });
+            }
+
+            let delta = std::cmp::min(*size - offset, len);
+            entry.offset += delta;
+            Ok(Range {
+                start: offset,
+                end: offset + delta,
+            })
+        } else {
+            Err(LinuxError::ClosedFd)
+        }
+    }
+
     pub fn read(&mut self, fd: Fd, len: usize) -> Result<&[u8], LinuxError> {
         if let Some(file) = self.get_file(fd)? {
             let entry = &mut self.files[file];
@@ -384,6 +453,9 @@ impl<const FDS: usize> Linux<FDS> {
 
                     let ret = &file.content()[offset..offset + delta];
                     Ok(ret)
+                },
+                FileType::FuzzInput { .. } => {
+                    return Err(LinuxError::InvalidFuzzInputOperation);
                 },
             }
         } else {
@@ -416,6 +488,25 @@ impl<const FDS: usize> Linux<FDS> {
 
                     Ok(entry.offset)
                 },
+                FileType::FuzzInput { size } => {
+                    match whence {
+                        libc::SEEK_SET => {
+                            if offset < 0 {
+                                return Err(LinuxError::InvalidOperation);
+                            }
+                            entry.offset = offset as usize;
+                        },
+                        libc::SEEK_CUR => {
+                            entry.offset = entry.offset.wrapping_add(offset as usize);
+                        },
+                        libc::SEEK_END => {
+                            entry.offset = size.wrapping_add(offset as usize);
+                        },
+                        _ => return Err(LinuxError::InvalidArgument),
+                    }
+
+                    Ok(entry.offset)
+                },
                 _ => Err(LinuxError::InvalidOperation),
             }
         } else {
@@ -431,6 +522,23 @@ impl<const FDS: usize> Linux<FDS> {
         }
 
         Ok(())
+    }
+
+    pub fn is_fuzz_input(&mut self, fd: Fd) -> bool {
+        let fd = fd as usize;
+
+        if fd >= self.fds.len() {
+            return false;
+        }
+        
+        if let Some(idx) = &self.fds[fd] {
+            return matches!(
+                &self.files[*idx].typ,
+                FileType::FuzzInput { .. }
+            );
+        }
+
+        false
     }
 }
 
