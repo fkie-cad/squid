@@ -29,13 +29,12 @@ This produces a process image that looks something like this (excerpt, the full 
 ![](./symimg.png)
 
 As you can see the process image is a tree.   
-The root points to loaded ELF files - in this case a "helloworld" executable and its dependency "libc.so.6".
-The children of ELF files are their allocatable sections (here identified by their permission bits "rwx").
+The root points to the loaded ELF files - in this case a "helloworld" executable and its dependency "libc.so.6".
+The children of ELF files are their allocatable sections (identified here by their permission bits "rwx").
 The children of sections are all ELF symbols that are inside those sections.
 For example, the symbol "main" is a child of the section "r-x" because the program has a `main()` function.
-The leafs of the process image are so-called "chunks".
-Chunks hold the actual contents of a symbol and tell us how to interpret the stream of bytes.
-It can either be code, data or a pointer.
+The leafs of the process image are so-called "chunks" that hold the actual contents of a symbol.
+They tell us whether to interpret the stream of bytes as either code, data or pointers.
 
 One of the things you're gonna do most frequently with a process image is traversing it.
 This can be done like so:
@@ -63,7 +62,7 @@ for elf in compiler.process_image().iter_elfs() {
 
 You can also add new nodes, delete nodes or modify existing nodes.   
 To add new nodes call their respective builder objects, e.g. `Elf::builder()` or
-`Section::builder()` and insert the newly created nodes via the `insert_*`
+`Section::builder()` and to insert the newly created nodes use the `insert_*`
 methods like `elf.insert_section(...)` or `section.insert_symbol(...)`.   
 The following example demonstrates how to create an AFL-style coverage map and insert
 it into the process image.
@@ -72,6 +71,7 @@ it into the process image.
 // This function will make it appear as if the AFL coverage map has been statically linked
 // into the application. It creates a new ELF file with a single symbol "coverage_map" that
 // holds the entire coverage map.
+// This way, we can access the map from the harness and the guest.
 fn build_coverage_map(image: &mut ProcessImage, map_size: usize) {
     // The map will be readable and writable
     let mut perms = Perms::default();
@@ -87,7 +87,7 @@ fn build_coverage_map(image: &mut ProcessImage, map_size: usize) {
 
     // Create a symbol named "coverage_map" that contains the chunk
     let mut symbol = Symbol::builder()
-        .private_name("coverage_map")
+        .public_name("coverage_map")
         .vaddr(0)
         .size(map_size)
         .build()
