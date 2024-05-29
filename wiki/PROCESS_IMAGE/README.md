@@ -1,9 +1,9 @@
 # Process Image
 
 The process image is a data structure that holds the code and data of ELF files.   
-It is created in a dynamic linking process where all dependencies are collected,
+It is created by a dynamic linking process where all dependencies are collected,
 allocatable sections are allocated, symbols are resolved, etc.
-The only difference to classical dynamic linkers is that a process image is a hierachical tree structure and not a linear memory image.
+The only difference to classical dynamic linking is that a process image is a hierachical tree structure and not a linear memory image.
 This hierachical approach enables us to modify the ELF files' content without messing up its overall structure.
 Its primary purpose is to make manipulations of global variables and functions easy.
 
