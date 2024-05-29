@@ -71,7 +71,7 @@ it into the process image.
 // This function will make it appear as if the AFL coverage map has been statically linked
 // into the application. It creates a new ELF file with a single symbol "coverage_map" that
 // holds the entire coverage map.
-// This way, we can access the map from the harness and the guest.
+// This way, we can access the map from the harness and from inside the guest.
 fn build_coverage_map(image: &mut ProcessImage, map_size: usize) {
     // The map will be readable and writable
     let mut perms = Perms::default();
