@@ -775,23 +775,25 @@ where
                                     runtime.set_gp_register(GpRegister::a0, 0);
                                 },
                                 _ => {
-                                    let filename = std::str::from_utf8(filename).map_err(|_| MultiverseRuntimeFault::InternalError("string conversion failed".to_string()))?;
-
-                                    match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
-                                        Ok(stat) => {
-                                            let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
-                                            let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
-                                            runtime.store_slice(a2, contents)?;
-                                            runtime.set_gp_register(GpRegister::a0, 0);
-                                        },
-                                        Err(err) => match err {
-                                            LinuxError::FsError(_) => {
-                                                runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
+                                    if let Ok(filename) = std::str::from_utf8(filename) {
+                                        match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
+                                            Ok(stat) => {
+                                                let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
+                                                let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                                runtime.store_slice(a2, contents)?;
+                                                runtime.set_gp_register(GpRegister::a0, 0);
                                             },
-                                            _ => {
-                                                return Err(err.into());
+                                            Err(err) => match err {
+                                                LinuxError::FsError(_) => {
+                                                    runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
+                                                },
+                                                _ => {
+                                                    return Err(err.into());
+                                                },
                                             },
-                                        },
+                                        }
+                                    } else {
+                                        runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
                                     }
                                 },
                             }
