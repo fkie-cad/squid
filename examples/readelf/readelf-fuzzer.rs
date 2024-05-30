@@ -54,6 +54,10 @@ use libafl::prelude::{
     UsesInput,
     UsesObservers,
     UsesState,
+    Event,
+    UserStats,
+    UserStatsValue,
+    AggregatorOps,
 };
 use libafl_bolts::prelude::{
     current_nanos,
@@ -1000,10 +1004,13 @@ where
         self.kernel.restore_snapshot(0);
         let _ = self.runtime.restore_snapshot(0);
 
+        let start = std::time::Instant::now();
+
         match self.run(input.bytes()) {
             Ok(num_instrs) => {
+                let secs = start.elapsed().as_secs_f64();
                 let observer = self.observers.match_name_mut::<SquidObserver>("instructions").unwrap();
-                observer.update_runtime(num_instrs);
+                observer.update(num_instrs, secs);
                 Ok(ExitKind::Ok)
             },
             Err(_e) => {
@@ -1049,6 +1056,7 @@ use serde::{
 struct SquidObserver {
     name: String,
     last_runtime: Option<Duration>,
+    instr_per_sec: f64,
 }
 
 impl SquidObserver {
@@ -1056,16 +1064,22 @@ impl SquidObserver {
         Self {
             name: name.to_string(),
             last_runtime: None,
+            instr_per_sec: 0.0,
         }
     }
 
-    fn update_runtime(&mut self, instrs: usize) {
+    fn update(&mut self, instrs: usize, secs: f64) {
         const GHZ: u64 = 2;
         self.last_runtime = Some(Duration::from_nanos(instrs as u64 / GHZ));
+        self.instr_per_sec = (instrs as f64) / secs;
     }
 
     fn last_runtime(&self) -> Option<&Duration> {
         self.last_runtime.as_ref()
+    }
+
+    fn instr_per_sec(&self) -> f64 {
+        self.instr_per_sec
     }
 }
 
@@ -1114,17 +1128,45 @@ impl Named for SquidObserver {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SquidFeedback;
+pub struct SquidFeedback {
+    max_instr_per_sec: f64,
+}
+
+impl SquidFeedback {
+    fn new() -> Self {
+        Self {
+            max_instr_per_sec: 0.0,
+        }
+    }
+}
 
 impl<S> Feedback<S> for SquidFeedback
 where
     S: State,
 {
-    fn is_interesting<EM, OT>(&mut self, _state: &mut S, _manager: &mut EM, _input: &<S>::Input, _observers: &OT, _exit_kind: &ExitKind) -> Result<bool, Error>
+    fn is_interesting<EM, OT>(&mut self, state: &mut S, mgr: &mut EM, _input: &<S>::Input, observers: &OT, _exit_kind: &ExitKind) -> Result<bool, Error>
     where
-        EM: libafl::prelude::EventFirer<State = S>,
+        EM: EventFirer<State = S>,
         OT: ObserversTuple<S>,
     {
+        let observer = observers.match_name::<SquidObserver>("instructions").unwrap();
+        let instr_per_sec = observer.instr_per_sec();
+
+        if instr_per_sec > self.max_instr_per_sec {
+            mgr.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: "instr/s".to_string(),
+                    value: UserStats::new(
+                        UserStatsValue::Float(instr_per_sec),
+                        AggregatorOps::Max,
+                    ),
+                    phantom: PhantomData,
+                }
+            )?;
+            self.max_instr_per_sec = instr_per_sec;
+        }
+
         Ok(false)
     }
 
@@ -1224,7 +1266,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let squid_observer = SquidObserver::new("instructions");
 
         let map_feedback = MaxMapFeedback::new(&map_observer);
-        let squid_feedback = SquidFeedback;
+        let squid_feedback = SquidFeedback::new();
 
         let calibration_stage = CalibrationStage::new(&map_feedback);
 
@@ -1358,7 +1400,7 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
 
     let squid_observer = SquidObserver::new("instructions");
 
-    let mut feedback = SquidFeedback;
+    let mut feedback = SquidFeedback::new();
     let mut objective = feedback_or!(CrashFeedback::new(), TimeoutFeedback::new());
 
     let mut state = StdState::new(StdRand::with_seed(current_nanos()), InMemoryCorpus::<BytesInput>::new(), InMemoryCorpus::<BytesInput>::new(), &mut feedback, &mut objective)?;
