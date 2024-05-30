@@ -1198,17 +1198,17 @@ fn assign_cores(cores: &[CoreId], mut num_exploitation: usize) -> Vec<CoreId> {
 
 fn pick_exploit_powerschedule(core: usize) -> PowerSchedule {
     if core % 2 == 0 {
-        PowerSchedule::FAST
-    } else {
         PowerSchedule::EXPLOIT
+    } else {
+        PowerSchedule::FAST
     }
 }
 
 fn pick_explore_powerschedule(core: usize) -> PowerSchedule {
     if core % 2 == 0 {
-        PowerSchedule::FAST
-    } else {
         PowerSchedule::EXPLORE
+    } else {
+        PowerSchedule::FAST
     }
 }
 
