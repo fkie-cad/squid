@@ -72,7 +72,6 @@ use libafl_bolts::prelude::{
     UnixShMemProvider,
 };
 use mimalloc::MiMalloc;
-use squid::passes::BreakpointPass;
 use squid::{
     backends::multiverse::{
         perms::*,
@@ -113,7 +112,10 @@ use squid::{
         },
         structs::Stat,
     },
-    passes::Pass,
+    passes::{
+        BreakpointPass,
+        Pass,
+    },
     riscv::{
         register::GpRegister,
         syscalls,
@@ -634,21 +636,11 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> Multiverse
         .source_file(format!("{}/jit.c", output));
 
     if cfg!(debug_assertions) {
-        builder = builder
-            .cflag("-O0")
-            .cflag("-g")
-            .cflag("-fno-omit-frame-pointer");
+        builder = builder.cflag("-O0").cflag("-g").cflag("-fno-omit-frame-pointer");
     } else {
-        builder = builder
-            .cflag("-Ofast")
-            .cflag("-ffast-math")
-            .cflag("-flto")
-            .cflag("-s")
-            .cflag("-fno-stack-protector")
-            .cflag("-march=native")
-            .cflag("-fomit-frame-pointer");
+        builder = builder.cflag("-Ofast").cflag("-ffast-math").cflag("-flto").cflag("-s").cflag("-fno-stack-protector").cflag("-march=native").cflag("-fomit-frame-pointer");
     }
-        
+
     let backend = builder.build().unwrap();
     compiler.compile(backend).unwrap()
 }
@@ -749,11 +741,13 @@ where
                                 let iov_len = runtime.load_dword(iov + 8)? as usize;
                                 let data = runtime.load_slice(iov_base, iov_len)?;
 
-                                #[cfg(debug_assertions)] {
+                                #[cfg(debug_assertions)]
+                                {
                                     ret += self.kernel.write(fd as i32, data)?;
                                 }
 
-                                #[cfg(not(debug_assertions))] {
+                                #[cfg(not(debug_assertions))]
+                                {
                                     ret += data.len();
                                 }
                             }
@@ -830,7 +824,7 @@ where
                                 let iov = iov + i * 16;
                                 let iov_base = runtime.load_dword(iov)? as VAddr;
                                 let iov_len = runtime.load_dword(iov + 8)? as usize;
-                                let data = if self.kernel.is_fuzz_input(fd) { 
+                                let data = if self.kernel.is_fuzz_input(fd) {
                                     let r = self.kernel.read_fuzz_input(fd, iov_len)?;
                                     &fuzz_input[r]
                                 } else {
@@ -1375,12 +1369,7 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
     let mut runtime = create_runtime(&binaries, "/tmp", breakpoints);
     let mut executor = SquidExecutor::new(tuple_list!(squid_observer), &mut runtime);
 
-    executor.run_target(
-        &mut fuzzer,
-        &mut state,
-        &mut mgr,
-        &input
-    )?;
+    executor.run_target(&mut fuzzer, &mut state, &mut mgr, &input)?;
 
     Ok(())
 }
