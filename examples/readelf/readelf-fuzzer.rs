@@ -1060,7 +1060,8 @@ impl SquidObserver {
     }
 
     fn update_runtime(&mut self, instrs: usize) {
-        self.last_runtime = Some(Duration::from_nanos(instrs as u64));
+        const GHZ: u64 = 2;
+        self.last_runtime = Some(Duration::from_nanos(instrs as u64 / GHZ));
     }
 
     fn last_runtime(&self) -> Option<&Duration> {
