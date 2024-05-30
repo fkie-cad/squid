@@ -1156,10 +1156,10 @@ where
             mgr.fire(
                 state,
                 Event::UpdateUserStats {
-                    name: "instr/s".to_string(),
+                    name: "instr/sec".to_string(),
                     value: UserStats::new(
                         UserStatsValue::Float(instr_per_sec),
-                        AggregatorOps::Max,
+                        AggregatorOps::Sum,
                     ),
                     phantom: PhantomData,
                 }
