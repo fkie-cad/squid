@@ -37,3 +37,6 @@ tui = []
 name = "readelf_fuzzer"
 path = "../examples/readelf/readelf-fuzzer.rs"
 
+[[example]]
+name = "helloworld"
+path = "../examples/helloworld/run-helloworld.rs"

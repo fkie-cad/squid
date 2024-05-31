@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+pub const EVENT_SYSCALL: usize = 0;
+pub const EVENT_BREAKPOINT: usize = 1;
+
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct EventId(usize);
 
