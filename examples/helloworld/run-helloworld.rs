@@ -50,10 +50,9 @@ fn main() {
     compiler.run_pass(&mut ImageDOTPass::new("process_image.dot")).unwrap();
     
     let backend = MultiverseBackend::builder()
-        .heap_size(0)
         .stack_size(1024 * 1024)
-        .progname("helloworld")
-        .source_file("./emu.c")
+        .progname("helloworld") // argv[0]
+        .source_file("./emu.c") // The AOT code goes into this file
         .build().
         unwrap();
     let runtime = compiler.compile(backend).unwrap();

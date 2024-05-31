@@ -78,7 +78,6 @@ Currently, `squid` comes with the `MultiverseBackend` and the `MultiverseRuntime
 ```rs
 // Create the backend responsible for compilation
 let backend = MultiverseBackend::builder()
-    .heap_size(1 * 1024 * 1024)             // Size of the heap region
     .stack_size(1 * 1024 * 1024)            // Size of the stack region
     .progname("my-fuzz-target")             // argv[0]
     .arg("--with-bugs-pls")                 // argv[1]

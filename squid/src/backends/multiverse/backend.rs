@@ -43,7 +43,7 @@ use crate::{
 
 pub struct MultiverseBackendBuilder {
     source_file: Option<PathBuf>,
-    heap_size: Option<usize>,
+    heap_size: usize,
     stack_size: Option<usize>,
     env: BTreeMap<String, String>,
     args: Vec<String>,
@@ -98,7 +98,7 @@ impl MultiverseBackendBuilder {
     }
 
     pub fn heap_size(mut self, heap_size: usize) -> Self {
-        self.heap_size = Some(heap_size);
+        self.heap_size = heap_size;
         self
     }
 
@@ -149,12 +149,11 @@ impl MultiverseBackendBuilder {
 
     pub fn build(self) -> Result<MultiverseBackend, &'static str> {
         let source_file = self.source_file.ok_or("Source file was not set")?;
-        let heap_size = self.heap_size.ok_or("Heap size was not set")?;
         let stack_size = self.stack_size.ok_or("Stack size was not set")?;
 
         Ok(MultiverseBackend {
             source_file,
-            heap_size,
+            heap_size: self.heap_size,
             stack_size,
             env: self.env,
             args: self.args,
@@ -200,7 +199,7 @@ impl MultiverseBackend {
     pub fn builder() -> MultiverseBackendBuilder {
         MultiverseBackendBuilder {
             source_file: None,
-            heap_size: None,
+            heap_size: 0,
             stack_size: None,
             env: BTreeMap::new(),
             args: Vec::new(),
