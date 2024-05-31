@@ -9,6 +9,7 @@ use std::{
     },
     path::PathBuf,
 };
+use std::hash::Hash;
 
 use ahash::RandomState;
 use thiserror::Error;
@@ -215,7 +216,7 @@ impl MultiverseBackend {
 }
 
 impl MultiverseBackend {
-    fn config_hash(&self) -> u64 {
+    fn config_hash(&self, image: &ProcessImage) -> u64 {
         let mut hasher = RandomState::with_seeds(1, 1, 1, 1).build_hasher();
         hasher.write_usize(self.heap_size);
         hasher.write_usize(self.stack_size);
@@ -229,6 +230,7 @@ impl MultiverseBackend {
         }
         hasher.write_usize(self.cc.len());
         hasher.write(self.cc.as_bytes());
+        image.hash(&mut hasher);
         hasher.finish()
     }
 }
@@ -275,7 +277,7 @@ impl Backend for MultiverseBackend {
         let varstore = VariableStorage::new(&image);
 
         /* Compile the code */
-        let config_hash = self.config_hash();
+        let config_hash = self.config_hash(&image);
         let mut clifter = CLifter::new(self.source_file.clone(), self.update_pc, self.update_last_instr, self.timeout, self.count_instructions, config_hash, layouter.code_size());
         let executor = clifter.lift(&image, &globals, &heap, &stack, &varstore, logger, &self.cflags, &self.cc)?;
 

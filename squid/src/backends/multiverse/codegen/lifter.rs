@@ -9,10 +9,7 @@ use std::{
     },
     path::PathBuf,
     process::Command,
-    time::{
-        Instant,
-        SystemTime,
-    },
+    time::Instant,
 };
 
 use thiserror::Error;
@@ -132,23 +129,8 @@ impl CLifter {
         u64::from_str_radix(hash, 16).unwrap_or(0)
     }
 
-    fn needs_recompilation(&self, image: &ProcessImage) -> bool {
-        if !self.out_binary.exists() {
-            return true;
-        }
-
-        let mut max_mtime = 0;
-
-        for elf in image.iter_elfs() {
-            if elf.path().exists() {
-                let mtime = elf.path().metadata().unwrap().modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
-                max_mtime = std::cmp::max(max_mtime, mtime);
-            }
-        }
-
-        let binary_mtime = self.out_binary.metadata().unwrap().modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
-
-        if max_mtime > binary_mtime {
+    fn needs_recompilation(&self) -> bool {
+        if !self.out_source.exists() || !self.out_binary.exists() {
             return true;
         }
 
@@ -169,7 +151,7 @@ impl CLifter {
     ) -> Result<JITExecutor, CLifterError> {
         logger.debug(format!("Config hash: {:016x}", self.config_hash));
 
-        if self.needs_recompilation(image) {
+        if self.needs_recompilation() {
             self.generate_c_code(image, globals, heap, stack, varstore, logger)?;
             self.compile_code(cc, cflags, logger)?;
         } else {
