@@ -2,7 +2,9 @@ use crate::frontend::{
     ChunkContent,
     ProcessImage,
     VAddr,
+    HasId,
 };
+use std::collections::HashMap;
 
 pub(crate) const POINTER_TAG_SHIFT: u32 = 62;
 pub(crate) const POINTER_TAG_MASK: VAddr = 0xC000000000000000;
@@ -106,9 +108,33 @@ impl AddressLayouter {
                 section.set_vaddr(AddressSpace::Code(section_start).encode());
 
                 for symbol in section.iter_symbols_mut() {
+                    let mut public_names = HashMap::new();
+                    for name in symbol.public_names() {
+                        let vaddr = symbol.public_name(name).unwrap();
+                        
+                        for chunk in symbol.iter_chunks() {
+                            if chunk.contains_address(vaddr) {
+                                public_names.insert(name.clone(), chunk.id());
+                                break;
+                            }
+                        }
+                    }
+                    
+                    let mut private_names = HashMap::new();
+                    for name in symbol.private_names() {
+                        let vaddr = symbol.private_name(name).unwrap();
+                        
+                        for chunk in symbol.iter_chunks() {
+                            if chunk.contains_address(vaddr) {
+                                private_names.insert(name.clone(), chunk.id());
+                                break;
+                            }
+                        }
+                    }
+                    
                     let symbol_start = cursor;
                     symbol.set_vaddr(AddressSpace::Code(symbol_start).encode());
-
+                    
                     for chunk in symbol.iter_chunks_mut() {
                         let chunk_start = cursor;
                         chunk.set_vaddr(AddressSpace::Code(chunk_start).encode());
@@ -121,6 +147,16 @@ impl AddressLayouter {
                         }
 
                         chunk.set_size(cursor - chunk_start);
+                    }
+                    
+                    for (name, chunk_id) in public_names {
+                        let chunk = symbol.chunk(chunk_id).unwrap();
+                        symbol.set_public_name(name, chunk.vaddr());
+                    }
+                    
+                    for (name, chunk_id) in private_names {
+                        let chunk = symbol.chunk(chunk_id).unwrap();
+                        symbol.set_private_name(name, chunk.vaddr());
                     }
 
                     symbol.set_size(cursor - symbol_start);

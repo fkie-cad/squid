@@ -108,6 +108,16 @@ fn verify_symbol(symbol: &Symbol, verify_vaddr: bool) {
         }
 
         assert_eq!(cursor, symbol.last_addr() + 1);
+        
+        /* Verify names */
+        for name in symbol.public_names() {
+            let vaddr = symbol.public_name(name).unwrap();
+            assert!(symbol.contains_address(vaddr));
+        }
+        for name in symbol.private_names() {
+            let vaddr = symbol.private_name(name).unwrap();
+            assert!(symbol.contains_address(vaddr));
+        }
     }
 }
 
