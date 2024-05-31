@@ -1,5 +1,6 @@
 use crate::frontend::ao::CFG;
 
+#[derive(Hash)]
 pub struct Function {
     cfg: CFG,
     perfect: bool,

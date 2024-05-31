@@ -1,8 +1,8 @@
 use std::{
     cmp::Ordering,
     collections::{
-        hash_map::Keys,
-        HashMap,
+        btree_map::Keys,
+        BTreeMap,
         HashSet,
     },
 };
@@ -33,11 +33,11 @@ use crate::{
     listing::ListingManager,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Symbol {
     id: Id,
-    public_names: HashMap<String, VAddr>,
-    private_names: HashMap<String, VAddr>,
+    public_names: BTreeMap<String, VAddr>,
+    private_names: BTreeMap<String, VAddr>,
     vaddr: VAddr,
     size: usize,
     file: Option<String>,
@@ -46,7 +46,7 @@ pub struct Symbol {
 }
 
 impl Symbol {
-    fn new(public_names: HashMap<String, VAddr>, private_names: HashMap<String, VAddr>, vaddr: VAddr, size: usize) -> Self {
+    fn new(public_names: BTreeMap<String, VAddr>, private_names: BTreeMap<String, VAddr>, vaddr: VAddr, size: usize) -> Self {
         Self {
             id: Id::default(),
             public_names,
@@ -63,11 +63,11 @@ impl Symbol {
         Self {
             id: Id::default(),
             public_names: {
-                let mut map = HashMap::new();
+                let mut map = BTreeMap::new();
                 map.insert(name, 0);
                 map
             },
-            private_names: HashMap::new(),
+            private_names: BTreeMap::new(),
             vaddr,
             size,
             idmap: IdMap::new(),
@@ -79,9 +79,9 @@ impl Symbol {
     fn new_private(name: String, vaddr: VAddr, size: usize) -> Self {
         Self {
             id: Id::default(),
-            public_names: HashMap::new(),
+            public_names: BTreeMap::new(),
             private_names: {
-                let mut map = HashMap::new();
+                let mut map = BTreeMap::new();
                 map.insert(name, 0);
                 map
             },
@@ -204,8 +204,8 @@ impl SymbolBuilder {
     pub fn build(self) -> Result<Symbol, &'static str> {
         let vaddr = self.vaddr.ok_or("Symbol address was not set")?;
         let size = self.size.ok_or("Symbol size was not set")?;
-        let mut public_names = HashMap::new();
-        let mut private_names = HashMap::new();
+        let mut public_names = BTreeMap::new();
+        let mut private_names = BTreeMap::new();
 
         for name in self.public_names {
             public_names.insert(name, 0);
@@ -329,17 +329,17 @@ impl SymbolParser {
     }
 
     fn merge_symbols(&mut self, idx: usize) {
-        let mut rem = self.symbols.remove(idx + 1);
+        let rem = self.symbols.remove(idx + 1);
         let prev = &mut self.symbols[idx];
         let prev_size = prev.size as VAddr;
 
         prev.size += rem.size;
 
-        for (name, offset) in rem.private_names.drain() {
+        for (name, offset) in rem.private_names {
             assert!(prev.private_names.insert(name, prev_size + offset).is_none());
         }
 
-        for (name, offset) in rem.public_names.drain() {
+        for (name, offset) in rem.public_names {
             assert!(prev.public_names.insert(name, prev_size + offset).is_none());
         }
     }
@@ -447,8 +447,8 @@ impl SymbolParser {
                     let new_size = vaddr - symbol.vaddr;
                     symbol.size = new_size as usize;
 
-                    let mut global_names = HashMap::new();
-                    let mut local_names = HashMap::new();
+                    let mut global_names = BTreeMap::new();
+                    let mut local_names = BTreeMap::new();
 
                     for (name, offset) in symbol.public_names.extract_if(|_, v| *v >= new_size) {
                         global_names.insert(name, offset - new_size);
@@ -473,8 +473,8 @@ impl SymbolParser {
         }
     }
 
-    fn find_local_split_targets(&self, elf: &goblin::elf::Elf, parent: &Section) -> HashMap<VAddr, Vec<String>> {
-        let mut targets = HashMap::new();
+    fn find_local_split_targets(&self, elf: &goblin::elf::Elf, parent: &Section) -> BTreeMap<VAddr, Vec<String>> {
+        let mut targets = BTreeMap::new();
 
         /* Split on local symbols with size = 0 or section symbols */
         for symbol in elf.syms.iter() {
@@ -495,8 +495,8 @@ impl SymbolParser {
         targets
     }
 
-    fn find_global_split_targets(&self, elf: &goblin::elf::Elf, parent: &Section) -> HashMap<VAddr, Vec<String>> {
-        let mut targets = HashMap::new();
+    fn find_global_split_targets(&self, elf: &goblin::elf::Elf, parent: &Section) -> BTreeMap<VAddr, Vec<String>> {
+        let mut targets = BTreeMap::new();
 
         /* Split on exported symbols with size = 0 */
         for symbol in elf.dynsyms.iter() {
@@ -523,7 +523,7 @@ impl SymbolParser {
             let sym = &self.symbols[i];
 
             if cursor < sym.vaddr {
-                self.symbols.insert(i, Symbol::new(HashMap::new(), HashMap::new(), cursor, (sym.vaddr - cursor) as usize));
+                self.symbols.insert(i, Symbol::new(BTreeMap::new(), BTreeMap::new(), cursor, (sym.vaddr - cursor) as usize));
             }
 
             cursor += self.symbols[i].size as VAddr;
@@ -533,7 +533,7 @@ impl SymbolParser {
         let section_end = parent.last_addr() + 1;
 
         if cursor < section_end {
-            self.symbols.push(Symbol::new(HashMap::new(), HashMap::new(), cursor, (section_end - cursor) as usize));
+            self.symbols.push(Symbol::new(BTreeMap::new(), BTreeMap::new(), cursor, (section_end - cursor) as usize));
         }
     }
 
@@ -593,17 +593,17 @@ impl SymbolParser {
                 max_vaddr = std::cmp::max(max_vaddr, symbol.last_addr());
             }
 
-            let mut global_names = HashMap::new();
-            let mut local_names = HashMap::new();
+            let mut global_names = BTreeMap::new();
+            let mut local_names = BTreeMap::new();
 
-            for mut symbol in contact {
-                for (name, offset) in symbol.public_names.drain() {
+            for symbol in contact {
+                for (name, offset) in symbol.public_names {
                     let fixed_addr = symbol.vaddr + offset;
                     let new_offset = fixed_addr - min_vaddr;
                     assert!(global_names.insert(name, new_offset).is_none());
                 }
 
-                for (name, offset) in symbol.private_names.drain() {
+                for (name, offset) in symbol.private_names {
                     let fixed_addr = symbol.vaddr + offset;
                     let new_offset = fixed_addr - min_vaddr;
                     assert!(local_names.insert(name, new_offset).is_none());

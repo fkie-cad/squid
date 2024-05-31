@@ -26,7 +26,7 @@ use crate::{
     listing::ListingManager,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Section {
     id: Id,
     perms: Perms,

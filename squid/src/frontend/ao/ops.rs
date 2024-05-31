@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Comparison {
     Equal,
     NotEqual,
@@ -19,7 +19,7 @@ pub enum Comparison {
     LessEqual(bool),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Register {
     Gp(GpRegister),
     Fp(FpRegister),
@@ -40,7 +40,7 @@ impl Register {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum VarType {
     /// A 64-bit integer (signed or unsigned)
     Number,
@@ -52,7 +52,7 @@ pub enum VarType {
     Float64,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub struct Var {
     id: u32,
     typ: VarType,
@@ -90,20 +90,20 @@ impl Var {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Half {
     Lower,
     Upper,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Signedness {
     Signed,
     Unsigned,
     Mixed,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Op {
     /// A meta-op that signals that a new instruction from the original
     /// binary is being executed.

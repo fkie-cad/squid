@@ -37,7 +37,7 @@ use crate::{
     logger::Logger,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Elf {
     id: Id,
     path: PathBuf,

@@ -2,6 +2,7 @@ use std::slice::{
     Iter,
     IterMut,
 };
+use std::hash::{Hash, Hasher};
 
 pub type Id = usize;
 
@@ -42,15 +43,27 @@ pub(crate) type IdMapValuesMut<'a, T> = IterMut<'a, T>;
 #[derive(Clone, Debug)]
 pub(crate) struct IdMap<T>
 where
-    T: HasId + HasIdMut,
+    T: HasId + HasIdMut + Hash,
 {
     data: Vec<T>,
     factory: IdFactory,
 }
 
+impl<T> Hash for IdMap<T>
+where
+    T: HasId + HasIdMut + Hash,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_usize(self.data.len());
+        for elem in &self.data {
+            elem.hash(state);
+        }
+    }
+}
+
 impl<T> IdMap<T>
 where
-    T: HasId + HasIdMut,
+    T: HasId + HasIdMut + Hash,
 {
     pub(crate) fn new() -> Self {
         Self {

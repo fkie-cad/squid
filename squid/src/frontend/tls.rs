@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::HashSet,
+    collections::BTreeSet,
 };
 
 use goblin;
@@ -29,11 +29,11 @@ use crate::frontend::{
 
 pub type TlsOffset = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct ThreadLocal {
     id: Id,
-    public_names: HashSet<String>,
-    private_names: HashSet<String>,
+    public_names: BTreeSet<String>,
+    private_names: BTreeSet<String>,
     offset: TlsOffset,
     size: usize,
     file_offset: Option<usize>,
@@ -46,8 +46,8 @@ impl ThreadLocal {
     fn new(offset: TlsOffset, size: usize, vaddr: VAddr) -> Self {
         Self {
             id: Id::default(),
-            public_names: HashSet::new(),
-            private_names: HashSet::new(),
+            public_names: BTreeSet::new(),
+            private_names: BTreeSet::new(),
             offset,
             size,
             file_offset: None,
@@ -61,11 +61,11 @@ impl ThreadLocal {
         Self {
             id: Id::default(),
             public_names: {
-                let mut set = HashSet::new();
+                let mut set = BTreeSet::new();
                 set.insert(name);
                 set
             },
-            private_names: HashSet::new(),
+            private_names: BTreeSet::new(),
             offset,
             size,
             file_offset: None,
@@ -78,9 +78,9 @@ impl ThreadLocal {
     fn new_private(name: String, offset: TlsOffset, size: usize, vaddr: VAddr) -> Self {
         Self {
             id: Id::default(),
-            public_names: HashSet::new(),
+            public_names: BTreeSet::new(),
             private_names: {
-                let mut set = HashSet::new();
+                let mut set = BTreeSet::new();
                 set.insert(name);
                 set
             },
@@ -93,11 +93,11 @@ impl ThreadLocal {
         }
     }
 
-    pub fn public_names(&self) -> &HashSet<String> {
+    pub fn public_names(&self) -> &BTreeSet<String> {
         &self.public_names
     }
 
-    pub fn private_names(&self) -> &HashSet<String> {
+    pub fn private_names(&self) -> &BTreeSet<String> {
         &self.private_names
     }
 
@@ -152,7 +152,7 @@ impl HasIdMut for ThreadLocal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Tls {
     idmap: IdMap<ThreadLocal>,
     cursor: usize,

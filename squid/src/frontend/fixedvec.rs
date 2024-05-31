@@ -10,6 +10,7 @@ use std::{
     slice::SliceIndex,
 };
 
+#[derive(Hash)]
 pub struct FixedVec<T> {
     inner: Vec<T>,
 }

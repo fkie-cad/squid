@@ -45,7 +45,7 @@ use crate::{
 
 pub type VAddr = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct ProcessImage {
     idmap: IdMap<Elf>,
     cursor: usize,

@@ -1,6 +1,6 @@
 use crate::frontend::error::LoaderError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Relocation {
     Offset(usize),
     TlsOffset(usize),

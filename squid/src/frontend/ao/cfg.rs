@@ -64,7 +64,7 @@ pub enum CFGError {
     MultipleNextBasicBlocks(Id),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Edge {
     Next(Id),
     Jump(Id),
@@ -78,7 +78,7 @@ impl Edge {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct BasicBlock {
     id: Id,
     vaddr: Option<VAddr>,
@@ -1114,7 +1114,7 @@ impl BasicBlock {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct CFG {
     idmap: IdMap<BasicBlock>,
     entry: Id,

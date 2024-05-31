@@ -77,7 +77,7 @@ mod csr {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]
 pub enum GpRegister {
     zero = gp::zero,
@@ -122,7 +122,7 @@ impl GpRegister {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]
 pub enum FpRegister {
     ft0 = fp::ft0,
@@ -167,7 +167,7 @@ impl FpRegister {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]
 pub enum CsrRegister {
     fflags = csr::fflags,

@@ -46,6 +46,7 @@ use crate::{
     },
 };
 
+#[derive(Hash)]
 pub enum ChunkContent {
     Code(Function),
     Data { bytes: FixedVec<u8>, perms: FixedVec<Perms> },
@@ -64,13 +65,13 @@ impl Debug for ChunkContent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 enum Stage {
     Pending(Relocation),
     Resolved(ChunkContent),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Chunk {
     id: Id,
     stage: Stage,
