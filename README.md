@@ -123,5 +123,5 @@ fn main() {
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
-For a concrete example, see our [readelf fuzzer](./examples/readelf).
-
+For a gentle introduction, see the [hello world]() example and for a
+full-blown "professional" usage of `squid` see our [readelf fuzzer](./examples/readelf).
