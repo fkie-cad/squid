@@ -13,9 +13,6 @@ mod runtime;
 mod symbol;
 mod variables;
 
-#[cfg(test)]
-mod tests;
-
 pub(crate) use address::{
     get_entrypoint_address,
     AddressLayouter,
