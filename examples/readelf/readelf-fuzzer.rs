@@ -77,7 +77,7 @@ use libafl_bolts::prelude::{
 };
 use mimalloc::MiMalloc;
 use squid::{
-    backends::multiverse::{
+    backends::clang::{
         perms::*,
         HeapError,
         MultiverseBackend,

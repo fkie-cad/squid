@@ -724,11 +724,11 @@ static int store_memory_dword (Context* ctx, uint64_t address, uint64_t value) {
     Dword* perms = (Dword*) &memory->perms[address];
     Dword perm_bits = *perms;
 
-    if (UNLIKELY((perm_bits & {mask_write_dword:#x}U) != {mask_write_dword:#x}U)) {{
+    if (UNLIKELY((perm_bits & {mask_write_dword:#x}ULL) != {mask_write_dword:#x}ULL)) {{
         return 0;
     }}
 
-    perm_bits &= {mask_clear_uninit_dword:#x}U;
+    perm_bits &= {mask_clear_uninit_dword:#x}ULL;
     *perms = perm_bits;
     *content = (Dword) value;
 
@@ -773,7 +773,7 @@ static int load_memory_byte (Context* ctx, uint64_t address, uint64_t* value) {{
     Byte* perms = (Byte*) &memory->perms[address];
 
     if (UNLIKELY((*perms & {mask_read_uninit_byte:#x}U) != {mask_read_byte:#x}U)) {{
-        ctx->return_buf->code = (*perms & {mask_uninit_byte}) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
+        ctx->return_buf->code = (*perms & {mask_uninit_byte:#x}U) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
         return 0;
     }}
 
@@ -792,7 +792,7 @@ static int load_memory_hword (Context* ctx, uint64_t address, uint64_t* value) {
     Hword* perms = (Hword*) &memory->perms[address];
 
     if (UNLIKELY((*perms & {mask_read_uninit_hword:#x}U) != {mask_read_hword:#x}U)) {{
-        ctx->return_buf->code = (*perms & {mask_uninit_hword}) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
+        ctx->return_buf->code = (*perms & {mask_uninit_hword:#x}U) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
         return 0;
     }}
 
@@ -811,7 +811,7 @@ static int load_memory_word (Context* ctx, uint64_t address, uint64_t* value) {{
     Word* perms = (Word*) &memory->perms[address];
 
     if (UNLIKELY((*perms & {mask_read_uninit_word:#x}U) != {mask_read_word:#x}U)) {{
-        ctx->return_buf->code = (*perms & {mask_uninit_word}) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
+        ctx->return_buf->code = (*perms & {mask_uninit_word:#x}U) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
         return 0;
     }}
 
@@ -829,8 +829,8 @@ static int load_memory_dword (Context* ctx, uint64_t address, uint64_t* value) {
     Dword* content = (Dword*) &memory->content[address];
     Dword* perms = (Dword*) &memory->perms[address];
 
-    if (UNLIKELY((*perms & {mask_read_uninit_dword:#x}U) != {mask_read_dword:#x}U)) {{
-        ctx->return_buf->code = (*perms & {mask_uninit_dword}) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
+    if (UNLIKELY((*perms & {mask_read_uninit_dword:#x}ULL) != {mask_read_dword:#x}ULL)) {{
+        ctx->return_buf->code = (*perms & {mask_uninit_dword:#x}ULL) ? RETURN_UNINIT_READ : RETURN_INVALID_READ;
         return 0;
     }}
 
@@ -1007,8 +1007,8 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
 
                         writeln!(out_file, "local_registers.gp[{}] = {};", *reg as usize, var_name(var),)?;
                     },
-                    Register::Fp(reg) => writeln!(out_file, "ctx->registers.fp[{}] = {};", *reg as usize, var_name(var),)?,
-                    Register::Csr(_) => writeln!(out_file, "ctx->registers.fcsr = {};", var_name(var),)?,
+                    Register::Fp(reg) => writeln!(out_file, "ctx->registers->fp[{}] = {};", *reg as usize, var_name(var),)?,
+                    Register::Csr(_) => writeln!(out_file, "ctx->registers->fcsr = {};", var_name(var),)?,
                 },
                 Op::LoadImmediate {
                     dst,
@@ -1035,8 +1035,8 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     reg,
                 } => match reg {
                     Register::Gp(reg) => writeln!(out_file, "{} = local_registers.gp[{}];", var_type_and_name(var), *reg as usize,)?,
-                    Register::Fp(reg) => writeln!(out_file, "{} = ctx->registers.fp[{}];", var_type_and_name(var), *reg as usize,)?,
-                    Register::Csr(_) => writeln!(out_file, "{} = ctx->registers.fcsr;", var_type_and_name(var),)?,
+                    Register::Fp(reg) => writeln!(out_file, "{} = ctx->registers->fp[{}];", var_type_and_name(var), *reg as usize,)?,
+                    Register::Csr(_) => writeln!(out_file, "{} = ctx->registers->fcsr;", var_type_and_name(var),)?,
                 },
                 Op::Add {
                     dst,

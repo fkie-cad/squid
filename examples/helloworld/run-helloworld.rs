@@ -1,7 +1,7 @@
 use squid::{
     Compiler,
     runtime::Runtime,
-    backends::multiverse::{MultiverseBackend, MultiverseRuntime, MultiverseRuntimeFault},
+    backends::clang::{MultiverseBackend, MultiverseRuntime, MultiverseRuntimeFault},
     event::EVENT_SYSCALL,
     riscv::register::GpRegister,
     riscv::syscalls,

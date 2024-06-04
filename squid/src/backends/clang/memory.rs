@@ -275,20 +275,6 @@ impl Memory {
     pub(crate) fn heap_end(&self) -> usize {
         self.heap_end
     }
-
-    #[cfg(test)]
-    pub(crate) fn dump_stack(&self) {
-        println!("--- Stack content ---");
-        let stack = unsafe { std::mem::transmute::<*const u8, *const usize>(self.data.as_ptr().add(self.offset_dirty_stack)) };
-        let stack_size = unsafe { *stack };
-
-        for i in 0..stack_size {
-            let region = unsafe { *stack.add(1 + i) };
-            println!("[{}] {}", i, region);
-        }
-
-        println!("--- End of stack ---");
-    }
 }
 
 fn store_slice(memory: &mut Memory, sp: usize, slice: &[u8]) -> Option<()> {
