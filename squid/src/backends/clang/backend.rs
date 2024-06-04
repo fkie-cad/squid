@@ -28,7 +28,7 @@ use crate::{
             CLifter,
             EventChannel,
             Memory,
-            MultiverseRuntime,
+            ClangRuntime,
             Registers,
             VariableStorage,
         },
@@ -40,7 +40,7 @@ use crate::{
     Logger,
 };
 
-pub struct MultiverseBackendBuilder {
+pub struct ClangBackendBuilder {
     source_file: Option<PathBuf>,
     heap_size: usize,
     stack_size: Option<usize>,
@@ -55,7 +55,7 @@ pub struct MultiverseBackendBuilder {
     cc: String,
 }
 
-impl MultiverseBackendBuilder {
+impl ClangBackendBuilder {
     pub fn cc<S: Into<String>>(mut self, cc: S) -> Self {
         self.cc = cc.into();
         self
@@ -146,11 +146,11 @@ impl MultiverseBackendBuilder {
         self
     }
 
-    pub fn build(self) -> Result<MultiverseBackend, &'static str> {
+    pub fn build(self) -> Result<ClangBackend, &'static str> {
         let source_file = self.source_file.ok_or("Source file was not set")?;
         let stack_size = self.stack_size.ok_or("Stack size was not set")?;
 
-        Ok(MultiverseBackend {
+        Ok(ClangBackend {
             source_file,
             heap_size: self.heap_size,
             stack_size,
@@ -168,7 +168,7 @@ impl MultiverseBackendBuilder {
 }
 
 #[derive(Error, Debug)]
-pub enum MultiverseBackendError {
+pub enum ClangBackendError {
     #[error("One of the ELF files makes use of thread local storage, which is not supported by this backend")]
     HasTls,
 
@@ -179,7 +179,7 @@ pub enum MultiverseBackendError {
     StackError,
 }
 
-pub struct MultiverseBackend {
+pub struct ClangBackend {
     source_file: PathBuf,
     heap_size: usize,
     stack_size: usize,
@@ -194,9 +194,9 @@ pub struct MultiverseBackend {
     cc: String,
 }
 
-impl MultiverseBackend {
-    pub fn builder() -> MultiverseBackendBuilder {
-        MultiverseBackendBuilder {
+impl ClangBackend {
+    pub fn builder() -> ClangBackendBuilder {
+        ClangBackendBuilder {
             source_file: None,
             heap_size: 0,
             stack_size: None,
@@ -213,7 +213,7 @@ impl MultiverseBackend {
     }
 }
 
-impl MultiverseBackend {
+impl ClangBackend {
     fn config_hash(&self, image: &ProcessImage) -> u64 {
         let mut hasher = RandomState::with_seeds(1, 1, 1, 1).build_hasher();
         hasher.write_usize(self.heap_size);
@@ -233,19 +233,19 @@ impl MultiverseBackend {
     }
 }
 
-impl Backend for MultiverseBackend {
-    type Runtime = MultiverseRuntime;
-    type Error = MultiverseBackendError;
+impl Backend for ClangBackend {
+    type Runtime = ClangRuntime;
+    type Error = ClangBackendError;
 
     fn name(&self) -> String {
-        "MultiverseBackend".to_string()
+        "ClangBackend".to_string()
     }
 
     fn create_runtime(&mut self, mut image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error> {
         /* Check if there is TLS anywhere */
         for elf in image.iter_elfs() {
             if elf.tls().num_thread_locals() > 0 {
-                return Err(MultiverseBackendError::HasTls);
+                return Err(ClangBackendError::HasTls);
             }
         }
 
@@ -287,13 +287,13 @@ impl Backend for MultiverseBackend {
         registers.set_pc(entrypoint);
 
         /* Create stack */
-        let sp = populate_stack(&mut memory, &self.args, &self.env).ok_or(MultiverseBackendError::StackError)?;
+        let sp = populate_stack(&mut memory, &self.args, &self.env).ok_or(ClangBackendError::StackError)?;
         registers.set_gp(GpRegister::sp as usize, sp);
         memory.clear_dirty_stack();
 
         /* Create the symbol store */
         let symbols = if self.symbol_store { create_symbol_store(&image) } else { HashMap::default() };
 
-        Ok(MultiverseRuntime::new(memory, event_channel, registers, executor, entrypoint, symbols, vec![0; varstore.num_variables()]))
+        Ok(ClangRuntime::new(memory, event_channel, registers, executor, entrypoint, symbols, vec![0; varstore.num_variables()]))
     }
 }

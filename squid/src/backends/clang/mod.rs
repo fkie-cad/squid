@@ -27,6 +27,7 @@ pub(crate) use heap::Heap;
 pub(crate) use memory::{
     populate_stack,
     Memory,
+    PAGE_SIZE,
 };
 pub(crate) use preprocess::{
     insert_entrypoint,
@@ -36,9 +37,9 @@ pub(crate) use registers::Registers;
 pub(crate) use variables::VariableStorage;
 pub mod perms;
 pub use backend::{
-    MultiverseBackend,
-    MultiverseBackendBuilder,
-    MultiverseBackendError,
+    ClangBackend,
+    ClangBackendBuilder,
+    ClangBackendError,
 };
 pub use exec::JITReturnCode;
 pub use heap::{
@@ -46,8 +47,8 @@ pub use heap::{
     HeapError,
 };
 pub use runtime::{
-    MultiverseRuntime,
-    MultiverseRuntimeFault,
+    ClangRuntime,
+    ClangRuntimeFault,
 };
 pub use symbol::{
     Symbol,

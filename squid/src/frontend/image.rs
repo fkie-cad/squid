@@ -56,21 +56,6 @@ pub struct ProcessImage {
 idmap_functions!(ProcessImage, Elf, elf);
 
 impl ProcessImage {
-    #[cfg(test)]
-    pub(crate) fn new() -> Self {
-        Self {
-            idmap: IdMap::new(),
-            cursor: 0,
-            entrypoint: FunctionPointer {
-                elf: Id::default(),
-                section: Id::default(),
-                symbol: Id::default(),
-                chunk: Id::default(),
-            },
-            constructors: Vec::new(),
-        }
-    }
-
     pub fn entrypoint(&self) -> &FunctionPointer {
         &self.entrypoint
     }

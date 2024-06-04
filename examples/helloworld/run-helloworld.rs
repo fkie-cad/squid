@@ -1,7 +1,7 @@
 use squid::{
     Compiler,
     runtime::Runtime,
-    backends::clang::{MultiverseBackend, MultiverseRuntime, MultiverseRuntimeFault},
+    backends::clang::{ClangBackend, ClangRuntime, ClangRuntimeFault},
     event::EVENT_SYSCALL,
     riscv::register::GpRegister,
     riscv::syscalls,
@@ -10,7 +10,7 @@ use squid::{
 };
 
 // Do one run of the target binary from its entrypoint to exit()
-fn execute(mut runtime: MultiverseRuntime) -> Result<(), MultiverseRuntimeFault> {
+fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
     loop {
         match runtime.run()? {
             EVENT_SYSCALL => {
@@ -49,7 +49,7 @@ fn main() {
     // this is of course optional
     compiler.run_pass(&mut ImageDOTPass::new("process_image.dot")).unwrap();
     
-    let backend = MultiverseBackend::builder()
+    let backend = ClangBackend::builder()
         .stack_size(1024 * 1024)
         .progname("helloworld") // argv[0]
         .source_file("./emu.c") // The AOT code goes into this file

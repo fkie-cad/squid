@@ -80,9 +80,9 @@ use squid::{
     backends::clang::{
         perms::*,
         HeapError,
-        MultiverseBackend,
-        MultiverseRuntime,
-        MultiverseRuntimeFault,
+        ClangBackend,
+        ClangRuntime,
+        ClangRuntimeFault,
     },
     event::EventPool,
     frontend::{
@@ -601,7 +601,7 @@ const EVENT_ID_REALLOC: usize = 5;
 const EVENT_ID_TAKE_SNAPSHOT: usize = 6;
 const EVENT_ID_RESTORE_SNAPSHOT: usize = 7;
 
-fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> MultiverseRuntime {
+fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRuntime {
     let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[format!("{}/piranha.so", &binaries)]).unwrap();
 
     compiler.run_pass(&mut PiranhaPass::new()).unwrap();
@@ -624,7 +624,7 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> Multiverse
     assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_RESTORE_SNAPSHOT));
     assert_eq!(compiler.event_pool().len(), 8);
 
-    let mut builder = MultiverseBackend::builder()
+    let mut builder = ClangBackend::builder()
         .heap_size(8 * 1024 * 1024)
         .stack_size(2 * 1024 * 1024)
         .progname("readelf")
@@ -649,7 +649,7 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> Multiverse
     compiler.compile(backend).unwrap()
 }
 
-fn get_real_pointer_to_symbol(runtime: &mut MultiverseRuntime, symbol: &str) -> OwnedMutSlice<'static, u8> {
+fn get_real_pointer_to_symbol(runtime: &mut ClangRuntime, symbol: &str) -> OwnedMutSlice<'static, u8> {
     let symbols = runtime.lookup_symbol_from_private_name(symbol);
     assert_eq!(symbols.len(), 1);
     let cov_map = symbols[0].1;
@@ -664,7 +664,7 @@ where
 {
     kernel: Linux<8>,
     observers: OT,
-    runtime: &'a mut MultiverseRuntime,
+    runtime: &'a mut ClangRuntime,
     phantom: PhantomData<S>,
 }
 
@@ -673,7 +673,7 @@ where
     S: State,
     OT: ObserversTuple<S>,
 {
-    fn new(observers: OT, runtime: &'a mut MultiverseRuntime) -> Self {
+    fn new(observers: OT, runtime: &'a mut ClangRuntime) -> Self {
         let disk = fs::Fs::new();
         let mut kernel = Linux::new(disk, 0);
 
@@ -689,7 +689,7 @@ where
     }
 
     #[inline]
-    fn run(&mut self, fuzz_input: &[u8]) -> Result<usize, MultiverseRuntimeFault> {
+    fn run(&mut self, fuzz_input: &[u8]) -> Result<usize, ClangRuntimeFault> {
         let mut num_instrs = 0;
         let runtime = &mut self.runtime;
 
@@ -705,7 +705,7 @@ where
 
                     #[cfg(not(debug_assertions))]
                     {
-                        return Err(MultiverseRuntimeFault::InternalError("Breakpoint".to_string()));
+                        return Err(ClangRuntimeFault::InternalError("Breakpoint".to_string()));
                     }
                 },
                 EVENT_ID_SYSCALL => {
@@ -726,7 +726,7 @@ where
                                     runtime.set_gp_register(GpRegister::a0, 0);
                                 },
                                 _ => {
-                                    return Err(MultiverseRuntimeFault::InternalError(format!("ioctl: {}", cmd)));
+                                    return Err(ClangRuntimeFault::InternalError(format!("ioctl: {}", cmd)));
                                 },
                             }
                         },
@@ -887,7 +887,7 @@ where
                                     runtime.set_gp_register(GpRegister::a0, -libc::EINVAL as i64 as u64);
                                 },
                                 _ => {
-                                    return Err(MultiverseRuntimeFault::InternalError(format!("readlinkat: {:?}", path)));
+                                    return Err(ClangRuntimeFault::InternalError(format!("readlinkat: {:?}", path)));
                                 },
                             }
                         },
@@ -900,7 +900,7 @@ where
                             runtime.set_gp_register(GpRegister::a0, ret_size as u64);
                         },
                         _ => {
-                            return Err(MultiverseRuntimeFault::InternalError(format!("syscall {}", a7)));
+                            return Err(ClangRuntimeFault::InternalError(format!("syscall {}", a7)));
                         },
                     }
                 },
@@ -908,7 +908,7 @@ where
                     let size = runtime.get_gp_register(GpRegister::a0) as usize;
                     let addr = match runtime.dynstore_allocate(size) {
                         Ok(addr) => addr,
-                        Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                        Err(ClangRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
                         Err(e) => {
                             return Err(e);
                         },
@@ -929,7 +929,7 @@ where
                     } else if chunk == 0 {
                         let addr = match runtime.dynstore_allocate(size) {
                             Ok(addr) => addr,
-                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                            Err(ClangRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
                             Err(e) => {
                                 return Err(e);
                             },
@@ -938,7 +938,7 @@ where
                     } else {
                         let new_chunk = match runtime.dynstore_reallocate(chunk, size) {
                             Ok(addr) => addr,
-                            Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                            Err(ClangRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
                             Err(e) => {
                                 return Err(e);
                             },
@@ -949,10 +949,10 @@ where
                 EVENT_ID_CALLOC => {
                     let a = runtime.get_gp_register(GpRegister::a0) as usize;
                     let b = runtime.get_gp_register(GpRegister::a1) as usize;
-                    let size = a.checked_mul(b).ok_or_else(|| MultiverseRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
+                    let size = a.checked_mul(b).ok_or_else(|| ClangRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
                     let addr = match runtime.dynstore_allocate(size) {
                         Ok(addr) => addr,
-                        Err(MultiverseRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
+                        Err(ClangRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
                         Err(e) => {
                             return Err(e);
                         },

@@ -40,7 +40,7 @@ use crate::{
 };
 
 #[derive(Error, Debug, Clone)]
-pub enum MultiverseRuntimeFault {
+pub enum ClangRuntimeFault {
     #[error("There was an error with the internal state of the JIT: {0}")]
     InternalError(String),
 
@@ -305,7 +305,7 @@ struct SnapshotData {
     var_storage: Vec<u64>,
 }
 
-pub struct MultiverseRuntime {
+pub struct ClangRuntime {
     memory: Memory,
     event_channel: EventChannel,
     registers: Registers,
@@ -318,7 +318,7 @@ pub struct MultiverseRuntime {
     heap_mgr: Heap,
 }
 
-impl MultiverseRuntime {
+impl ClangRuntime {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         memory: Memory,
@@ -344,8 +344,8 @@ impl MultiverseRuntime {
     }
 }
 
-impl Runtime for MultiverseRuntime {
-    type Error = MultiverseRuntimeFault;
+impl Runtime for ClangRuntime {
+    type Error = ClangRuntimeFault;
     type Event = usize;
 
     fn set_pc(&mut self, pc: VAddr) {
@@ -397,29 +397,29 @@ impl Runtime for MultiverseRuntime {
                 let id = self.executor.return_arg0();
                 Ok(id)
             },
-            JITReturnCode::InvalidState => Err(MultiverseRuntimeFault::InternalError("JIT code returned but did not set an event or fault".to_string())),
+            JITReturnCode::InvalidState => Err(ClangRuntimeFault::InternalError("JIT code returned but did not set an event or fault".to_string())),
             JITReturnCode::InvalidJumpTarget => {
                 let addr = self.executor.return_arg0() as VAddr;
-                Err(MultiverseRuntimeFault::InvalidPc(addr))
+                Err(ClangRuntimeFault::InvalidPc(addr))
             },
             JITReturnCode::UninitializedRead | JITReturnCode::InvalidRead => {
                 let addr = self.executor.return_arg0() as VAddr;
                 let size = self.executor.return_arg1();
-                Err(MultiverseRuntimeFault::MemoryReadError(addr, size))
+                Err(ClangRuntimeFault::MemoryReadError(addr, size))
             },
-            JITReturnCode::End => Err(MultiverseRuntimeFault::End),
+            JITReturnCode::End => Err(ClangRuntimeFault::End),
             JITReturnCode::InvalidWrite => {
                 let addr = self.executor.return_arg0() as VAddr;
                 let size = self.executor.return_arg1();
-                Err(MultiverseRuntimeFault::MemoryWriteError(addr, size))
+                Err(ClangRuntimeFault::MemoryWriteError(addr, size))
             },
             JITReturnCode::InvalidEventChannel => {
                 let req_size = self.executor.return_arg0();
                 let act_size = self.executor.return_arg1();
-                Err(MultiverseRuntimeFault::InvalidEventChannel(req_size, act_size))
+                Err(ClangRuntimeFault::InvalidEventChannel(req_size, act_size))
             },
-            JITReturnCode::DivByZero => Err(MultiverseRuntimeFault::DivisionByZero),
-            JITReturnCode::Timeout => Err(MultiverseRuntimeFault::Timeout),
+            JITReturnCode::DivByZero => Err(ClangRuntimeFault::DivisionByZero),
+            JITReturnCode::Timeout => Err(ClangRuntimeFault::Timeout),
         }
     }
 
@@ -444,7 +444,7 @@ impl Runtime for MultiverseRuntime {
             self.next_event_channel_length = snapshot.next_event_channel_length;
             unsafe { std::ptr::copy_nonoverlapping(snapshot.var_storage.as_ptr(), self.var_storage.as_mut_ptr(), snapshot.var_storage.len()) };
         } else {
-            return Err(MultiverseRuntimeFault::InvalidSnapshotId(id));
+            return Err(ClangRuntimeFault::InvalidSnapshotId(id));
         }
         self.memory.restore_snapshot_unchecked(id);
         self.event_channel.restore_snapshot_unchecked(id);
@@ -455,7 +455,7 @@ impl Runtime for MultiverseRuntime {
 
     fn delete_snapshot(&mut self, id: SnapshotId) -> Result<(), Self::Error> {
         if self.snapshots.remove(&id).is_none() {
-            return Err(MultiverseRuntimeFault::InvalidSnapshotId(id));
+            return Err(ClangRuntimeFault::InvalidSnapshotId(id));
         }
         self.memory.delete_snapshot_unchecked(id);
         self.event_channel.delete_snapshot_unchecked(id);
@@ -481,7 +481,7 @@ impl Runtime for MultiverseRuntime {
             self.next_event_channel_length = std::cmp::max(self.next_event_channel_length, size);
             Ok(data)
         } else {
-            Err(MultiverseRuntimeFault::InvalidEventChannel(size, cap))
+            Err(ClangRuntimeFault::InvalidEventChannel(size, cap))
         }
     }
 
@@ -490,7 +490,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_riscv_type(&self.memory, offset),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, 8))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, 8))
     }
 
     fn load_word(&self, address: VAddr) -> Result<u32, Self::Error> {
@@ -498,7 +498,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_riscv_type(&self.memory, offset),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, 4))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, 4))
     }
 
     fn load_hword(&self, address: VAddr) -> Result<u16, Self::Error> {
@@ -506,7 +506,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_riscv_type(&self.memory, offset),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, 2))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, 2))
     }
 
     fn load_byte(&self, address: VAddr) -> Result<u8, Self::Error> {
@@ -514,7 +514,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_riscv_type(&self.memory, offset),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, 1))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, 1))
     }
 
     fn load_slice(&self, address: VAddr, size: usize) -> Result<&[u8], Self::Error> {
@@ -522,7 +522,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_slice(&self.memory, offset, size),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, size))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
     }
 
     fn store_dword(&mut self, address: VAddr, value: u64) -> Result<(), Self::Error> {
@@ -533,7 +533,7 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, 8))
+            Err(ClangRuntimeFault::MemoryWriteError(address, 8))
         }
     }
     fn store_word(&mut self, address: VAddr, value: u32) -> Result<(), Self::Error> {
@@ -544,7 +544,7 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, 4))
+            Err(ClangRuntimeFault::MemoryWriteError(address, 4))
         }
     }
     fn store_hword(&mut self, address: VAddr, value: u16) -> Result<(), Self::Error> {
@@ -555,7 +555,7 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, 2))
+            Err(ClangRuntimeFault::MemoryWriteError(address, 2))
         }
     }
     fn store_byte(&mut self, address: VAddr, value: u8) -> Result<(), Self::Error> {
@@ -566,7 +566,7 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, 1))
+            Err(ClangRuntimeFault::MemoryWriteError(address, 1))
         }
     }
 
@@ -579,7 +579,7 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, value.len()))
+            Err(ClangRuntimeFault::MemoryWriteError(address, value.len()))
         }
     }
 
@@ -588,7 +588,7 @@ impl Runtime for MultiverseRuntime {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_string(&self.memory, offset),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, 0))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, 0))
     }
 
     fn store_string<S: AsRef<str>>(&mut self, address: VAddr, value: S) -> Result<(), Self::Error> {
@@ -600,42 +600,42 @@ impl Runtime for MultiverseRuntime {
         if result {
             Ok(())
         } else {
-            Err(MultiverseRuntimeFault::MemoryWriteError(address, value.len()))
+            Err(ClangRuntimeFault::MemoryWriteError(address, value.len()))
         }
     }
 }
 
-impl MultiverseRuntime {
+impl ClangRuntime {
     pub fn jit_return_code(&self) -> JITReturnCode {
         self.executor.return_code()
     }
 
-    pub fn permissions(&self, address: VAddr, size: usize) -> Result<&[u8], MultiverseRuntimeFault> {
+    pub fn permissions(&self, address: VAddr, size: usize) -> Result<&[u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_perms(&self.memory, offset, size),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, size))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
     }
 
-    pub fn permissions_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], MultiverseRuntimeFault> {
+    pub fn permissions_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_perms_mut(&mut self.memory, offset, size),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryWriteError(address, size))
+        result.ok_or(ClangRuntimeFault::MemoryWriteError(address, size))
     }
 
     pub fn get_last_instruction(&self) -> VAddr {
         self.registers.get_last_instr()
     }
 
-    pub fn load_slice_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], MultiverseRuntimeFault> {
+    pub fn load_slice_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
             AddressSpace::Data(offset) => load_slice_mut(&mut self.memory, offset, size),
         };
-        result.ok_or(MultiverseRuntimeFault::MemoryReadError(address, size))
+        result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
     }
 
     pub fn get_executed_instructions(&self) -> usize {
@@ -644,7 +644,7 @@ impl MultiverseRuntime {
 }
 
 /// Symbol store
-impl MultiverseRuntime {
+impl ClangRuntime {
     pub fn lookup_symbol_from_address(&self, addr: VAddr) -> Vec<(&str, &Symbol)> {
         let mut ret = Vec::new();
 
@@ -691,13 +691,13 @@ impl MultiverseRuntime {
 }
 
 /// Dynstore
-impl MultiverseRuntime {
-    pub fn dynstore_allocate(&mut self, size: usize) -> Result<VAddr, MultiverseRuntimeFault> {
+impl ClangRuntime {
+    pub fn dynstore_allocate(&mut self, size: usize) -> Result<VAddr, ClangRuntimeFault> {
         let offset = self.heap_mgr.malloc(&mut self.memory, size)?;
         Ok(AddressSpace::Data(offset).encode())
     }
 
-    pub fn dynstore_deallocate(&mut self, addr: VAddr) -> Result<(), MultiverseRuntimeFault> {
+    pub fn dynstore_deallocate(&mut self, addr: VAddr) -> Result<(), ClangRuntimeFault> {
         if addr == 0 {
             return Ok(());
         }
@@ -705,7 +705,7 @@ impl MultiverseRuntime {
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(MultiverseRuntimeFault::MemoryManagementError(format!("Tried to deallocate a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to deallocate a non-heap address: {:#x}", addr)));
         };
 
         self.heap_mgr.free(&mut self.memory, offset)?;
@@ -717,11 +717,11 @@ impl MultiverseRuntime {
         self.heap_mgr.get_heap_chunks(&self.memory)
     }
 
-    pub fn dynstore_get_single_chunk(&self, addr: VAddr) -> Result<HeapChunk, MultiverseRuntimeFault> {
+    pub fn dynstore_get_single_chunk(&self, addr: VAddr) -> Result<HeapChunk, ClangRuntimeFault> {
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(MultiverseRuntimeFault::MemoryManagementError(format!("Tried to get a single chunk with a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to get a single chunk with a non-heap address: {:#x}", addr)));
         };
 
         let chunk = self.heap_mgr.get_heap_chunk(&self.memory, offset)?;
@@ -733,15 +733,15 @@ impl MultiverseRuntime {
         self.heap_mgr.has_mem_leaks()
     }
 
-    pub fn dynstore_reallocate(&mut self, addr: VAddr, new_size: usize) -> Result<VAddr, MultiverseRuntimeFault> {
+    pub fn dynstore_reallocate(&mut self, addr: VAddr, new_size: usize) -> Result<VAddr, ClangRuntimeFault> {
         if addr == 0 || new_size == 0 {
-            return Err(MultiverseRuntimeFault::MemoryManagementError("Called dynstore_reallocate() with invalid parameters".to_string()));
+            return Err(ClangRuntimeFault::MemoryManagementError("Called dynstore_reallocate() with invalid parameters".to_string()));
         }
 
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(MultiverseRuntimeFault::MemoryManagementError(format!("Tried to reallocate a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to reallocate a non-heap address: {:#x}", addr)));
         };
 
         let new_offset = self.heap_mgr.realloc(&mut self.memory, offset, new_size)?;
