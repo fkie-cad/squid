@@ -47,35 +47,3 @@ impl DeadCodeEliminationPass {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        frontend::ao::{
-            BasicBlock,
-            CFG,
-        },
-        riscv::register::GpRegister,
-    };
-
-    #[test]
-    fn test_dead_code_elimination() {
-        let mut cfg = CFG::new();
-        let mut bb = BasicBlock::new();
-
-        let imm = bb.load_immediate(0);
-        let reg = bb.load_gp_register(GpRegister::t0);
-        let result = bb.add(imm, reg).unwrap();
-        let _ = bb.copy(result);
-        //bb.store_gp_register(GpRegister::t0, result).unwrap();
-
-        cfg.add_basic_block(bb);
-
-        let mut func = Function::new(cfg, false);
-
-        println!("{:#?}", func.cfg());
-        DeadCodeEliminationPass::new().run(&mut func).unwrap();
-        println!("{:#?}", func.cfg());
-    }
-}

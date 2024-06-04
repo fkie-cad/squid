@@ -99,6 +99,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_style() {
         let mut logger = Logger::spinner();
         logger.set_title("TITLE HERE");

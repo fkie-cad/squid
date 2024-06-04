@@ -24,13 +24,3 @@ pub struct Stat {
     pub st_ctime: Timespec,
     pub pad: u64,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stat_layout() {
-        assert_eq!(std::mem::size_of::<Stat>(), 128,);
-    }
-}

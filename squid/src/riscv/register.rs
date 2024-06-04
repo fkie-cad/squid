@@ -190,13 +190,3 @@ impl CsrRegister {
 pub const syscall_number: GpRegister = GpRegister::a7;
 pub const syscall_args: [GpRegister; 6] = [GpRegister::a0, GpRegister::a1, GpRegister::a2, GpRegister::a3, GpRegister::a4, GpRegister::a5];
 pub const syscall_ret: GpRegister = GpRegister::a0;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn roundtrip() {
-        assert_eq!(GpRegister::a0, GpRegister::from_usize(GpRegister::a0 as usize));
-    }
-}

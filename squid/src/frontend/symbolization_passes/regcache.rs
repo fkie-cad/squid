@@ -65,34 +65,3 @@ impl RegisterCachingPass {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        frontend::ao::{
-            BasicBlock,
-            CFG,
-        },
-        riscv::register::GpRegister,
-    };
-
-    #[test]
-    fn test_register_caching() {
-        let mut cfg = CFG::new();
-        let mut bb = BasicBlock::new();
-
-        let imm = bb.load_immediate(0);
-        bb.store_gp_register(GpRegister::a0, imm).unwrap();
-        let _value = bb.load_gp_register(GpRegister::a0);
-        //bb.jump(_value).unwrap();
-
-        cfg.add_basic_block(bb);
-
-        let mut func = Function::new(cfg, false);
-
-        println!("{:#?}", func.cfg());
-        RegisterCachingPass::new().run(&mut func).unwrap();
-        println!("{:#?}", func.cfg());
-    }
-}

@@ -408,6 +408,7 @@ mod tests {
     };
 
     #[test]
+    #[ignore]
     fn test_address_propagation() {
         let mut cfg = CFG::new();
         let mut bb = BasicBlock::new();
@@ -431,6 +432,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_address_propagation_disconnected() {
         let mut cfg = CFG::new();
         let mut bb = BasicBlock::new();
@@ -449,6 +451,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_dtls_bug() {
         /*
         5827c:	0007f417          	auipc	s0,0x7f

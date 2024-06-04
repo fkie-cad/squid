@@ -551,35 +551,3 @@ impl<const FDS: usize> Linux<FDS> {
         false
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_snapshots() {
-        let mut fs = Fs::new();
-        let handle = fs.touch(fs.root(), "test.txt", fs::PERM_R).unwrap();
-        fs.file_mut(handle).unwrap().content_mut().extend_from_slice(b"TEST123");
-
-        let mut linux = Linux::<1024>::new(fs, 0);
-        let fd = linux.openat(libc::AT_FDCWD, "/test.txt", 0, 0).unwrap() as i32;
-
-        linux.take_snapshot(0);
-
-        assert_eq!(linux.read(fd, 4).unwrap(), b"TEST");
-
-        linux.take_snapshot(1);
-
-        assert_eq!(linux.read(fd, 100).unwrap(), b"123");
-
-        assert!(linux.restore_snapshot(0));
-
-        assert_eq!(linux.read(fd, 4).unwrap(), b"TEST");
-        assert_eq!(linux.read(fd, 100).unwrap(), b"123");
-
-        assert!(linux.restore_snapshot(1));
-
-        assert_eq!(linux.read(fd, 100).unwrap(), b"123");
-    }
-}
