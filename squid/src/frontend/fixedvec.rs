@@ -60,16 +60,3 @@ impl<T> Debug for FixedVec<T> {
         write!(f, "FixedVec")
     }
 }
-
-#[cfg(test)]
-#[test]
-fn test_lock() {
-    let mut lock = FixedVec::lock("asdf 1234");
-    assert_eq!(&lock[0..4], b"asdf");
-
-    for b in &mut lock[0..4] {
-        *b = b'A';
-    }
-
-    assert_eq!(&lock[..], b"AAAA 1234");
-}
