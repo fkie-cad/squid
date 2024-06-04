@@ -615,8 +615,7 @@ static void mark_stack_uninit (Memory* memory, uint64_t pre, uint64_t post) {{
 
 static inline __attribute__((always_inline)) uint64_t saturating_add64 (uint64_t a, uint64_t b) {{
     uint64_t c = a + b;
-    if (c < a)  /* Can only happen due to overflow */
-        c = -1;
+    if (c < a) c = -1LL;
     return c;
 }}
 ",
