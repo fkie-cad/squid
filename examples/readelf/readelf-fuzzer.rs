@@ -10,11 +10,13 @@ use libafl::prelude::{
     feedback_or,
     havoc_mutations,
     powersched::PowerSchedule,
+    AggregatorOps,
     BytesInput,
     CachedOnDiskCorpus,
     CalibrationStage,
     CanTrack,
     CrashFeedback,
+    Event,
     EventConfig,
     EventFirer,
     Executor,
@@ -51,13 +53,11 @@ use libafl::prelude::{
     TimeFeedback,
     TimeObserver,
     TimeoutFeedback,
+    UserStats,
+    UserStatsValue,
     UsesInput,
     UsesObservers,
     UsesState,
-    Event,
-    UserStats,
-    UserStatsValue,
-    AggregatorOps,
 };
 use libafl_bolts::prelude::{
     current_nanos,
@@ -79,10 +79,10 @@ use mimalloc::MiMalloc;
 use squid::{
     backends::clang::{
         perms::*,
-        HeapError,
         ClangBackend,
         ClangRuntime,
         ClangRuntimeFault,
+        HeapError,
     },
     event::EventPool,
     frontend::{
@@ -1159,12 +1159,9 @@ where
                 state,
                 Event::UpdateUserStats {
                     name: "instr/sec".to_string(),
-                    value: UserStats::new(
-                        UserStatsValue::Float(instr_per_sec),
-                        AggregatorOps::Sum,
-                    ),
+                    value: UserStats::new(UserStatsValue::Float(instr_per_sec), AggregatorOps::Sum),
                     phantom: PhantomData,
-                }
+                },
             )?;
             self.max_instr_per_sec = instr_per_sec;
         }

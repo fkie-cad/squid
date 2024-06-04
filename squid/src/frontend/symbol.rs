@@ -148,11 +148,11 @@ impl Symbol {
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = vaddr;
     }
-    
+
     pub fn set_public_name<S: Into<String>>(&mut self, name: S, value: VAddr) {
         self.public_names.insert(name.into(), value - self.vaddr);
     }
-    
+
     pub fn set_private_name<S: Into<String>>(&mut self, name: S, value: VAddr) {
         self.private_names.insert(name.into(), value - self.vaddr);
     }

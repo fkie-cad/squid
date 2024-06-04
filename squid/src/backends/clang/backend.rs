@@ -5,11 +5,11 @@ use std::{
     },
     hash::{
         BuildHasher,
+        Hash,
         Hasher,
     },
     path::PathBuf,
 };
-use std::hash::Hash;
 
 use ahash::RandomState;
 use thiserror::Error;
@@ -26,9 +26,9 @@ use crate::{
             symbol::create_symbol_store,
             AddressLayouter,
             CLifter,
+            ClangRuntime,
             EventChannel,
             Memory,
-            ClangRuntime,
             Registers,
             VariableStorage,
         },

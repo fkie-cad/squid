@@ -341,10 +341,7 @@ impl CLifter {
 
         writeln!(out_file, "#pragma clang diagnostic pop")?;
 
-        writeln!(
-            out_file,
-            "struct _Context {{ Memory* memory; EventChannel* event_channel; ReturnBuffer* return_buf; uint64_t* static_vars; Registers* registers; }};"
-        )?;
+        writeln!(out_file, "struct _Context {{ Memory* memory; EventChannel* event_channel; ReturnBuffer* return_buf; uint64_t* static_vars; Registers* registers; }};")?;
 
         writeln!(out_file, "enum OpSize {{ BYTE_SIZE = 1, HWORD_SIZE = 2, WORD_SIZE = 4, DWORD_SIZE = 8, }};")?;
 

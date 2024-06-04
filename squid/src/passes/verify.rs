@@ -108,7 +108,7 @@ fn verify_symbol(symbol: &Symbol, verify_vaddr: bool) {
         }
 
         assert_eq!(cursor, symbol.last_addr() + 1);
-        
+
         /* Verify names */
         for name in symbol.public_names() {
             let vaddr = symbol.public_name(name).unwrap();

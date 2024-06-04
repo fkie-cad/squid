@@ -37,7 +37,7 @@ pub(crate) fn insert_guard_pages(image: &mut ProcessImage) {
 
     image.set_cursor(0);
     image.insert_elf(elf);
-    
+
     /* Right guard page */
     let chunk = Chunk::builder().vaddr(0).uninitialized_data(PAGE_SIZE, Perms::default()).build().unwrap();
 

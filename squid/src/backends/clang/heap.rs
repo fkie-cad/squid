@@ -94,7 +94,7 @@ impl Heap {
     pub(crate) fn delete_snapshot_unchecked(&mut self, id: SnapshotId) {
         self.snapshots.remove(&id);
     }
-    
+
     #[inline]
     fn is_in_bounds(&self, start: usize, len: usize) -> bool {
         start.saturating_add(len) <= self.end

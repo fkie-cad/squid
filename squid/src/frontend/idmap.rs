@@ -1,8 +1,13 @@
-use std::slice::{
-    Iter,
-    IterMut,
+use std::{
+    hash::{
+        Hash,
+        Hasher,
+    },
+    slice::{
+        Iter,
+        IterMut,
+    },
 };
-use std::hash::{Hash, Hasher};
 
 pub type Id = usize;
 

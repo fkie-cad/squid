@@ -62,7 +62,7 @@ impl Memory {
         let heap_size = round_up::<PAGE_SIZE>(org_heap_size);
         let stack_size = PAGE_SIZE + round_up::<PAGE_SIZE>(org_stack_size) + PAGE_SIZE;
         let total_size = globals_size + heap_size + stack_size;
-        
+
         let num_regions = idiv_ceil::<SNAPSHOT_REGION_SIZE>(total_size);
         let dirty_bitmap_size = round_up::<8>(idiv_ceil::<8>(num_regions));
         let dirty_stack_size = 8 * (1 + dirty_bitmap_size * 8);
@@ -99,7 +99,7 @@ impl Memory {
                 }
             }
         }
-        
+
         Self {
             data,
             size: total_size,
@@ -263,15 +263,15 @@ impl Memory {
             *byte = 0;
         }
     }
-    
+
     pub(crate) fn stack(&self) -> usize {
         self.stack
     }
-    
+
     pub(crate) fn heap(&self) -> usize {
         self.heap
     }
-    
+
     pub(crate) fn heap_end(&self) -> usize {
         self.heap_end
     }
@@ -380,7 +380,7 @@ pub(crate) fn populate_stack(memory: &mut Memory, args: &[String], env: &BTreeMa
     /* Mark space below as readable and writable */
     let start = memory.stack();
     let size = sp - start;
-    
+
     for byte in memory.perms_mut_raw(start, size) {
         *byte = perms::PERM_READ | perms::PERM_WRITE | perms::PERM_UNINIT;
     }

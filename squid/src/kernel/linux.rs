@@ -467,9 +467,7 @@ impl<const FDS: usize> Linux<FDS> {
                 },
                 FileType::FuzzInput {
                     ..
-                } => {
-                    return Err(LinuxError::InvalidFuzzInputOperation);
-                },
+                } => Err(LinuxError::InvalidFuzzInputOperation),
             }
         } else {
             Err(LinuxError::ClosedFd)
