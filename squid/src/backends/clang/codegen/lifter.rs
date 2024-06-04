@@ -505,18 +505,17 @@ static void mark_offset_dirty (Memory* memory, uint64_t offset, unsigned int siz
         return;
     }}
 
-    entry |= bit;
-    bits[idx] = entry;
+    bits[idx] |= bit;
 
     uint64_t stack_size = stack->size;
-    stack->regions[stack_size] = region_index;
     stack->size = stack_size + 1;
+    stack->regions[stack_size] = region_index;
 
     /* Check if store overlaps regions */
     offset += size - 1;
 
-    if (UNLIKELY(offset >> REGION_BITS > region_index)) {{
-        mark_offset_dirty(memory, offset, 0);
+    if (UNLIKELY((offset >> REGION_BITS) > region_index)) {{
+        mark_offset_dirty(memory, offset, 1);
     }}
 }}
 
@@ -860,7 +859,12 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
     __builtin_memcpy(&local_registers, registers, sizeof(LocalRegisters));
     BasicBlockFn next_pc_func = lookup_pc(&ctx);
 
-    while (next_pc_func && num_instructions < {}ULL) {{
+    while (next_pc_func) {{
+        if (UNLIKELY(num_instructions >= {}ULL)) {{
+            ctx.return_buf->code = RETURN_TIMEOUT;
+            break;
+        }}
+        
         next_pc_func = (BasicBlockFn) (next_pc_func)(&ctx, &ret, &num_instructions);
     }}
     
