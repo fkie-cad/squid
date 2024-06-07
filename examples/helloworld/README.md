@@ -2,7 +2,7 @@
 
 This example showcases the bare minimum steps necessary to get `squid` up and running.
 
-# Build the target
+## Build the target
 Enter the `squid-toolchain` container:
 ```
 docker run --rm -it -v "$PWD:/io" squid-toolchain
