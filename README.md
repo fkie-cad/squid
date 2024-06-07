@@ -9,24 +9,27 @@
 
 `squid` is a RISC-V emulator with features that make it a powerful tool for vulnerability research and fuzzing.
 
-Unlike other emulators, `squid` utilizes AOT instead of JIT compilation and allows you to write passes that modify the target's code before emulation.
-During runtime, you manually handle events like system calls in your harness, giving you total control over your target.
-This makes it easy to create new sanitizers and test programs for all kinds of vulnerabilities, not just memory corruption.
+Unlike other emulators, `squid` utilizes AOT instead of JIT compilation and allows you to rewrite your target's code before emulation.    
+During runtime, you get full control over your target by handling all system calls and other events yourself.
+This makes it easy to create and combine new sanitizers and test programs for all kinds of vulnerabilities, not just memory corruptions.
 
-Check out [this blog post (todo)]() to take a look under the hood of `squid` and get a demonstration of how to apply four different sanitizers to a target,
+Check out [this blog post (todo)]() to get an overview over `squid` and a demonstration of how to apply multiple different sanitizers to a target,
 covering SQL injections, command injections, memory corruptions, and information disclosures.
 
 ## Features
-While `squid` was built to enhance traditional greybox fuzzing, it has certain limitations.
+`squid` is an emulator but its main use case is to augment greybox fuzzing with advanced crash oracles.
+It is best combined with a native fuzzer to achieve both, high throughput and enhanced bug finding capabilities.
 
 `squid` offers
-- Fast snapshots
-- Byte-level permissions on memory
-- Good perf due to AOT compilation
-- Custom instrumentation by custom passes
+- Fast snapshots on memory
+- Byte-level permissions
+- Decent enough performance due to AOT compilation
+- Ability to rewrite the binaries before emulation
 - Integration into LibAFL for the creation of fully-fledged fuzzers
 
-However, it can only be used for Linux user-space applications that are written in C and compiled with a specific set of flags.
+However, it can only be used for Linux user-space applications that are written in C.
+The source of the target _must_ be available because `squid` only supports binaries that are compiled
+with a specific set of flags.
 
 ## Demo Sanitizer
 The following demonstrates how to setup an exemplary SQL-injection sanitizer in less than 100 lines of code / 30 minutes.    
@@ -124,4 +127,4 @@ fn main() {
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
 For a gentle introduction, see the [hello world]() example and for a
-full-blown "professional" usage of `squid` see our [readelf fuzzer](./examples/readelf).
+full-blown "professional" fuzzer, see our [readelf fuzzer](./examples/readelf).
