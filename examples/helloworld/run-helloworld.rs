@@ -15,7 +15,7 @@ use squid::{
     Compiler,
 };
 
-// Do one run of the target binary from its entrypoint to exit()
+// Do one run of the target binary from entrypoint to exit() and forward all system calls
 fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
     loop {
         match runtime.run()? {
@@ -25,21 +25,28 @@ fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
                 match number {
                     syscalls::write => {
                         // Get syscall arguments
+                        let fd = runtime.get_gp_register(GpRegister::a0) as i32;
                         let buf = runtime.get_gp_register(GpRegister::a1) as VAddr;
                         let len = runtime.get_gp_register(GpRegister::a2) as usize;
-
+                        
+                        // Do the syscall
                         let data = runtime.load_slice(buf, len)?;
-                        let data = std::str::from_utf8(data).unwrap();
-
-                        // Do syscall action
-                        print!("{}", data);
-
+                        let ret = unsafe {
+                            libc::write(
+                                fd,
+                                data.as_ptr() as *const libc::c_void,
+                                len
+                            )
+                        };
+                        
                         // Set syscall return value
-                        runtime.set_gp_register(GpRegister::a0, len as u64);
+                        runtime.set_gp_register(GpRegister::a0, ret as u64);
                     },
                     syscalls::exit_group => {
-                        let code = runtime.get_gp_register(GpRegister::a0) as i8;
-                        std::process::exit(code as i32);
+                        let code = runtime.get_gp_register(GpRegister::a0) as i32;
+                        unsafe { 
+                            libc::exit(code);
+                        }
                     },
                     _ => unreachable!(),
                 }
@@ -50,11 +57,13 @@ fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
 }
 
 fn main() {
+    // 1) Load the target binary
     let mut compiler = Compiler::load_elf("./helloworld", &[], &[]).unwrap();
 
-    // this is of course optional
+    // 2) Run passes over binary
     compiler.run_pass(&mut ImageDOTPass::new("process_image.dot")).unwrap();
 
+    // 3) AOT compile code in binary for fast emulation
     let backend = ClangBackend::builder()
         .stack_size(1024 * 1024)
         .progname("helloworld") // argv[0]
@@ -62,5 +71,7 @@ fn main() {
         .build()
         .unwrap();
     let runtime = compiler.compile(backend).unwrap();
+    
+    // 4) Emulate the binary
     execute(runtime).unwrap();
 }
