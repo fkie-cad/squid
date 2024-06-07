@@ -41,6 +41,7 @@ whether the SQL query has a valid syntax. If that is not the case, it most likel
 use squid::*;
 use sqlparser;
 
+// This pass instruments the target
 struct SQLiPass;
 
 impl Pass for SQLiPass {
@@ -50,11 +51,11 @@ impl Pass for SQLiPass {
         event_pool: &mut EventPool, 
         logger: &Logger
     ) -> Result<(), String> {
-        // We are gonna throw this event at the beginning of sqlite3_exec
-        let event_check_sql = event_pool.add_event("CHECK_SQL_SYNTAX");
-
         // Search libsqlite in the process image
         if let Some(libsqlite) = image.elf_by_filename_mut("libsqlite3.so.0") {
+            
+            // We are gonna throw this event at the beginning of sqlite3_exec
+            let event_check_sql = event_pool.add_event("CHECK_SQL_SYNTAX");
             
             // Search sqlite3_exec function
             for section in libsqlite.iter_sections_mut() {
