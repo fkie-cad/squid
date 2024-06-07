@@ -129,5 +129,5 @@ Please note, that for clarity the code leaves out a lot of `unwrap()`s and error
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
-For a gentle introduction, see the [hello world]() example and for a
+For a gentle introduction, see the [hello world](./examples/helloworld) example and for a
 full-blown "professional" fuzzer, see our [readelf fuzzer](./examples/readelf).
