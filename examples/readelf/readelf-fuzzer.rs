@@ -629,8 +629,6 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRunti
         .stack_size(2 * 1024 * 1024)
         .progname("readelf")
         .arg("-W")
-        .arg("-L")
-        .arg("-w")
         .arg("-a")
         .arg("file")
         .build_symbol_table(true)
@@ -1058,7 +1056,8 @@ use serde::{
 struct SquidObserver {
     name: String,
     last_runtime: Option<Duration>,
-    instr_per_sec: f64,
+    total_instrs: f64,
+    total_secs: f64,
 }
 
 impl SquidObserver {
@@ -1066,14 +1065,16 @@ impl SquidObserver {
         Self {
             name: name.to_string(),
             last_runtime: None,
-            instr_per_sec: 0.0,
+            total_instrs: 0.0,
+            total_secs: 0.0,
         }
     }
 
     fn update(&mut self, instrs: usize, secs: f64) {
         const GHZ: u64 = 2;
         self.last_runtime = Some(Duration::from_nanos(instrs as u64 / GHZ));
-        self.instr_per_sec = (instrs as f64) / secs;
+        self.total_instrs += instrs as f64;
+        self.total_secs += secs;
     }
 
     fn last_runtime(&self) -> Option<&Duration> {
@@ -1081,7 +1082,7 @@ impl SquidObserver {
     }
 
     fn instr_per_sec(&self) -> f64 {
-        self.instr_per_sec
+        self.total_instrs / self.total_secs
     }
 }
 
@@ -1129,15 +1130,20 @@ impl Named for SquidObserver {
     }
 }
 
+#[inline]
+fn within_window<const W: usize>(value: f64, base: f64) -> bool {
+    value >= (base - W as f64) && value <= (base + W as f64)
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SquidFeedback {
-    max_instr_per_sec: f64,
+    last_instr_per_sec: f64,
 }
 
 impl SquidFeedback {
     fn new() -> Self {
         Self {
-            max_instr_per_sec: 0.0,
+            last_instr_per_sec: 0.0,
         }
     }
 }
@@ -1154,7 +1160,7 @@ where
         let observer = observers.match_name::<SquidObserver>("instructions").unwrap();
         let instr_per_sec = observer.instr_per_sec();
 
-        if instr_per_sec > self.max_instr_per_sec {
+        if !within_window::<{10 * 1024 * 1024}>(instr_per_sec, self.last_instr_per_sec) {
             mgr.fire(
                 state,
                 Event::UpdateUserStats {
@@ -1163,7 +1169,7 @@ where
                     phantom: PhantomData,
                 },
             )?;
-            self.max_instr_per_sec = instr_per_sec;
+            self.last_instr_per_sec = instr_per_sec;
         }
 
         Ok(false)
@@ -1349,7 +1355,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
             .program(&native_binary)
             .debug_child(cfg!(debug_assertions))
             .shmem_provider(&mut shmem_provider)
-            .parse_afl_cmdline(["-W", "-L", "-w", "-a", "@@"])
+            .parse_afl_cmdline(["-W", "-a", "@@"])
             .coverage_map_size(MAP_SIZE)
             .timeout(Duration::from_millis(5000))
             .is_persistent(false)
