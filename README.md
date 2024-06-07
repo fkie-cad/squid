@@ -9,7 +9,7 @@
 
 `squid` is a RISC-V emulator with features that make it a powerful tool for vulnerability research and fuzzing.
 
-Unlike other emulators, `squid` utilizes AOT instead of JIT compilation and allows you to rewrite your target's code before emulation.    
+Unlike other emulators, `squid` utilizes AOT instead of JIT compilation and allows you to rewrite your target's code before emulation.
 During runtime, you get full control over your target by handling all system calls and other events yourself.
 This makes it easy to create and combine new sanitizers and test programs for all kinds of vulnerabilities, not just memory corruptions.
 
@@ -21,23 +21,21 @@ covering SQL injections, command injections, memory corruptions, and information
 It is best combined with a native fuzzer to achieve both, high throughput and enhanced bug finding capabilities.
 
 `squid` offers
-- Fast snapshots on memory
-- Byte-level permissions
+- Fast snapshots
+- Byte-level permissions on memory
 - Decent enough performance due to AOT compilation
 - Ability to rewrite the binaries before emulation
 - Integration into LibAFL for the creation of fully-fledged fuzzers
 
 However, it can only be used for Linux user-space applications that are written in C.
-The source of the target _must_ be available because `squid` only supports binaries that are compiled
+The source of the target _must_ be available because `squid` only supports binaries that have been compiled
 with a specific set of flags.
 
-## Demo Sanitizer
-The following demonstrates how to setup an exemplary SQL-injection sanitizer in less than 100 lines of code / 30 minutes.    
-We detect SQL injections by hooking the function `sqlite3_exec` from `libsqlite3.so.0` and checking that the SQL query
-has a valid syntax.    
+## Demo
+The following snippet of code shows how little effort it takes to create a new sanitizer and apply it to a target with `squid`.   
 
-Note that a sanitizer written like this can be combined with a multitude of other sanitizers to catch a wide variety of bugs.     
-For clarity, the code leaves out a lot of `unwrap()`'s and error handling.
+The sanitizer belows detects SQL injections when `libsqlite3` is being used. It hooks the `sqlite3_exec` function and checks
+whether the SQL query has a valid syntax. If that is not the case, it most likely contains fuzz input and we signal a crash.
 
 ```rs
 use squid::*;
@@ -56,31 +54,33 @@ impl Pass for SQLiPass {
         let event_check_sql = event_pool.add_event("CHECK_SQL_SYNTAX");
 
         // Search libsqlite in the process image
-        let libsqlite = image.elf_by_filename_mut("libsqlite3.so.0");
+        if let Some(libsqlite) = image.elf_by_filename_mut("libsqlite3.so.0") {
+            
+            // Search sqlite3_exec function
+            for section in libsqlite.iter_sections_mut() {
+                for symbol in section.iter_symbols_mut() {
+                    if symbol.name("sqlite3_exec").is_some() {
+                        
+                        // Found the sqlite3_exec function. 
+                        // Insert code that throws the CHECK_SQL_SYNTAX
+                        // event before executing the function.
+                        let chunk = symbol.iter_chunks_mut().first();
+                        let ChunkContent::Code(function) = chunk.content_mut() else {
+                            unreachable!()
+                        };
 
-        // Search sqlite3_exec function
-        for section in libsqlite.iter_sections_mut() {
-            for symbol in section.iter_symbols_mut() {
-                if symbol.name("sqlite3_exec").is_some() {
-                    // Found the sqlite3_exec function. 
-                    // Insert code that throws the CHECK_SQL_SYNTAX
-                    // event before executing the function.
-                    let chunk = symbol.iter_chunks_mut().first();
-                    let ChunkContent::Code(function) = chunk.content_mut() else {
-                        unreachable!()
-                    };
+                        // Synthesize instructions in new BB.
+                        // In this case it's only one instruction.
+                        let mut new_bb = BasicBlock::new();
+                        new_bb.fire_event(event_check_sql);
 
-                    // Synthesize instructions in new BB.
-                    // In this case it's only one instruction.
-                    let mut new_bb = BasicBlock::new();
-                    new_bb.fire_event(event_check_sql);
+                        // Insert new BB at beginning of CFG
+                        let old_entry_id = function.cfg().entry();
+                        new_bb.add_edge(Edge::Next(old_entry_id));
 
-                    // Insert new BB at beginning of CFG
-                    let old_entry_id = function.cfg().entry();
-                    new_bb.add_edge(Edge::Next(old_entry_id));
-
-                    let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
-                    function.cfg_mut().set_entry(new_bb_id);
+                        let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
+                        function.cfg_mut().set_entry(new_bb_id);
+                    }
                 }
             }
         }
@@ -123,6 +123,8 @@ fn main() {
     }
 }
 ```
+
+Please note, that for clarity the code leaves out a lot of `unwrap()`s and error handling.
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
