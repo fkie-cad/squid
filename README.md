@@ -23,9 +23,9 @@ It is best combined with a native fuzzer to achieve both, high throughput and en
 `squid` offers
 - Fast snapshots
 - Byte-level permissions on memory
-- Decent enough performance due to AOT compilation
 - Ability to rewrite the binaries before emulation
 - Integration into LibAFL for the creation of fully-fledged fuzzers
+- Decent enough performance due to AOT compilation
 
 However, it can only be used for Linux user-space applications that are written in C.
 The source of the target _must_ be available because `squid` only supports binaries that have been compiled
@@ -71,7 +71,7 @@ impl Pass for SQLiPass {
                         };
 
                         // Synthesize instructions in new BB.
-                        // In this case it's only one instruction.
+                        // In this case it's only one instruction: FireEvent
                         let mut new_bb = BasicBlock::new();
                         new_bb.fire_event(event_check_sql);
 
