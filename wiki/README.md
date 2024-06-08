@@ -90,11 +90,12 @@ let runtime = compiler.compile(backend).expect("Backend had an error");
 
 ## Running the target
 Once we have obtained the runtime, we can start interacting with the program.    
-The runtime gives us access to the registers and memory, it lets us create snapshots, restore
-snapshots and of course run our target with the `Runtime::run` method.   
-Running the target will throw certain events like system calls or breakpoints that
+The runtime gives us access to registers, memory, lets us create/restore snapshots,
+and of course run our target with the `Runtime::run` method.   
+Running the target will throw certain events like system calls that
 must be handled by the harness.
 It is also possible to throw custom events that can be created inside passes.
+For more on that see [EVENTS](./EVENTS.md).
 
 Run the target like so:
 ```rs
@@ -103,9 +104,6 @@ loop {
         Ok(event) => match event {
             EVENT_SYSCALL => {
                 // Handle syscall
-            },
-            EVENT_BREAKPOINT => {
-                // Handle breakpoint
             },
             CUSTOM_EVENT => {
                 // Handle custom events from passes
@@ -118,3 +116,4 @@ loop {
     }
 }
 ```
+
