@@ -1,30 +1,81 @@
 # Events
 
-- During emulation the guest may throw events to communicate with the host
-- there are two standard events: syscalls and breakpoints
-- but it is also possible to create and throw custom events
-- the syscall and breakpoint event are built into `squid` in order to handle the `ECALL` and `EBREAK`
-  RISC-V instructions
-- but inside of passes you can also add custom events that carry a custom meaning to your harness
-- one example for this is the SQL injection sanitizer in the [README]() that throws an `CHECK_SQL_SYNTAX`
-  event that tells the harness to check an SQL query for SQL injection
+- events are a means of communication between the guest and the host
+- events can be thrown with the `FireEvent` IR instruction
+- two examples of events are the builtin syscall event and the builtin breakpoint event that stem
+  from ECALL / EBREAK instructions
+- you can define custom events in passes
 
-- custom events can be defined in [Passes]() with the help of the `EventPool`
-- each event has a name and a unique ID
-- e.g. name of syscall event is `builtin::syscall` and has id 0
-- whenever an event is thrown in the guest the event ID gets passed to the harness like so (code example of runtime.run())
+### Creating events
+- events can be created by the `EventPool` that you can access inside passes
+- call `EventPool::add_event` with the name of your event and get a unique event ID in return
+- throw events by injecting the `FireEvent` instruction into the target
+- `FireEvent` takes an event id as argument
 
-- to create a custom event call `EventPool::add_event` with the name of your custom event
-- this returns an ID for you to use
-- throw the event by synthesizing a `BasicBlock::fire_event` instruction
+### Event channel
+- you can communicate more than just the event id
+- events have arguments and return values
+- these are placed into the "event channel"
+- to push some arguments into the event channel before throwing an event use the `PushEventArgs` instruction
+- then when the harness receives an event, it can access the arguments via the `Runtime::event_channel` method
+- the harness can place return values into the event channel before resuming execution via the `Runtime::event_channel_mut` method
+- These return values can be collected inside the guest via the `CollectEventReturns` instruction
 
-- you also have the possibility to pass event arguments to the host, similar to function arguments
-- this is what the event channel is for
-- use the `BasicBlock::push_event_args` instruction to place a number of variables into the event channel right
-  before a `BasicBlock::fire_event`
-- the harness has access to the event channel via `Runtime::event_channel`
-- the harness can also pass some values back to the guest as some kind of "return values" of an event
-- `Runtime::event_channel_mut` allows the harness to write back into the event channel and the written
-  values can be read by the guest after resuming execution with the `BasicBlock::collect_event_returns` instruction
+### Example
+- example pass that replaces that hooks the `malloc()` function so that the harness can handle the allocation
+  instead of the libc
 
-- (full example)
+TODO: check that this compiles
+```rs
+use squid::*;
+
+struct MallocPass;
+
+impl Pass for MallocPass {
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+        // Create a new event in the event pool
+        let event_id = event_pool.add_event("HANDLE_MALLOC");
+
+        // Search the malloc function
+        let libc = image.elf_by_filename_mut("libc.so.6");
+        for section in libc.iter_sections_mut() {
+            for symbol in section.iter_symbols_mut() {
+                if symbol.name("malloc").is_some() {
+                    
+                    // Get the CFG of the function
+                    let ChunkContent::Code(function) = symbol.chunk_mut(1).content_mut() else {
+                        unreachable!()
+                    };
+                    let cfg = function.cfg_mut();
+                    
+                    // This bb pushes the argument onto the event channel and throws the HANDLE_MALLOC event
+                    let mut bb1 = BasicBlock::new();
+                    let a0 = bb1.load_gp_register(GpRegister::a0);
+                    bb1.push_event_args([a0]);
+                    bb1.fire_event(event_id);
+
+                    // This bb collects the address from the harness and returns it
+                    let mut bb2 = BasicBlock::new();
+                    let rets = bb2.collect_event_returns(1);
+                    bb2.store_gp_register(GpRegister::a0, rets[0]);
+                    let ra = bb2.load_gp_register(GpRegister::ra);
+                    bb2.jump(ra);
+
+                    // Replace the malloc function with these two basic blocks
+                    cfg.clear();
+                    let bb2_id = cfg.add_basic_block(bb2);
+                    bb1.add_edge(Edge::Next(bb2_id));
+                    let bb1_id = cfg.add_basic_block(bb1);
+                    cfg.set_entry(bb1_id);
+
+                    // Now the malloc() function consists entirely of the two basic blocks from above and
+                    // the harness has full control over the allocation strategy.
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+```
+
