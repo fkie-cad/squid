@@ -892,8 +892,6 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
     return ret;
 }}
 
-
-
 #pragma clang diagnostic pop
 ",
             self.timeout, self.count_instructions as usize,
@@ -1238,7 +1236,7 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                 } => {
                     writeln!(
                         out_file,
-                        "if (UNLIKELY(ctx->event_channel->length < {0})) return (void*) fault_invalid_event_channel(ctx, {0}, ctx->event_channel->length);",
+                        "if (UNLIKELY(ctx->event_channel->length != {0})) return (void*) fault_invalid_event_channel(ctx, {0}, ctx->event_channel->length);",
                         vars.len()
                     )?;
                     for (i, var) in vars.iter().enumerate() {
