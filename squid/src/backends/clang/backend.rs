@@ -53,9 +53,15 @@ pub struct ClangBackendBuilder {
     count_instructions: bool,
     cflags: Vec<String>,
     cc: String,
+    uninit_stack: bool,
 }
 
 impl ClangBackendBuilder {
+    pub fn enable_uninit_stack(mut self, flag: bool) -> Self {
+        self.uninit_stack = flag;
+        self
+    }
+    
     pub fn cc<S: Into<String>>(mut self, cc: S) -> Self {
         self.cc = cc.into();
         self
@@ -163,6 +169,7 @@ impl ClangBackendBuilder {
             count_instructions: self.count_instructions,
             cflags: self.cflags,
             cc: self.cc,
+            uninit_stack: self.uninit_stack,
         })
     }
 }
@@ -192,6 +199,7 @@ pub struct ClangBackend {
     count_instructions: bool,
     cflags: Vec<String>,
     cc: String,
+    uninit_stack: bool,
 }
 
 impl ClangBackend {
@@ -209,6 +217,7 @@ impl ClangBackend {
             count_instructions: true,
             cflags: Vec::new(),
             cc: "clang".to_string(),
+            uninit_stack: true,
         }
     }
 }
@@ -222,6 +231,7 @@ impl ClangBackend {
         hasher.write_u8(self.update_last_instr as u8);
         hasher.write_usize(self.timeout);
         hasher.write_u8(self.count_instructions as u8);
+        hasher.write_u8(self.uninit_stack as u8);
         for cflag in &self.cflags {
             hasher.write_usize(cflag.len());
             hasher.write(cflag.as_bytes());
@@ -274,7 +284,7 @@ impl Backend for ClangBackend {
 
         /* Compile the code */
         let config_hash = self.config_hash(&image);
-        let mut clifter = CLifter::new(self.source_file.clone(), self.update_pc, self.update_last_instr, self.timeout, self.count_instructions, config_hash, layouter.code_size());
+        let mut clifter = CLifter::new(self.source_file.clone(), self.update_pc, self.update_last_instr, self.timeout, self.count_instructions, config_hash, layouter.code_size(), self.uninit_stack);
         let executor = clifter.lift(&image, &memory, &varstore, logger, &self.cflags, &self.cc)?;
 
         /* Print some stats */

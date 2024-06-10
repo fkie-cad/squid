@@ -84,6 +84,7 @@ pub(crate) struct CLifter {
     count_instructions: bool,
     config_hash: u64,
     num_functions: usize,
+    uninit_stack: bool,
 }
 
 impl CLifter {
@@ -95,6 +96,7 @@ impl CLifter {
         count_instructions: bool,
         config_hash: u64,
         basic_block_table_size: usize,
+        uninit_stack: bool,
     ) -> Self {
         let mut out_binary = out_source.clone();
         out_binary.set_extension("so");
@@ -109,6 +111,7 @@ impl CLifter {
             count_instructions,
             config_hash,
             num_functions: 0,
+            uninit_stack,
         }
     }
 
@@ -1023,7 +1026,7 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     var,
                 } => match reg {
                     Register::Gp(reg) => {
-                        if *reg == GpRegister::sp {
+                        if self.uninit_stack && *reg == GpRegister::sp {
                             writeln!(out_file, "mark_stack_uninit(ctx->memory, local_registers.gp[{}], {});", *reg as usize, var_name(var))?;
                         }
 

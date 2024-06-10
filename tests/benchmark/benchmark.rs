@@ -23,6 +23,7 @@ fn benchmark_emulator() {
         .build_symbol_table(false)
         .update_pc(false)
         .update_last_instruction(false)
+        .enable_uninit_stack(false)
         .build()
         .unwrap();
     let mut runtime = compiler.compile(backend).unwrap();
