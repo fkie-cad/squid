@@ -134,7 +134,6 @@ impl CLifter {
         self.read_config_hash() != self.config_hash
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub(crate) fn lift(
         &mut self,
         image: &ProcessImage,
@@ -158,15 +157,17 @@ impl CLifter {
 
     fn compile_code(&mut self, cc: &str, cflags: &[String], logger: &Logger) -> Result<(), CLifterError> {
         let mut args = vec![
-            "-o".to_string(),
-            self.out_binary.to_str().unwrap().to_owned(),
-            "-fPIC".to_string(),
-            "-shared".to_string(),
-            "-fvisibility=hidden".to_string(),
-            "-nostdlib".to_string(),
+            "-o",
+            self.out_binary.to_str().unwrap(),
+            "-fPIC",
+            "-shared",
+            "-fvisibility=hidden",
+            "-nostdlib",
         ];
-        args.extend_from_slice(cflags);
-        args.push(self.out_source.to_str().unwrap().to_owned());
+        for cflag in cflags {
+            args.push(cflag.as_ref());
+        }
+        args.push(self.out_source.to_str().unwrap());
 
         logger.info(format!("Invoking {} {}", cc, args.join(" ")));
 
@@ -361,13 +362,15 @@ impl CLifter {
 
                             for subgraph in subgraphs {
                                 let bb = func.cfg().basic_block(subgraph.entry()).unwrap();
-                                writeln!(out_file, "static void* basic_block_{:#x} (Context*, uint64_t*, uint64_t*);", bb.vaddr().unwrap())?;
+                                write!(out_file, "static void* basic_block_{:#x} (Context*, uint64_t*, uint64_t*);", bb.vaddr().unwrap())?;
                             }
                         }
                     }
                 }
             }
         }
+        
+        writeln!(out_file)?;
 
         assert!(subgraphs_iter.next().is_none());
 
