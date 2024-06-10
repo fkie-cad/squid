@@ -68,6 +68,8 @@ fn main() {
         .stack_size(1024 * 1024)
         .progname("helloworld") // argv[0]
         .source_file("./emu.c") // The AOT code goes into this file
+        .cflag("-g")
+        .cflag("-O0")
         .build()
         .unwrap();
     let runtime = compiler.compile(backend).unwrap();

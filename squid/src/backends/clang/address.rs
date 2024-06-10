@@ -11,6 +11,8 @@ pub(crate) const POINTER_TAG_SHIFT: u32 = 63;
 pub(crate) const POINTER_TAG_MASK: VAddr = 0x8000000000000000;
 pub(crate) const POINTER_TAG_DATA: VAddr = 0;
 pub(crate) const POINTER_TAG_CODE: VAddr = 0x8000000000000000;
+pub(crate) const POINTER_CODE_MASK: VAddr = 0x7FFFFFF000000000;
+pub(crate) const POINTER_CODE_SHIFT: u32 = 36;
 
 pub(crate) enum AddressSpace {
     Data(usize),
@@ -40,6 +42,11 @@ impl AddressSpace {
             },
         }
     }
+}
+
+#[inline]
+fn make_code_address(idx: usize) -> VAddr {
+    AddressSpace::Code(idx << POINTER_CODE_SHIFT).encode()
 }
 
 pub(crate) struct AddressLayouter {
@@ -90,7 +97,7 @@ impl AddressLayouter {
                 }
 
                 let section_start = cursor;
-                section.set_vaddr(AddressSpace::Code(section_start).encode());
+                section.set_vaddr(make_code_address(section_start));
 
                 for symbol in section.iter_symbols_mut() {
                     let mut public_names = HashMap::new();
@@ -118,16 +125,16 @@ impl AddressLayouter {
                     }
 
                     let symbol_start = cursor;
-                    symbol.set_vaddr(AddressSpace::Code(symbol_start).encode());
+                    symbol.set_vaddr(make_code_address(symbol_start));
 
                     for chunk in symbol.iter_chunks_mut() {
                         let chunk_start = cursor;
-                        chunk.set_vaddr(AddressSpace::Code(chunk_start).encode());
+                        chunk.set_vaddr(make_code_address(chunk_start));
 
                         let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
 
                         for bb in func.cfg_mut().iter_basic_blocks_mut() {
-                            bb.set_vaddr(AddressSpace::Code(cursor).encode());
+                            bb.set_vaddr(make_code_address(cursor));
                             cursor += 1;
                         }
 

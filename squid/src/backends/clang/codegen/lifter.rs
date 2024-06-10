@@ -20,6 +20,9 @@ use crate::{
             POINTER_TAG_CODE,
             POINTER_TAG_MASK,
             POINTER_TAG_SHIFT,
+            AddressSpace,
+            POINTER_CODE_MASK,
+            POINTER_CODE_SHIFT,
         },
         codegen::subcfg::{
             split_into_subgraphs,
@@ -273,8 +276,11 @@ impl CLifter {
         writeln!(out_file, "#define LIKELY(x) __builtin_expect(!!(x), 1)")?;
 
         writeln!(out_file, "#define POINTER_TAG_SHIFT {}", POINTER_TAG_SHIFT)?;
-        writeln!(out_file, "#define POINTER_TAG_MASK  {:#x}ULL", !POINTER_TAG_MASK)?;
+        writeln!(out_file, "#define POINTER_BB_MASK  {:#x}ULL", !(POINTER_TAG_MASK | POINTER_CODE_MASK))?;
+        writeln!(out_file, "#define POINTER_IDX_MASK  {:#x}ULL", POINTER_CODE_MASK)?;
+        writeln!(out_file, "#define POINTER_INDEX_SHIFT  {}", POINTER_CODE_SHIFT)?;
         writeln!(out_file, "#define POINTER_TAG_CODE {}ULL", POINTER_TAG_CODE >> POINTER_TAG_SHIFT)?;
+        writeln!(out_file, "#define TAG_BB_ADDRESS(address, func) (address | ( ((uint64_t)(void*) func) - ((uint64_t)(void*) run) ))")?;
 
         writeln!(out_file, "#define REGION_BITS {}", SNAPSHOT_REGION_SIZE.ilog2())?;
         writeln!(out_file, "#define REINTERPRET(T, x) ( *((T*)(&(x))) )")?;
@@ -345,6 +351,7 @@ impl CLifter {
         writeln!(out_file, "struct _Context {{ Memory* memory; EventChannel* event_channel; ReturnBuffer* return_buf; uint64_t* static_vars; Registers* registers; }};")?;
 
         writeln!(out_file, "enum OpSize {{ BYTE_SIZE = 1, HWORD_SIZE = 2, WORD_SIZE = 4, DWORD_SIZE = 8, }};")?;
+        writeln!(out_file, "uint64_t run (void*, void*, void*, void*, void*);")?;
 
         Ok(())
     }
@@ -470,7 +477,12 @@ static BasicBlockFn lookup_basic_block_table (Context* ctx, uint64_t address) {{
         return fault_invalid_jump_target(ctx, address);
     }}
     
-    uint64_t offset = address & POINTER_TAG_MASK;
+    uint64_t bb = address & POINTER_BB_MASK;
+    if (LIKELY(bb)) {{
+        return (BasicBlockFn) (bb + (uint64_t)(void*)run);
+    }}
+    
+    uint64_t offset = (address & POINTER_IDX_MASK) >> POINTER_INDEX_SHIFT;
 
     if (UNLIKELY(offset >= {0}ULL)) {{
         return fault_invalid_jump_target(ctx, address);
@@ -875,12 +887,15 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
 #endif
     __builtin_memcpy(registers, &local_registers, sizeof(LocalRegisters));
     return ret;
-}}",
+}}
+
+
+
+#pragma clang diagnostic pop
+",
             self.timeout, self.count_instructions as usize,
         )?;
-
-        writeln!(out_file, "#pragma clang diagnostic pop")?;
-
+        
         Ok(())
     }
 
@@ -997,7 +1012,11 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     dst,
                     vaddr,
                 } => {
-                    writeln!(out_file, "{} = {:#x}ULL;", var_type_and_name(dst), *vaddr)?;
+                    if matches!(AddressSpace::decode(*vaddr), AddressSpace::Code(_)) && !addrs.contains(vaddr) {
+                        writeln!(out_file, "{0} = TAG_BB_ADDRESS({1:#x}ULL, basic_block_{1:#x});", var_type_and_name(dst), *vaddr)?;
+                    } else {
+                        writeln!(out_file, "{} = {:#x}ULL;", var_type_and_name(dst), *vaddr)?;
+                    }
                 },
                 Op::StoreRegister {
                     reg,
@@ -1204,7 +1223,7 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     for edge in bb.edges() {
                         if let Edge::Next(id) = edge {
                             let addr = cfg.basic_block(*id).unwrap().vaddr().unwrap();
-                            writeln!(out_file, "*next_pc = {:#x}UL;", addr)?;
+                            writeln!(out_file, "*next_pc = TAG_BB_ADDRESS({0:#x}ULL, basic_block_{0:#x});", addr)?;
                             break;
                         }
                     }
