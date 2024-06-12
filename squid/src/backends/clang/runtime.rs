@@ -14,9 +14,9 @@ use thiserror::Error;
 
 use crate::{
     backends::clang::{
+        address::POINTER_CODE_MASK,
         perms::*,
         AddressSpace,
-        address::POINTER_CODE_MASK,
         EventChannel,
         Heap,
         HeapChunk,
@@ -650,7 +650,7 @@ impl ClangRuntime {
         let mut ret = Vec::new();
 
         // Codegen mixes native and virtual pointers, only keep the virtual part of code pointers
-        if let AddressSpace::Code(mut offset) = AddressSpace::decode(addr) { 
+        if let AddressSpace::Code(mut offset) = AddressSpace::decode(addr) {
             offset &= POINTER_CODE_MASK as usize;
             addr = AddressSpace::Code(offset).encode();
         }

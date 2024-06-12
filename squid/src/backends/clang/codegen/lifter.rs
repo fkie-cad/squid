@@ -17,12 +17,12 @@ use thiserror::Error;
 use crate::{
     backends::clang::{
         address::{
-            POINTER_TAG_CODE,
-            POINTER_TAG_MASK,
-            POINTER_TAG_SHIFT,
             AddressSpace,
             POINTER_CODE_MASK,
             POINTER_CODE_SHIFT,
+            POINTER_TAG_CODE,
+            POINTER_TAG_MASK,
+            POINTER_TAG_SHIFT,
         },
         codegen::subcfg::{
             split_into_subgraphs,
@@ -88,6 +88,7 @@ pub(crate) struct CLifter {
 }
 
 impl CLifter {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         out_source: PathBuf,
         update_pc: bool,
@@ -162,14 +163,7 @@ impl CLifter {
     }
 
     fn compile_code(&mut self, cc: &str, cflags: &[String], logger: &Logger) -> Result<(), CLifterError> {
-        let mut args = vec![
-            "-o",
-            self.out_binary.to_str().unwrap(),
-            "-fPIC",
-            "-shared",
-            "-fvisibility=hidden",
-            "-nostdlib",
-        ];
+        let mut args = vec!["-o", self.out_binary.to_str().unwrap(), "-fPIC", "-shared", "-fvisibility=hidden", "-nostdlib"];
         for cflag in cflags {
             args.push(cflag.as_ref());
         }
@@ -379,7 +373,7 @@ impl CLifter {
                 }
             }
         }
-        
+
         writeln!(out_file)?;
 
         assert!(subgraphs_iter.next().is_none());
@@ -896,7 +890,7 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
 ",
             self.timeout, self.count_instructions as usize,
         )?;
-        
+
         Ok(())
     }
 

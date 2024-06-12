@@ -1160,7 +1160,7 @@ where
         let observer = observers.match_name::<SquidObserver>("instructions").unwrap();
         let instr_per_sec = observer.instr_per_sec();
 
-        if !within_window::<{10 * 1024 * 1024}>(instr_per_sec, self.last_instr_per_sec) {
+        if !within_window::<{ 10 * 1024 * 1024 }>(instr_per_sec, self.last_instr_per_sec) {
             mgr.fire(
                 state,
                 Event::UpdateUserStats {

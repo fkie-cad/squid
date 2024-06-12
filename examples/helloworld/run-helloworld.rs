@@ -28,23 +28,17 @@ fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
                         let fd = runtime.get_gp_register(GpRegister::a0) as i32;
                         let buf = runtime.get_gp_register(GpRegister::a1) as VAddr;
                         let len = runtime.get_gp_register(GpRegister::a2) as usize;
-                        
+
                         // Do the syscall
                         let data = runtime.load_slice(buf, len)?;
-                        let ret = unsafe {
-                            libc::write(
-                                fd,
-                                data.as_ptr() as *const libc::c_void,
-                                len
-                            )
-                        };
-                        
+                        let ret = unsafe { libc::write(fd, data.as_ptr() as *const libc::c_void, len) };
+
                         // Set syscall return value
                         runtime.set_gp_register(GpRegister::a0, ret as u64);
                     },
                     syscalls::exit_group => {
                         let code = runtime.get_gp_register(GpRegister::a0) as i32;
-                        unsafe { 
+                        unsafe {
                             libc::exit(code);
                         }
                     },
@@ -73,7 +67,7 @@ fn main() {
         .build()
         .unwrap();
     let runtime = compiler.compile(backend).unwrap();
-    
+
     // 4) Emulate the binary
     execute(runtime).unwrap();
 }

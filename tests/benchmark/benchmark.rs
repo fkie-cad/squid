@@ -27,13 +27,13 @@ fn benchmark_emulator() {
         .build()
         .unwrap();
     let mut runtime = compiler.compile(backend).unwrap();
-    
+
     let start = std::time::Instant::now();
     match runtime.run() {
         Ok(EVENT_BREAKPOINT) => {},
         e => unreachable!("{:?}", e),
     }
     let secs = start.elapsed().as_secs_f64();
-    
+
     println!("{} instr/s", runtime.get_executed_instructions() as f64 / secs);
 }

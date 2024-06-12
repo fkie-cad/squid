@@ -61,7 +61,7 @@ impl ClangBackendBuilder {
         self.uninit_stack = flag;
         self
     }
-    
+
     pub fn cc<S: Into<String>>(mut self, cc: S) -> Self {
         self.cc = cc.into();
         self
@@ -284,7 +284,16 @@ impl Backend for ClangBackend {
 
         /* Compile the code */
         let config_hash = self.config_hash(&image);
-        let mut clifter = CLifter::new(self.source_file.clone(), self.update_pc, self.update_last_instr, self.timeout, self.count_instructions, config_hash, layouter.code_size(), self.uninit_stack);
+        let mut clifter = CLifter::new(
+            self.source_file.clone(),
+            self.update_pc,
+            self.update_last_instr,
+            self.timeout,
+            self.count_instructions,
+            config_hash,
+            layouter.code_size(),
+            self.uninit_stack,
+        );
         let executor = clifter.lift(&image, &memory, &varstore, logger, &self.cflags, &self.cc)?;
 
         /* Print some stats */
