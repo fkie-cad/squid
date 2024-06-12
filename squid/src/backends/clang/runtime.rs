@@ -16,6 +16,7 @@ use crate::{
     backends::clang::{
         perms::*,
         AddressSpace,
+        address::POINTER_CODE_MASK,
         EventChannel,
         Heap,
         HeapChunk,
@@ -645,8 +646,14 @@ impl ClangRuntime {
 
 /// Symbol store
 impl ClangRuntime {
-    pub fn lookup_symbol_from_address(&self, addr: VAddr) -> Vec<(&str, &Symbol)> {
+    pub fn lookup_symbol_from_address(&self, mut addr: VAddr) -> Vec<(&str, &Symbol)> {
         let mut ret = Vec::new();
+
+        // Codegen mixes native and virtual pointers, only keep the virtual part of code pointers
+        if let AddressSpace::Code(mut offset) = AddressSpace::decode(addr) { 
+            offset &= POINTER_CODE_MASK as usize;
+            addr = AddressSpace::Code(offset).encode();
+        }
 
         for (file, symbols) in &self.symbols {
             for symbol in symbols {
