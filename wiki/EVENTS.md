@@ -1,38 +1,41 @@
 # Events
 
-- events are a means of communication between the guest and the host
-- events can be thrown with the `FireEvent` IR instruction
-- two examples of events are the builtin syscall event and the builtin breakpoint event that stem
-  from ECALL / EBREAK instructions
-- you can define custom events in passes
+Events are a means of communication between the guest and the host and
+can be used to pass information to the harness and back.
+They can be thrown at any point in the code by inserting the `FireEvent` IR instruction.
+Two events are built into `squid`. The syscall event that is caused by an ECALL instruction
+and the breakpoint event that is caused by an EBREAK instruction.
+You can also define custom events.
 
 ### Creating events
-- events can be created by the `EventPool` that you can access inside passes
-- call `EventPool::add_event` with the name of your event and get a unique event ID in return
-- throw events by injecting the `FireEvent` instruction into the target
-- `FireEvent` takes an event id as argument
+Events can be created inside passes with the `EventPool`.
+Call `EventPool::add_event()` with the name of your custom event to get a unique event ID in return.
+This event ID can be used in the `FireEvent` instruction to throw your custom event.
+
+### Handling events
+An event ID is the return value of the `Runtime::run` method that can be used to execute a target.
+The host must inspect that return value and handle it accordingly.
 
 ### Event channel
-- you can communicate more than just the event id
-- events have arguments and return values
-- these are placed into the "event channel"
-- to push some arguments into the event channel before throwing an event use the `PushEventArgs` instruction
-- then when the harness receives an event, it can access the arguments via the `Runtime::event_channel` method
-- the harness can place return values into the event channel before resuming execution via the `Runtime::event_channel_mut` method
-- These return values can be collected inside the guest via the `CollectEventReturns` instruction
+Events have their own arguments and return values such that you can communicate more than just an event ID.
+The arguments and return values are placed into the "event channel", which is a buffer of a fixed size.
+Push data into the event channel before throwing an event, by using the `PushEventArgs` IR instruction.
+Then, when harness handles the event, it can access the arguments via the `Runtime::event_channel()` method.
+The harness can in turn place return values into the event channel after handling an event. This is done with
+the `Runtime::event_channel_mut()` method. The return values can be collected inside the guest with the `CollectEventReturns`
+IR instruction.
 
-### Example
-- example pass that replaces that hooks the `malloc()` function so that the harness can handle the allocation
-  instead of the libc
+## Example
+The following example shows how to hook the `malloc()` function of the libc by throwing a custom `HANDLE_MALLOC` event
+and using the return value of the event as the return value of the function.
 
-TODO: check that this compiles
 ```rs
 use squid::*;
 
 struct MallocPass;
 
 impl Pass for MallocPass {
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), String> {
+    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), ()> {
         // Create a new event in the event pool
         let event_id = event_pool.add_event("HANDLE_MALLOC");
 
@@ -43,9 +46,7 @@ impl Pass for MallocPass {
                 if symbol.name("malloc").is_some() {
                     
                     // Get the CFG of the function
-                    let ChunkContent::Code(function) = symbol.chunk_mut(1).content_mut() else {
-                        unreachable!()
-                    };
+                    let function = symbol.chunk_mut(1).content_mut();
                     let cfg = function.cfg_mut();
                     
                     // This bb pushes the argument onto the event channel and throws the HANDLE_MALLOC event
