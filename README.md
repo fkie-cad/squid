@@ -41,7 +41,10 @@ whether the SQL query has a valid syntax. If that is not the case, it most likel
 use squid::*;
 use sqlparser;
 
-// This pass instruments the target
+// This pass instruments the target by rewriting the
+// sqlite3_exec function. It inserts code that throws
+// a "CHECK_SQL_SYNTAX" event at the beginning of the
+// function that must be handled by the host.
 struct SQLiPass;
 
 impl Pass for SQLiPass {
@@ -50,7 +53,7 @@ impl Pass for SQLiPass {
         image: &mut ProcessImage, 
         event_pool: &mut EventPool, 
         logger: &Logger
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         // Search libsqlite in the process image
         if let Some(libsqlite) = image.elf_by_filename_mut("libsqlite3.so.0") {
             
@@ -65,10 +68,7 @@ impl Pass for SQLiPass {
                         // Found the sqlite3_exec function. 
                         // Insert code that throws the CHECK_SQL_SYNTAX
                         // event before executing the function.
-                        let chunk = symbol.iter_chunks_mut().first();
-                        let ChunkContent::Code(function) = chunk.content_mut() else {
-                            unreachable!()
-                        };
+                        let cfg = symbol.chunk_mut(1).content_mut().cfg_mut();
 
                         // Synthesize instructions in new BB.
                         // In this case it's only one instruction: FireEvent
@@ -76,11 +76,11 @@ impl Pass for SQLiPass {
                         new_bb.fire_event(event_check_sql);
 
                         // Insert new BB at beginning of CFG
-                        let old_entry_id = function.cfg().entry();
+                        let old_entry_id = cfg.entry();
                         new_bb.add_edge(Edge::Next(old_entry_id));
 
-                        let new_bb_id = function.cfg_mut().add_basic_block(new_bb);
-                        function.cfg_mut().set_entry(new_bb_id);
+                        let new_bb_id = cfg.add_basic_block(new_bb);
+                        cfg.set_entry(new_bb_id);
                     }
                 }
             }
@@ -104,17 +104,17 @@ fn main() {
     loop {
         match runtime.run() {
             Ok(event) => {
-                if event == event_check_sql {
-                    // Get query (second argument to function)
-                    let a1 = runtime.get_gp_register(GpRegister::a1);
-                    let query = runtime.load_string(a1);
-                    
-                    // Parse query
-                    let dialect = sqlparser::dialect::SQLiteDialect {};
-                    if sqlparser::parser::Parser::parse_sql(&dialect, query).is_err() {
-                        // SQLi !!!
-                        break;
-                    }
+                assert_eq!(event, event_check_sql);
+
+                // Get query (second argument to function)
+                let a1 = runtime.get_gp_register(GpRegister::a1);
+                let query = runtime.load_string(a1);
+                
+                // Parse query
+                let dialect = sqlparser::dialect::SQLiteDialect {};
+                if sqlparser::parser::Parser::parse_sql(&dialect, query).is_err() {
+                    // SQLi !!!
+                    break;
                 }
             }
             Err(fault) => {
@@ -125,9 +125,10 @@ fn main() {
 }
 ```
 
-Please note, that for clarity the code leaves out a lot of `unwrap()`s and error handling.
+Please note that for clarity the code leaves out a lot of `unwrap()`s and error handling.
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
 For a gentle introduction, see the [hello world](./examples/helloworld) example and for a
 full-blown "professional" fuzzer, see our [readelf fuzzer](./examples/readelf).
+
