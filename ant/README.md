@@ -1,6 +1,6 @@
 # Ant
 
-Ant is a fake loader DSO and replaces
+Ant is a fake dynamic linker DSO and replaces
 - `ld-linux-riscv64-lp64d.so.1`
 - `libdl.so.2`
 
