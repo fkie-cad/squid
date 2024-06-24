@@ -37,6 +37,7 @@ use crate::{
     },
 };
 
+/// This error type shows everything that can go wrong when synthesizing basic blocks or CFGs.
 #[derive(Error, Debug)]
 pub enum CFGError {
     #[error("Invalid entry: {0}")]
@@ -64,6 +65,7 @@ pub enum CFGError {
     MultipleNextBasicBlocks(Id),
 }
 
+/// An Edge is an edge in the CFG
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Edge {
     Next(Id),
@@ -71,6 +73,7 @@ pub enum Edge {
 }
 
 impl Edge {
+    /// The destination basic block of this edge
     pub fn target(&self) -> Id {
         match self {
             Edge::Next(id) | Edge::Jump(id) => *id,
@@ -78,6 +81,7 @@ impl Edge {
     }
 }
 
+/// A BasicBlock is a sequence of ΑΩ-operations that run uninterrupted
 #[derive(Debug, Clone, Hash)]
 pub struct BasicBlock {
     id: Id,
@@ -89,6 +93,7 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
+    /// Create a new BasicBlock without a virtual address
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
@@ -101,6 +106,7 @@ impl BasicBlock {
         }
     }
 
+    /// Delete all ΑΩ-operations, edges and reset this BasicBlock
     pub fn clear(&mut self) {
         self.ops.clear();
         self.cursor = 0;
@@ -108,6 +114,7 @@ impl BasicBlock {
         self.edges.clear();
     }
 
+    /// Create a new BasicBlock at the given virtual address
     pub fn at_vaddr(vaddr: VAddr) -> Self {
         Self {
             id: Id::default(),
@@ -119,24 +126,29 @@ impl BasicBlock {
         }
     }
 
+    /// Change the virtual address of this basic block
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = Some(vaddr);
     }
 
+    /// The outgoing edges of this basic block
     pub fn edges(&self) -> &[Edge] {
         &self.edges
     }
 
+    /// The outgoing edges of this basic block
     pub fn edges_mut(&mut self) -> &mut [Edge] {
         &mut self.edges
     }
 
+    /// Add an outgoing edge to this basic block
     pub fn add_edge(&mut self, edge: Edge) {
         if !self.edges.contains(&edge) {
             self.edges.push(edge);
         }
     }
 
+    /// Delete an outgoing edge from this basic block
     pub fn delete_edge(&mut self, id: Id) -> Option<Edge> {
         for i in 0..self.edges.len() {
             if self.edges[i].target() == id {
@@ -148,6 +160,7 @@ impl BasicBlock {
         None
     }
 
+    /// Check if this basic block has an outgoing `Edge::Next` edge and return its destination
     pub fn next_basic_block(&self) -> Option<Id> {
         for edge in &self.edges {
             if let Edge::Next(id) = edge {
@@ -158,6 +171,7 @@ impl BasicBlock {
         None
     }
 
+    /// Check if this basic block has an outgoing `Edge::Jump` edge and return its destination
     pub fn jump_target(&self) -> Option<Id> {
         for edge in &self.edges {
             if let Edge::Jump(id) = edge {
@@ -168,23 +182,28 @@ impl BasicBlock {
         None
     }
 
+    /// Get the ΑΩ-operations in this basic block
     pub fn ops(&self) -> &[Op] {
         &self.ops
     }
 
+    /// Get the virtual address of this basic block. Not every basic block must have a virtual address.
     pub fn vaddr(&self) -> Option<VAddr> {
         self.vaddr
     }
 
+    /// Update the op cursor
     pub fn set_cursor(&mut self, idx: usize) {
         assert!(idx <= self.ops.len());
         self.cursor = idx;
     }
 
+    /// Set the op cursor to the end of the op list. This enables appending ops.
     pub fn move_cursor_beyond_end(&mut self) {
         self.cursor = self.ops.len();
     }
 
+    /// Increment the op cursor. Return `false` if the cursor already points to the last op.
     pub fn move_cursor_forward(&mut self) -> bool {
         if self.cursor >= self.ops.len().saturating_sub(1) {
             false
@@ -194,6 +213,7 @@ impl BasicBlock {
         }
     }
 
+    /// Decrement the op cursor. Return `false` if the cursor already is at the first op.
     pub fn move_cursor_backwards(&mut self) -> bool {
         if self.cursor > 0 {
             self.cursor -= 1;
@@ -203,22 +223,27 @@ impl BasicBlock {
         }
     }
 
+    /// Get the ΑΩ-operation at the current cursor position
     pub fn cursor_op(&self) -> Option<&Op> {
         self.ops.get(self.cursor)
     }
 
+    /// Get the ΑΩ-operation at the current cursor position
     pub fn cursor_op_mut(&mut self) -> Option<&mut Op> {
         self.ops.get_mut(self.cursor)
     }
 
+    /// Get the current op cursor position
     pub fn cursor(&self) -> usize {
         self.cursor
     }
 
+    /// Get the number of different ΑΩ-variables in use by this basic block
     pub fn num_variables(&self) -> usize {
         self.var_cursor
     }
 
+    /// Delete and return the ΑΩ-operation at the current cursor position
     pub fn delete_op(&mut self) -> Op {
         let op = self.ops.remove(self.cursor);
         self.cursor = std::cmp::min(self.cursor, self.ops.len());
@@ -231,10 +256,12 @@ impl BasicBlock {
         old
     }
 
+    /// Check whether this basic block ends with an op that explicitly overwrites the program counter (unconditionally)
     pub fn has_continuous_flow(&self) -> bool {
         !matches!(self.ops().last(), Some(Op::Jump { .. }))
     }
 
+    /// Verify the internal state of this basic block and its operations
     pub fn verify(&self) -> Result<(), CFGError> {
         if self.id == Id::default() {
             return Err(CFGError::NoId);
@@ -277,6 +304,8 @@ impl BasicBlock {
         Ok(())
     }
 
+    /// Split this basic block in two by splitting the list of ΑΩ-operations at the current cursor position.
+    /// Note that this leaves the current basic block with no edges, all the edges belong to the returned basic block.
     pub fn split(&mut self) -> Self {
         let ops = self.ops.split_off(self.cursor);
         let var_cursor = self.var_cursor;
@@ -305,6 +334,7 @@ impl HasIdMut for BasicBlock {
     }
 }
 
+/// Synthesizing instructions for ΑΩ-operations. Each ΑΩ-operation has a corresponding method.
 impl BasicBlock {
     fn next_variable(&mut self, typ: VarType) -> Var {
         let var = self.var_cursor;
@@ -1114,6 +1144,7 @@ impl BasicBlock {
     }
 }
 
+/// The Control Flow Graph of a function
 #[derive(Clone, Debug, Hash)]
 pub struct CFG {
     idmap: IdMap<BasicBlock>,
@@ -1124,6 +1155,7 @@ pub struct CFG {
 idmap_functions!(CFG, BasicBlock, basic_block);
 
 impl CFG {
+    /// Create a new, empty CFG
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
@@ -1133,20 +1165,24 @@ impl CFG {
         }
     }
 
+    /// Delete all basic blocks in this CFG and reset its state
     pub fn clear(&mut self) {
         self.idmap.clear();
         self.entry = Id::default();
         self.cursor = 0;
     }
 
+    /// Insert a basic block in this CFG and assign it an ID that is returned by this function
     pub fn add_basic_block(&mut self, bb: BasicBlock) -> Id {
         self.idmap.insert(bb)
     }
 
+    /// Get the entrypoint basic block of this CFG
     pub fn entry(&self) -> Id {
         self.entry
     }
 
+    /// Change the entrypoint basic block of this CFG
     pub fn set_entry(&mut self, id: Id) {
         self.entry = id;
     }

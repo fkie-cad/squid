@@ -1,3 +1,5 @@
+//! Contains the [`Engine`] for execution of ΑΩ-operations
+
 #![allow(clippy::result_large_err)]
 
 use thiserror::Error;
@@ -62,6 +64,7 @@ fn pointer_sub(p: &Pointer, i: u64) -> Option<Pointer> {
     }
 }
 
+/// This error type shows everything that can go wrong when interpreting ΑΩ operations
 #[derive(Error, Debug)]
 pub enum EngineError {
     #[error("Invalid type combination: {0:?}")]
@@ -92,6 +95,7 @@ pub enum EngineError {
     NotImplemented,
 }
 
+/// The concrete value of an ΑΩ-variable.
 #[derive(Clone, Debug)]
 pub enum Value {
     Unknown,
@@ -322,6 +326,7 @@ impl Value {
     }
 }
 
+/// This error type shows everything that can go wrong with the memory component of the [`Engine`].
 #[derive(Error, Debug)]
 pub enum MemoryError {
     #[error("Out-of-bounds access of {1} bytes at address {0:#x}")]
@@ -331,6 +336,7 @@ pub enum MemoryError {
     Other(String),
 }
 
+/// This trait must be implemented by anything that handles the memory for the [`Engine`].
 pub trait MemoryProvider {
     fn load_byte(&self, vaddr: VAddr) -> Result<u8, MemoryError>;
     fn load_hword(&self, vaddr: VAddr) -> Result<u16, MemoryError>;
@@ -381,6 +387,8 @@ impl MemoryProvider for () {
     }
 }
 
+/// After interpreting a [`BasicBlock`], the next basic block to interpret is determined
+/// by this enum.
 #[derive(Debug)]
 pub enum JumpTarget {
     Unknown,
@@ -390,6 +398,8 @@ pub enum JumpTarget {
     Pointer(Pointer),
 }
 
+/// The Engine is an interpreter for ΑΩ-operations and is used to execute basic blocks.
+/// After execution you can inspect the concrete values inside registers / memory / ΑΩ-variables.
 pub struct Engine<'a, M>
 where
     M: MemoryProvider,
@@ -407,6 +417,9 @@ impl<'a, M> Engine<'a, M>
 where
     M: MemoryProvider,
 {
+    /// Attach this engine to a BasicBlock that you want to execute.
+    /// Optionally you can pass a MemoryProvider that handles the memory loads and stores
+    /// of the given basic block.
     pub fn attach(bb: &'a BasicBlock, memory: Option<&'a mut M>) -> Self {
         Self {
             bb,
@@ -419,42 +432,52 @@ where
         }
     }
 
+    /// After execution, this is set if the basic block threw an event
     pub fn event(&self) -> Option<EventId> {
         self.event
     }
 
+    /// Access the event channel that the bb wrote to
     pub fn event_channel(&self) -> &[Var] {
         &self.event_channel
     }
 
+    /// Set the contents of a given register to a given value
     pub fn set_register(&mut self, reg: &Register, value: Value) {
         self.registers[register_index(reg)] = value;
     }
 
+    /// Get the contents of a given register
     pub fn get_register(&self, reg: &Register) -> &Value {
         &self.registers[register_index(reg)]
     }
 
+    /// Get the memory subsystem
     pub fn memory(&self) -> Option<&M> {
         self.memory.as_deref()
     }
 
+    /// Get the memory subsystem
     pub fn memory_mut(&mut self) -> Option<&mut M> {
         self.memory.as_deref_mut()
     }
 
+    /// Get the concrete values of all ΑΩ-variables after execution
     pub fn vars(&self) -> &[Value] {
         &self.vars
     }
 
+    /// Get the concrete value of a given ΑΩ-variable after execution
     pub fn var(&self, var: Var) -> &Value {
         &self.vars[var.id()]
     }
 
+    /// Check if the basic block has made a jump during execution
     pub fn jump(&self) -> Option<&JumpTarget> {
         self.jump.as_ref()
     }
 
+    /// Execute all the ΑΩ-operations inside the attached basic block
     #[rustfmt::skip]
     pub fn execute(&mut self) -> Result<(), EngineError> {
         let mut must_end = false;

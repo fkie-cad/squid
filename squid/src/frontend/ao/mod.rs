@@ -1,3 +1,5 @@
+//! ΑΩ (ao) stands for "atomic operations" and is the IR of `squid`
+
 mod cfg;
 mod error;
 mod func;

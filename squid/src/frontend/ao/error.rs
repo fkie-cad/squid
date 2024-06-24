@@ -5,6 +5,8 @@ use crate::frontend::{
     image::VAddr,
 };
 
+/// This error type shows everything that can go wrong when lifting RISC-V code
+/// into the ΑΩ IR.
 #[derive(Error, Debug)]
 pub enum AoError {
     #[error("Invalid operation size: {0}")]

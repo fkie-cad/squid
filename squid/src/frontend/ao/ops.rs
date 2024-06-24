@@ -11,6 +11,7 @@ use crate::{
     },
 };
 
+/// The different types of comparisons that can occur in RISC-V code
 #[derive(Debug, Clone, Hash)]
 pub enum Comparison {
     Equal,
@@ -19,6 +20,7 @@ pub enum Comparison {
     LessEqual(bool),
 }
 
+/// The different types of registers that can occur in RISC-V code
 #[derive(Debug, Clone, Hash)]
 pub enum Register {
     Gp(GpRegister),
@@ -27,22 +29,26 @@ pub enum Register {
 }
 
 impl Register {
+    /// Check whether this register is a general purpose register
     pub fn is_gp(&self) -> bool {
         matches!(self, Self::Gp(_))
     }
 
+    /// Check whether this register is a floating point register
     pub fn is_fp(&self) -> bool {
         matches!(self, Self::Fp(_))
     }
 
+    /// Check whether this register is a control/status register
     pub fn is_csr(&self) -> bool {
         matches!(self, Self::Csr(_))
     }
 }
 
+/// Every ΑΩ-variable has one of these types
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum VarType {
-    /// A 64-bit integer (signed or unsigned)
+    /// A 64-bit integer (signed or unsigned). Also used for pointers.
     Number,
 
     /// A single-precision floating point number
@@ -52,6 +58,7 @@ pub enum VarType {
     Float64,
 }
 
+/// An ΑΩ-variable is an [SSA variable](https://en.wikipedia.org/wiki/Static_single-assignment_form) of the ΑΩ IR
 #[derive(Debug, Copy, Clone, Hash)]
 pub struct Var {
     id: u32,
@@ -66,36 +73,43 @@ impl Var {
         }
     }
 
+    /// Get the unique ID of this variable (ΑΩ-variables are numbered starting from zero)
     pub fn id(&self) -> usize {
         self.id as usize
     }
 
+    /// Get the type of this variable
     pub fn vartype(&self) -> VarType {
         self.typ
     }
 
+    /// Check whether this variable is a number
     #[inline]
     pub fn is_number(&self) -> bool {
         matches!(&self.typ, VarType::Number)
     }
 
+    /// Check whether this variable is a single-precision float
     #[inline]
     pub fn is_float32(&self) -> bool {
         matches!(&self.typ, VarType::Float32)
     }
 
+    /// Check whether this variable is a double-precision float
     #[inline]
     pub fn is_float64(&self) -> bool {
         matches!(&self.typ, VarType::Float64)
     }
 }
 
+/// For operations that have 128-bit results, this determines which 64-bit half to use
 #[derive(Debug, Clone, Hash)]
 pub enum Half {
     Lower,
     Upper,
 }
 
+/// Some ΑΩ-operations behave differently depending on the signedness of their arguments
 #[derive(Debug, Clone, Hash)]
 pub enum Signedness {
     Signed,
@@ -103,6 +117,19 @@ pub enum Signedness {
     Mixed,
 }
 
+/// ΑΩ-operations are used to capture the behavior of RISC-V instructions but make
+/// every single step explicit.
+/// 
+/// For example, the RISC-V instruction `add a0, a1, a2` can be broken down into the steps
+/// 1. Load register a1
+/// 2. Load register a2
+/// 3. Perform add
+/// 4. Write result to register a0
+/// 
+/// The ΑΩ IR provides operations for all of the four steps.
+/// 
+/// You cannot directly synthesize [`Op`]s, you have to use the builder methods
+/// in [`BasicBlock`](crate::frontend::ao::BasicBlock).
 #[derive(Debug, Clone, Hash)]
 pub enum Op {
     /// A meta-op that signals that a new instruction from the original
@@ -285,10 +312,12 @@ pub enum Op {
 }
 
 impl Op {
+    /// Check whether the current operation terminates a basic block
     pub fn is_terminator(&self) -> bool {
         matches!(self, Op::Branch { .. } | Op::Jump { .. } | Op::FireEvent { .. })
     }
 
+    /// Return the output variables of this op
     pub fn output_variables(&self) -> Vec<Var> {
         let mut ret = Vec::new();
 
@@ -471,6 +500,7 @@ impl Op {
         ret
     }
 
+    /// Get the input variables used by this op
     pub fn input_variables(&self) -> Vec<Var> {
         let mut ret = Vec::new();
 
@@ -691,6 +721,7 @@ impl Op {
         ret
     }
 
+    /// Get the input registers used by this op
     pub fn input_register(&self) -> Option<Register> {
         match self {
             Op::LoadRegister {
@@ -701,6 +732,7 @@ impl Op {
         }
     }
 
+    /// Get the output registers used by this op
     pub fn output_register(&self) -> Option<Register> {
         match self {
             Op::StoreRegister {
