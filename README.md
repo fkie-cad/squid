@@ -131,4 +131,8 @@ Please note that for clarity the code leaves out a lot of `unwrap()`s and error 
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
 For a gentle introduction, see the [hello world](./examples/helloworld) example and for a
 full-blown "professional" fuzzer, see our [readelf fuzzer](./examples/readelf).
+Finally, consult the documentation on [docs.rs](https://docs.rs/squid) when you start using `squid`.
+
+If you find that something is not properly documented / explained or you have any other questions, please
+do not hesitate to [create an issue](https://github.com/fkie-cad/squid/issues/new).
 
