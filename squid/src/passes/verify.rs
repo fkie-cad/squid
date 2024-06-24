@@ -254,6 +254,9 @@ fn verify_pointer(image: &ProcessImage, pointer: &Pointer) {
     }
 }
 
+/// The VerifyerPass is an internal pass that verifies the correctness of a process image.
+/// If the process image has been incorrectly modified by external passes then this error
+/// is thrown.
 #[derive(Error, Debug)]
 #[error("VerifyerPassError")]
 pub struct VerifyerPassError;

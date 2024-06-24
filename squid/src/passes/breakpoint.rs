@@ -19,10 +19,12 @@ use crate::{
     passes::Pass,
 };
 
+/// The error type of the [`BreakpointPass`]
 #[derive(Error, Debug)]
 #[error("BreakpointPassError")]
 pub struct BreakpointPassError;
 
+/// The BreakpointPass allows you to insert breakpoints into the application.
 pub struct BreakpointPass {
     private_names: HashSet<String>,
     public_names: HashSet<String>,
@@ -31,6 +33,7 @@ pub struct BreakpointPass {
 }
 
 impl BreakpointPass {
+    /// Create a new BreakpointPass
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
@@ -41,21 +44,25 @@ impl BreakpointPass {
         }
     }
 
+    /// Break on all basic blocks
     pub fn all(&mut self) -> &mut Self {
         self.all = true;
         self
     }
 
+    /// Break on functions with the given private name
     pub fn private_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.private_names.insert(name.into());
         self
     }
 
+    /// Break on functions with the given public name
     pub fn public_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.public_names.insert(name.into());
         self
     }
 
+    /// Break at the provided address
     pub fn address(&mut self, addr: VAddr) -> &mut Self {
         self.addrs.insert(addr);
         self

@@ -21,11 +21,13 @@ use crate::{
     passes::Pass,
 };
 
+/// ImageDOTPass dumps the process image as a .dot file
 pub struct ImageDOTPass {
     filename: PathBuf,
 }
 
 impl ImageDOTPass {
+    /// Create a new ImageDOTPass
     pub fn new<S: Into<PathBuf>>(filename: S) -> Self {
         Self {
             filename: filename.into(),
@@ -139,6 +141,7 @@ impl Pass for ImageDOTPass {
     }
 }
 
+/// The FunctionDOTPass dumps the CFG of selected functions into a .dot file
 pub struct FunctionDOTPass {
     filename: PathBuf,
     private_name: Option<String>,
@@ -147,6 +150,7 @@ pub struct FunctionDOTPass {
 }
 
 impl FunctionDOTPass {
+    /// Create a new FunctionDOTPass
     #[allow(clippy::new_without_default)]
     pub fn new<P: Into<PathBuf>>(filename: P) -> Self {
         Self {
@@ -157,16 +161,19 @@ impl FunctionDOTPass {
         }
     }
 
+    /// Dump functions with the given private name
     pub fn private_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.private_name = Some(name.into());
         self
     }
 
+    /// Dump functions with the given public name
     pub fn public_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.public_name = Some(name.into());
         self
     }
 
+    /// Dump functions at the given address
     pub fn address(&mut self, addr: VAddr) -> &mut Self {
         self.addr = Some(addr);
         self

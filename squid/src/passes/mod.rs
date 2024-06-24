@@ -1,3 +1,5 @@
+//! Contains the passes that are provided by `squid`
+
 mod breakpoint;
 mod dot;
 mod pass;
