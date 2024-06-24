@@ -29,5 +29,5 @@ If your target makes use of the C extension that enables `goto*` statements and 
 use `/ewe/gcc` instead of `riscv64-unknown-linux-gnu-gcc`.
 This tool is a compiler wrapper that collects certain metadata about the code and is necessary to
 correctly reconstruct CFG's. It produces an `.ewe` file alongside your binary that contains said metadata.
-For more information on this see the documentation of [ewe (todo)]().
+For more information on this see the documentation of [ewe](../ewe).
 
