@@ -36,7 +36,7 @@ pub enum CompilationError<E: std::error::Error> {
 
 /// The Compiler is the center piece of `squid`. It loads ELF files, runs passes and launches a backend
 /// to obtain a [Runtime](crate::runtime::Runtime).
-/// 
+///
 /// To obtain a `Compiler` instance, call [`Compiler::load_elf`]. Then you can run one or more passes
 /// with [`Compiler::run_pass`] before compiling the process image with [`Compiler::compile`].
 #[derive(Debug)]
@@ -48,7 +48,7 @@ pub struct Compiler {
 
 impl Compiler {
     /// Symbolically load an ELF file and create a process image.
-    /// 
+    ///
     /// # Arguments
     /// 1. `binary`: Path to the ELF binary that is being run by `squid`
     /// 2. `search_paths`: Similar to LD_LIBRARY_PATH, a list of directory names where the binaries dependencies
@@ -79,7 +79,7 @@ impl Compiler {
     }
 
     /// Run a pass to inspect or modify the process image.
-    /// 
+    ///
     /// # Arguments
     /// 1. `pass`: Anything that implements the [`Pass`] trait
     pub fn run_pass<P>(&mut self, pass: &mut P) -> Result<(), P::Error>
@@ -107,7 +107,7 @@ impl Compiler {
 
     /// Compile the process image and create a [Runtime](crate::runtime::Runtime).
     /// The type of the runtime is determined by the backend. Each backend can have its own runtime.
-    /// 
+    ///
     /// # Arguments
     /// 1. `backend`: Anything that implements the [`Backend`] trait
     pub fn compile<B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, CompilationError<B::Error>> {

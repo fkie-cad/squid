@@ -84,7 +84,7 @@ impl Section {
     pub fn set_size(&mut self, size: usize) {
         self.size = size;
     }
-    
+
     /// Change the permissions of this section
     pub fn set_perms(&mut self, perms: Perms) {
         self.perms = perms;

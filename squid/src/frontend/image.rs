@@ -47,7 +47,7 @@ use crate::{
 pub type VAddr = u64;
 
 /// The ProcessImage contains all necessary ELF files for emulation
-/// 
+///
 /// It
 /// - parses its binaries into a tree structure instead of a linear memory image
 /// - symbolizes all pointers in the ELF files

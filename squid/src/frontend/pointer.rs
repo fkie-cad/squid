@@ -48,16 +48,16 @@ pub struct FunctionPointer {
 pub enum Pointer {
     /// This pointer points nowhere
     Null,
-    
+
     /// This pointer points to a global variable
     Global(GlobalPointer),
-    
+
     /// This pointer points to a thread-local variable
     Local(ThreadLocalPointer),
-    
+
     /// This pointer points to a specific bb of a function
     BasicBlock(BasicBlockPointer),
-    
+
     /// This pointer points to a specific function
     Function(FunctionPointer),
 }

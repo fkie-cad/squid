@@ -16,14 +16,14 @@ use crate::{
 pub enum Comparison {
     /// Equality
     Equal,
-    
+
     /// Non-equality
     NotEqual,
-    
+
     /// Compare if one operand is less than the other. If the inner bool is `true` then this
     /// is a signed comparison.
     Less(bool),
-    
+
     /// Compare if one operand is less than or equal than the other. If the inner bool is `true` then this
     /// is a signed comparison.
     LessEqual(bool),
@@ -34,10 +34,10 @@ pub enum Comparison {
 pub enum Register {
     /// General purpose register
     Gp(GpRegister),
-    
+
     /// Floating point register
     Fp(FpRegister),
-    
+
     /// Control/status register
     Csr(CsrRegister),
 }
@@ -135,15 +135,15 @@ pub enum Signedness {
 
 /// ΑΩ-operations are used to capture the behavior of RISC-V instructions but make
 /// every single step explicit.
-/// 
+///
 /// For example, the RISC-V instruction `add a0, a1, a2` can be broken down into the steps
 /// 1. Load register a1
 /// 2. Load register a2
 /// 3. Perform add
 /// 4. Write result to register a0
-/// 
+///
 /// The ΑΩ IR provides operations for all of the four steps.
-/// 
+///
 /// You cannot directly synthesize [`Op`]s, you have to use the builder methods
 /// in [`BasicBlock`](crate::frontend::ao::BasicBlock).
 #[allow(missing_docs)]

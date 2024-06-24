@@ -76,7 +76,7 @@ impl Perms {
     pub fn clear_readable(&mut self) {
         self.0 &= !PERM_R;
     }
-    
+
     #[allow(missing_docs)]
     pub fn make_executable(&mut self) {
         self.0 |= PERM_X

@@ -57,7 +57,7 @@ impl Elf {
     pub fn tls(&self) -> &Tls {
         &self.tls
     }
-    
+
     /// Retrieve the thread-local storage area of this Elf file
     pub fn tls_mut(&mut self) -> &mut Tls {
         &mut self.tls

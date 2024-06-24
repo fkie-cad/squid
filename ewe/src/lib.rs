@@ -3,7 +3,7 @@
 //! Its primary purpose is to tackle the information loss problem during compilation
 //! and reconstruct basic block boundaries in machine code.
 //! This enables CFG reconstruction from C code making use of the `goto*` extension.
-//! 
+//!
 //! This crate is a helper for [squid](https://github.com/fkie-cad/squid) and not meant to be
 //! generally usable. Use at your own risk.
 

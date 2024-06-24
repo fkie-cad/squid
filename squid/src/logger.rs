@@ -12,7 +12,7 @@ use indicatif::{
 };
 
 /// The Logger is a helper struct that display log messages to the terminal.
-/// 
+///
 /// If the feature `tui` is activated, it also displays some nice TUI animations.
 /// Use the functions [`Logger::info`], [`Logger::warning`], [`Logger::error`] to emit log messages
 /// at the corresponding log levels.

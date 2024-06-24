@@ -16,7 +16,7 @@ pub type SnapshotId = usize;
 pub trait Runtime {
     /// Each runtime has its corresponding error type
     type Error: std::error::Error;
-    
+
     /// The Event is the return value of the [`Runtime::run`] function
     type Event;
 

@@ -52,16 +52,16 @@ use crate::{
 pub enum ChunkContent {
     /// This chunk holds executable RISC-V code that was lifted into the IR
     Code(Function),
-    
+
     /// This chunk contains data with the given permissions
     Data {
         /// The content of the chunk
         bytes: FixedVec<u8>,
-        
+
         /// Byte-level permissions for every byte of the content
-        perms: FixedVec<Perms>
+        perms: FixedVec<Perms>,
     },
-    
+
     /// This chunk contains a pointer
     Pointer(Pointer),
 }

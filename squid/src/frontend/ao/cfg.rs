@@ -72,7 +72,7 @@ pub enum Edge {
     /// The "next" edge points to the basic block that immediately follows the source basic block
     /// in linear memory.
     Next(Id),
-    
+
     /// The "jump" edge points to a basic block that can only be reached by an overwite of the program counter
     /// by a branch or a jump (or a switch).
     Jump(Id),
