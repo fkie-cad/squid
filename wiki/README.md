@@ -74,13 +74,14 @@ The backend receives a process image and produces a "runtime" that interfaces wi
 In a similar fashion like before, a backend is anything that implements the `Backend` trait and a runtime
 is anything that implements the `Runtime` trait.
 
-Currently, `squid` comes with the `MultiverseBackend` and the `MultiverseRuntime`:
+Currently, `squid` comes with the `ClangBackend` and the `ClangRuntime`:
 ```rs
 // Create the backend responsible for compilation
-let backend = MultiverseBackend::builder()
+let backend = ClangBackend::builder()
     .stack_size(1 * 1024 * 1024)            // Size of the stack region
     .progname("my-fuzz-target")             // argv[0]
     .arg("--with-bugs-pls")                 // argv[1]
+    .source_file("./aot-code.c")
     .build()
     .expect("Could not configure backend");
 

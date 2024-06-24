@@ -47,7 +47,7 @@ for elf in compiler.process_image().iter_elfs() {
                     ChunkContent::Code(code) => {
                         // ...
                     },
-                    ChunkContent::Data { bytes, perms } => {
+                    ChunkContent::Data { content, perms } => {
                         // ...
                     },
                     ChunkContent::Pointer(pointer) => {

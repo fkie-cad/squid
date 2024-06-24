@@ -2,7 +2,7 @@
 
 Events are a means of communication between the guest and the host and
 can be used to pass information to the harness and back.
-They can be thrown at any point in the code by inserting the `FireEvent` IR instruction.
+They can be thrown at any point in the code with the `FireEvent` IR instruction.
 Two events are built into `squid`. The syscall event that is caused by an ECALL instruction
 and the breakpoint event that is caused by an EBREAK instruction.
 You can also define custom events.
