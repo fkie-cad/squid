@@ -13,7 +13,7 @@
 //! ...can be found in the [repository](https://github.com/fkie-cad/squid).
 //! 
 //! # What is supported
-//! Binaries compiled with `squid`s own RISC-V toolchain and this special set of flags:
+//! Binaries compiled with `squid`s own [RISC-V toolchain](https://github.com/fkie-cad/squid/blob/main/wiki/TOOLCHAIN.md) and this special set of flags:
 //! ```
 //! -fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
 //! ```
