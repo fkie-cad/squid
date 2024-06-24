@@ -1,3 +1,5 @@
+//! The rounding modes of the RISC-V ISA that might appear in the `frm` CSR
+
 /// Round to nearest, ties to even
 pub const RNE: u64 = 0b000;
 /// Round towards zero

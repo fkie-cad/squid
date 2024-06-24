@@ -11,6 +11,11 @@ use indicatif::{
     ProgressStyle,
 };
 
+/// The Logger is a helper struct that display log messages to the terminal.
+/// 
+/// If the feature `tui` is activated, it also displays some nice TUI animations.
+/// Use the functions [`Logger::info`], [`Logger::warning`], [`Logger::error`] to emit log messages
+/// at the corresponding log levels.
 pub struct Logger {
     bar: ProgressBar,
     running: bool,
@@ -68,14 +73,17 @@ impl Logger {
         }
     }
 
+    /// Emit a log message with log level "INFO"
     pub fn info<S: AsRef<str>>(&self, msg: S) {
         self.emit("[🦑::INFO]".blue().bold(), msg);
     }
 
+    /// Emit a log message with log level "WARN"
     pub fn warning<S: AsRef<str>>(&self, msg: S) {
         self.emit("[🦑::WARN]".yellow().bold(), msg);
     }
 
+    /// Emit a log message with log level "DEBUG"
     pub fn debug<S: AsRef<str>>(&self, _msg: S) {
         #[cfg(debug_assertions)]
         {
@@ -83,6 +91,7 @@ impl Logger {
         }
     }
 
+    /// Emit a log message with log level "ERROR"
     pub fn error<S: AsRef<str>>(&self, msg: S) {
         self.emit("[🦑::ERROR]".red().bold(), msg);
     }

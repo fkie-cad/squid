@@ -1,3 +1,5 @@
+//! Contains types related to the IEEE754 usage of the RISC-V ISA.
+
 use std::ops::{
     AddAssign,
     SubAssign,
@@ -9,11 +11,11 @@ use num_traits::{
     float::Float,
 };
 
-pub const NAN_BOX: u64 = 0xFFFFFFFF00000000;
-pub const SINGLE_NAN: u32 = 0x7fc00000;
-pub const DOUBLE_NAN: u64 = 0x7ff8000000000000;
+pub(crate) const NAN_BOX: u64 = 0xFFFFFFFF00000000;
+pub(crate) const SINGLE_NAN: u32 = 0x7fc00000;
+pub(crate) const DOUBLE_NAN: u64 = 0x7ff8000000000000;
 
-pub trait RiscvFloat: Float {
+pub(crate) trait RiscvFloat: Float {
     const PRECISION: u32;
 
     fn is_half(&self) -> bool;
@@ -67,7 +69,7 @@ impl RiscvFloat for f64 {
 }
 
 /// Round to nearest, tie to even
-pub fn round_nte<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
+pub(crate) fn round_nte<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
     if x.is_special() {
         return x;
     }
@@ -86,7 +88,7 @@ pub fn round_nte<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
 }
 
 /// Round towards zero
-pub fn round_tz<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
+pub(crate) fn round_tz<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
     if x.is_special() {
         return x;
     }
@@ -99,7 +101,7 @@ pub fn round_tz<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
 }
 
 /// Round down
-pub fn round_dn<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
+pub(crate) fn round_dn<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
     if x.is_special() {
         return x;
     }
@@ -108,7 +110,7 @@ pub fn round_dn<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
 }
 
 /// Round up
-pub fn round_up<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
+pub(crate) fn round_up<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
     if x.is_special() {
         return x;
     }
@@ -117,7 +119,7 @@ pub fn round_up<T: RiscvFloat + AddAssign + SubAssign>(x: T) -> T {
 }
 
 /// Round to nearest, tie to max magnitude
-pub fn round_nmm<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
+pub(crate) fn round_nmm<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
     if x.is_special() {
         return x;
     }
@@ -131,7 +133,7 @@ pub fn round_nmm<T: RiscvFloat + AddAssign + SubAssign>(mut x: T) -> T {
     x.round()
 }
 
-pub fn add<T>(a: T, b: T) -> T
+pub(crate) fn add<T>(a: T, b: T) -> T
 where
     T: RiscvFloat,
 {
@@ -154,7 +156,7 @@ where
     }
 }
 
-pub fn sub<T: RiscvFloat>(a: T, b: T) -> T {
+pub(crate) fn sub<T: RiscvFloat>(a: T, b: T) -> T {
     if a.is_nan() || b.is_nan() {
         T::riscv_nan()
     } else if a.is_infinite() && b.is_infinite() {
@@ -168,7 +170,7 @@ pub fn sub<T: RiscvFloat>(a: T, b: T) -> T {
     }
 }
 
-pub fn mul<T: RiscvFloat>(a: T, b: T) -> T {
+pub(crate) fn mul<T: RiscvFloat>(a: T, b: T) -> T {
     if (a.is_nan() || b.is_nan()) || (a.is_infinite() && b.is_zero()) || (a.is_zero() && b.is_infinite()) {
         T::riscv_nan()
     } else {
@@ -176,7 +178,7 @@ pub fn mul<T: RiscvFloat>(a: T, b: T) -> T {
     }
 }
 
-pub fn div<T: RiscvFloat>(a: T, b: T) -> T {
+pub(crate) fn div<T: RiscvFloat>(a: T, b: T) -> T {
     if a.is_nan() || b.is_nan() {
         T::riscv_nan()
     } else if b.is_infinite() {
@@ -206,7 +208,7 @@ pub fn div<T: RiscvFloat>(a: T, b: T) -> T {
     }
 }
 
-pub fn min<T: RiscvFloat>(a: T, b: T) -> T {
+pub(crate) fn min<T: RiscvFloat>(a: T, b: T) -> T {
     if a.is_nan() || b.is_nan() {
         if a.is_nan() && b.is_nan() {
             T::riscv_nan()
@@ -222,7 +224,7 @@ pub fn min<T: RiscvFloat>(a: T, b: T) -> T {
     }
 }
 
-pub fn max<T: RiscvFloat>(a: T, b: T) -> T {
+pub(crate) fn max<T: RiscvFloat>(a: T, b: T) -> T {
     if a.is_nan() || b.is_nan() {
         if a.is_nan() && b.is_nan() {
             T::riscv_nan()
@@ -238,7 +240,7 @@ pub fn max<T: RiscvFloat>(a: T, b: T) -> T {
     }
 }
 
-pub fn classify<T: RiscvFloat>(a: T) -> u64 {
+pub(crate) fn classify<T: RiscvFloat>(a: T) -> u64 {
     let mut mask: u64 = 0;
 
     if a.is_nan() {
@@ -270,7 +272,7 @@ pub fn classify<T: RiscvFloat>(a: T) -> u64 {
     mask
 }
 
-pub fn convert<F, I>(f: F) -> I
+pub(crate) fn convert<F, I>(f: F) -> I
 where
     F: RiscvFloat,
     I: Bounded + NumCast,

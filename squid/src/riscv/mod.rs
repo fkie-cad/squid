@@ -1,3 +1,5 @@
+//! Provides constants and types that are related to the RISC-V ISA.
+
 pub(crate) mod ieee754;
 pub(crate) mod instr;
 

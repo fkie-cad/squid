@@ -34,6 +34,11 @@ pub enum CompilationError<E: std::error::Error> {
     VerificationError(#[from] VerifyerPassError),
 }
 
+/// The Compiler is the center piece of `squid`. It loads ELF files, runs passes and launches a backend
+/// to obtain a [Runtime](crate::runtime::Runtime).
+/// 
+/// To obtain a `Compiler` instance, call [`Compiler::load_elf`]. Then you can run one or more passes
+/// with [`Compiler::run_pass`] before compiling the process image with [`Compiler::compile`].
 #[derive(Debug)]
 pub struct Compiler {
     pub(crate) image: ProcessImage,
@@ -42,6 +47,14 @@ pub struct Compiler {
 }
 
 impl Compiler {
+    /// Symbolically load an ELF file and create a process image.
+    /// 
+    /// # Arguments
+    /// 1. `binary`: Path to the ELF binary that is being run by `squid`
+    /// 2. `search_paths`: Similar to LD_LIBRARY_PATH, a list of directory names where the binaries dependencies
+    ///    are searched
+    /// 3. `preloads`: Similar to LD_PRELOAD, a list of shared objects that are to be preloaded into the process image
+    ///     before all other dependencies
     pub fn load_elf<S>(binary: S, search_paths: &[S], preloads: &[S]) -> Result<Self, LoaderError>
     where
         S: AsRef<Path>,
@@ -65,6 +78,10 @@ impl Compiler {
         Ok(compiler)
     }
 
+    /// Run a pass to inspect or modify the process image.
+    /// 
+    /// # Arguments
+    /// 1. `pass`: Anything that implements the [`Pass`] trait
     pub fn run_pass<P>(&mut self, pass: &mut P) -> Result<(), P::Error>
     where
         P: Pass,
@@ -88,6 +105,11 @@ impl Compiler {
         Ok(())
     }
 
+    /// Compile the process image and create a [Runtime](crate::runtime::Runtime).
+    /// The type of the runtime is determined by the backend. Each backend can have its own runtime.
+    /// 
+    /// # Arguments
+    /// 1. `backend`: Anything that implements the [`Backend`] trait
     pub fn compile<B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, CompilationError<B::Error>> {
         if self.modified {
             self.verify()?;
@@ -107,10 +129,12 @@ impl Compiler {
         Ok(ret)
     }
 
+    /// Access the process image, which is the result of symbolically loading a binary
     pub fn process_image(&self) -> &ProcessImage {
         &self.image
     }
 
+    /// Access the event pool
     pub fn event_pool(&self) -> &EventPool {
         &self.event_pool
     }

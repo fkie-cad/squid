@@ -1,3 +1,4 @@
+//! The linux syscall values + documentation for the RISC-V ISA
 #![allow(non_upper_case_globals)]
 /// `long sys_io_setup(unsigned nr_reqs, aio_context_t __user *ctx);`
 pub const io_setup: u64 = 0;

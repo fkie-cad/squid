@@ -1,3 +1,5 @@
+//! The flags that can be set in the `fflags` CSR.
+
 /// Inexact
 pub const NX: u32 = 1 << 0;
 

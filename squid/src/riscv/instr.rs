@@ -2,12 +2,12 @@
 #![allow(non_camel_case_types)]
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeU {
-    pub rd: usize,
-    pub imm: i64,
+pub(crate) struct TypeU {
+    pub(crate) rd: usize,
+    pub(crate) imm: i64,
 }
 impl TypeU {
-    pub fn decode(instruction: u32) -> TypeU {
+    pub(crate) fn decode(instruction: u32) -> TypeU {
         TypeU {
             rd: ((instruction >> 7) & 0b11111) as usize,
             imm: (instruction & 0xFFFFF000) as i32 as i64,
@@ -16,12 +16,12 @@ impl TypeU {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeJ {
-    pub rd: usize,
-    pub imm: i64,
+pub(crate) struct TypeJ {
+    pub(crate) rd: usize,
+    pub(crate) imm: i64,
 }
 impl TypeJ {
-    pub fn decode(instruction: u32) -> TypeJ {
+    pub(crate) fn decode(instruction: u32) -> TypeJ {
         let mut imm: u32 = 0;
 
         imm |= (instruction >> 20) & 0b11111111110;
@@ -37,14 +37,14 @@ impl TypeJ {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeI {
-    pub rd: usize,
-    pub funct3: u64,
-    pub rs1: usize,
-    pub imm: i64,
+pub(crate) struct TypeI {
+    pub(crate) rd: usize,
+    pub(crate) funct3: u64,
+    pub(crate) rs1: usize,
+    pub(crate) imm: i64,
 }
 impl TypeI {
-    pub fn decode(instruction: u32) -> TypeI {
+    pub(crate) fn decode(instruction: u32) -> TypeI {
         TypeI {
             rd: ((instruction >> 7) & 0b11111) as usize,
             funct3: ((instruction >> 12) & 0b111) as u64,
@@ -55,14 +55,14 @@ impl TypeI {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeB {
-    pub funct3: u64,
-    pub rs1: usize,
-    pub rs2: usize,
-    pub imm: i64,
+pub(crate) struct TypeB {
+    pub(crate) funct3: u64,
+    pub(crate) rs1: usize,
+    pub(crate) rs2: usize,
+    pub(crate) imm: i64,
 }
 impl TypeB {
-    pub fn decode(instruction: u32) -> TypeB {
+    pub(crate) fn decode(instruction: u32) -> TypeB {
         let mut imm: u32 = 0;
 
         imm |= (instruction >> 7) & 0b11110;
@@ -80,14 +80,14 @@ impl TypeB {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeS {
-    pub rs1: usize,
-    pub rs2: usize,
-    pub funct3: u64,
-    pub imm: i64,
+pub(crate) struct TypeS {
+    pub(crate) rs1: usize,
+    pub(crate) rs2: usize,
+    pub(crate) funct3: u64,
+    pub(crate) imm: i64,
 }
 impl TypeS {
-    pub fn decode(instruction: u32) -> TypeS {
+    pub(crate) fn decode(instruction: u32) -> TypeS {
         let mut imm: u32 = 0;
 
         imm |= (instruction >> 7) & 0b11111;
@@ -103,15 +103,15 @@ impl TypeS {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeR {
-    pub rd: usize,
-    pub rs1: usize,
-    pub rs2: usize,
-    pub funct3: u64,
-    pub funct7: u64,
+pub(crate) struct TypeR {
+    pub(crate) rd: usize,
+    pub(crate) rs1: usize,
+    pub(crate) rs2: usize,
+    pub(crate) funct3: u64,
+    pub(crate) funct7: u64,
 }
 impl TypeR {
-    pub fn decode(instruction: u32) -> TypeR {
+    pub(crate) fn decode(instruction: u32) -> TypeR {
         TypeR {
             rd: ((instruction >> 7) & 0b11111) as usize,
             rs1: ((instruction >> 15) & 0b11111) as usize,
@@ -123,16 +123,16 @@ impl TypeR {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeR4 {
-    pub rd: usize,
-    pub rs1: usize,
-    pub rs2: usize,
-    pub funct3: u64,
-    pub funct2: u64,
-    pub rs3: usize,
+pub(crate) struct TypeR4 {
+    pub(crate) rd: usize,
+    pub(crate) rs1: usize,
+    pub(crate) rs2: usize,
+    pub(crate) funct3: u64,
+    pub(crate) funct2: u64,
+    pub(crate) rs3: usize,
 }
 impl TypeR4 {
-    pub fn decode(instruction: u32) -> TypeR4 {
+    pub(crate) fn decode(instruction: u32) -> TypeR4 {
         TypeR4 {
             rd: ((instruction >> 7) & 0b11111) as usize,
             rs1: ((instruction >> 15) & 0b11111) as usize,
@@ -146,7 +146,7 @@ impl TypeR4 {
 
 /// Instructions belonging to the base 32-bit integer instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV32I {
+pub(crate) enum RV32I {
     LUI(TypeU),
     AUIPC(TypeU),
     JAL(TypeJ),
@@ -191,7 +191,7 @@ pub enum RV32I {
 
 /// Instructions belonging to the base 64-bit integer instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV64I {
+pub(crate) enum RV64I {
     LWU(TypeI),
     LD(TypeI),
     SD(TypeS),
@@ -211,7 +211,7 @@ pub enum RV64I {
 
 /// Instructions belonging to the 32-bit A extension
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV32A {
+pub(crate) enum RV32A {
     LR(TypeR),
     SC(TypeR),
     AMOSWAP(TypeR),
@@ -227,7 +227,7 @@ pub enum RV32A {
 
 /// Instructions belonging to the 64-bit A extension
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV64A {
+pub(crate) enum RV64A {
     LR(TypeR),
     SC(TypeR),
     AMOSWAP(TypeR),
@@ -243,7 +243,7 @@ pub enum RV64A {
 
 /// Instructions belonging to the 32-bit extension F
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV32F {
+pub(crate) enum RV32F {
     FLW(TypeI),
     FSW(TypeS),
     FMADD(TypeR4),
@@ -274,7 +274,7 @@ pub enum RV32F {
 
 /// Instructions belonging to the RV64F instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV64F {
+pub(crate) enum RV64F {
     FCVT_LS(TypeR),
     FCVT_LUS(TypeR),
     FCVT_SL(TypeR),
@@ -283,7 +283,7 @@ pub enum RV64F {
 
 /// Instructions belonging to the RV32D instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV32D {
+pub(crate) enum RV32D {
     FLD(TypeI),
     FSD(TypeS),
     FMADD(TypeR4),
@@ -314,7 +314,7 @@ pub enum RV32D {
 
 /// Instructions belonging to the RV64D instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV64D {
+pub(crate) enum RV64D {
     FCVT_LD(TypeR),
     FCVT_LUD(TypeR),
     FMV_XD(TypeR),
@@ -325,7 +325,7 @@ pub enum RV64D {
 
 /// Instructions belonging to the Zicsr instruction set
 #[derive(Debug, PartialEq, Clone)]
-pub enum CSR {
+pub(crate) enum CSR {
     RW(TypeI),
     RS(TypeI),
     RC(TypeI),
@@ -335,7 +335,7 @@ pub enum CSR {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV32M {
+pub(crate) enum RV32M {
     MUL(TypeR),
     MULH(TypeR),
     MULHSU(TypeR),
@@ -347,7 +347,7 @@ pub enum RV32M {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum RV64M {
+pub(crate) enum RV64M {
     MULW(TypeR),
     DIVW(TypeR),
     DIVUW(TypeR),
@@ -357,7 +357,7 @@ pub enum RV64M {
 
 /// The collection of supported instruction sets
 #[derive(Debug, PartialEq, Clone)]
-pub enum InstructionSet {
+pub(crate) enum InstructionSet {
     RV32I(RV32I),
     RV64I(RV64I),
     RV32A(RV32A),
@@ -377,7 +377,7 @@ pub enum InstructionSet {
 ///  - which instruction set it belongs to
 ///  - what instruction it is
 ///  - its arguments
-pub fn decode(buf: &[u8]) -> InstructionSet {
+pub(crate) fn decode(buf: &[u8]) -> InstructionSet {
     let instruction = u32::from_le_bytes(buf[..4].try_into().unwrap());
     match instruction & 0b1111111 {
         0b0000011 => {
