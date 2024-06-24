@@ -18,6 +18,7 @@ pub(crate) trait HasIdMut {
 
 /// This trait provides access to the ID of elements in the process image
 pub trait HasId {
+    /// Retrieve the ID of this element
     fn id(&self) -> Id;
 }
 

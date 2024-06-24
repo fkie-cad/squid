@@ -22,6 +22,7 @@
 //! - `tui` (enabled by default): Enables animations and fancy loading graphics
 //! 
 
+#![warn(missing_docs)]
 #![feature(btree_extract_if)]
 
 mod compiler;

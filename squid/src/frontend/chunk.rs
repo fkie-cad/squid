@@ -54,7 +54,13 @@ pub enum ChunkContent {
     Code(Function),
     
     /// This chunk contains data with the given permissions
-    Data { bytes: FixedVec<u8>, perms: FixedVec<Perms> },
+    Data {
+        /// The content of the chunk
+        bytes: FixedVec<u8>,
+        
+        /// Byte-level permissions for every byte of the content
+        perms: FixedVec<Perms>
+    },
     
     /// This chunk contains a pointer
     Pointer(Pointer),

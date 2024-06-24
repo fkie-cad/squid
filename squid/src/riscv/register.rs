@@ -79,6 +79,7 @@ mod csr {
 }
 
 /// The general purpose registers of the RISC-V ISA
+#[allow(missing_docs)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]
@@ -125,6 +126,7 @@ impl GpRegister {
 }
 
 /// The floating point register of the RISC-V ISA
+#[allow(missing_docs)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]
@@ -171,6 +173,7 @@ impl FpRegister {
 }
 
 /// The control/status registers of the RISC-V ISA
+#[allow(missing_docs)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(usize)]

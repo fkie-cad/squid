@@ -21,15 +21,25 @@ use crate::{
 #[repr(u32)]
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum JITReturnCode {
+    /// The guest threw an event
     Event = 0,
+    /// An invalid state of the codegen has been reached. This means that there is an error with the codegen.
     InvalidState = 1,
+    /// The guest tried to jump to a virtual address that does not exist or does not contain code.
     InvalidJumpTarget = 2,
+    /// The guest tried to read from a virtual address that does not point to readable memory.
     InvalidRead = 3,
+    /// The guest tried to read from a virtual address that contains uninitialized data.
     UninitializedRead = 4,
+    /// The guest has terminated and execution cannot continue.
     End = 5,
+    /// The guest tried to write to a virtual address that does not point to writable memory.
     InvalidWrite = 6,
+    /// The event channel does not the exact number of values the guest expected
     InvalidEventChannel = 7,
+    /// The guest attempted a division by zero
     DivByZero = 8,
+    /// The guest exceed the maximum number of allowed RISC-V instructions
     Timeout = 9,
 }
 

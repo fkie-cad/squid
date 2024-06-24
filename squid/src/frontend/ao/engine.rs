@@ -65,6 +65,7 @@ fn pointer_sub(p: &Pointer, i: u64) -> Option<Pointer> {
 }
 
 /// This error type shows everything that can go wrong when interpreting ΑΩ operations
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum EngineError {
     #[error("Invalid type combination: {0:?}")]
@@ -98,11 +99,17 @@ pub enum EngineError {
 /// The concrete value of an ΑΩ-variable.
 #[derive(Clone, Debug)]
 pub enum Value {
+    /// An unknown value
     Unknown,
+    /// A virtual address
     VAddr(VAddr),
+    /// A 64-bit number
     Integer(u64),
+    /// A single-precision float
     FloatSingle(f32),
+    /// A double-precision float
     FloatDouble(f64),
+    /// A symbolic pointer
     Pointer(Pointer),
 }
 
@@ -327,6 +334,7 @@ impl Value {
 }
 
 /// This error type shows everything that can go wrong with the memory component of the [`Engine`].
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum MemoryError {
     #[error("Out-of-bounds access of {1} bytes at address {0:#x}")]
@@ -337,6 +345,7 @@ pub enum MemoryError {
 }
 
 /// This trait must be implemented by anything that handles the memory for the [`Engine`].
+#[allow(missing_docs)]
 pub trait MemoryProvider {
     fn load_byte(&self, vaddr: VAddr) -> Result<u8, MemoryError>;
     fn load_hword(&self, vaddr: VAddr) -> Result<u16, MemoryError>;
@@ -346,6 +355,7 @@ pub trait MemoryProvider {
     fn store_hword(&mut self, vaddr: VAddr, value: u16) -> Result<(), MemoryError>;
     fn store_word(&mut self, vaddr: VAddr, value: u32) -> Result<(), MemoryError>;
     fn store_dword(&mut self, vaddr: VAddr, value: u64) -> Result<(), MemoryError>;
+    /// Given a symbolic pointer, return its virtual address
     fn translate_pointer(&self, pointer: &Pointer) -> Result<VAddr, MemoryError>;
 }
 
@@ -391,10 +401,15 @@ impl MemoryProvider for () {
 /// by this enum.
 #[derive(Debug)]
 pub enum JumpTarget {
+    /// The jump target is unknown
     Unknown,
+    /// Simply execute the next basic block
     Next,
+    /// Take the branch
     Branch,
+    /// Jump to the given virtual address
     VAddr(VAddr),
+    /// Jump to the given symbolic pointer
     Pointer(Pointer),
 }
 

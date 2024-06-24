@@ -42,42 +42,52 @@ impl Perms {
         perms
     }
 
+    #[allow(missing_docs)]
     pub fn is_executable(&self) -> bool {
         (self.0 & PERM_X) != 0
     }
 
+    #[allow(missing_docs)]
     pub fn is_writable(&self) -> bool {
         (self.0 & PERM_W) != 0
     }
 
+    #[allow(missing_docs)]
     pub fn is_readable(&self) -> bool {
         (self.0 & PERM_R) != 0
     }
 
+    #[allow(missing_docs)]
     pub fn is_inaccessible(&self) -> bool {
         self.0 == 0
     }
 
+    #[allow(missing_docs)]
     pub fn clear_executable(&mut self) {
         self.0 &= !PERM_X;
     }
 
+    #[allow(missing_docs)]
     pub fn clear_writable(&mut self) {
         self.0 &= !PERM_W;
     }
 
+    #[allow(missing_docs)]
     pub fn clear_readable(&mut self) {
         self.0 &= !PERM_R;
     }
-
+    
+    #[allow(missing_docs)]
     pub fn make_executable(&mut self) {
         self.0 |= PERM_X
     }
 
+    #[allow(missing_docs)]
     pub fn make_readable(&mut self) {
         self.0 |= PERM_R
     }
 
+    #[allow(missing_docs)]
     pub fn make_writable(&mut self) {
         self.0 |= PERM_W
     }

@@ -1,4 +1,5 @@
 //! The permission bits used by the ClangBackend
+#![allow(missing_docs)]
 
 use crate::frontend::Perms;
 

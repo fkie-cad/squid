@@ -41,6 +41,7 @@ use crate::{
 };
 
 /// This type shows all errors that can occur during runtime
+#[allow(missing_docs)]
 #[derive(Error, Debug, Clone)]
 pub enum ClangRuntimeFault {
     #[error("There was an error with the internal state of the code: {0}")]

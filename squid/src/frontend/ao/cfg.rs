@@ -38,6 +38,7 @@ use crate::{
 };
 
 /// This error type shows everything that can go wrong when synthesizing basic blocks or CFGs.
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum CFGError {
     #[error("Invalid entry: {0}")]
@@ -68,7 +69,12 @@ pub enum CFGError {
 /// An Edge is an edge in the CFG
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Edge {
+    /// The "next" edge points to the basic block that immediately follows the source basic block
+    /// in linear memory.
     Next(Id),
+    
+    /// The "jump" edge points to a basic block that can only be reached by an overwite of the program counter
+    /// by a branch or a jump (or a switch).
     Jump(Id),
 }
 
@@ -334,6 +340,7 @@ impl HasIdMut for BasicBlock {
     }
 }
 
+#[allow(missing_docs)]
 /// Synthesizing instructions for ΑΩ-operations. Each ΑΩ-operation has a corresponding method.
 impl BasicBlock {
     fn next_variable(&mut self, typ: VarType) -> Var {

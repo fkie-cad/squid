@@ -14,17 +14,31 @@ use crate::{
 /// The different types of comparisons that can occur in RISC-V code
 #[derive(Debug, Clone, Hash)]
 pub enum Comparison {
+    /// Equality
     Equal,
+    
+    /// Non-equality
     NotEqual,
+    
+    /// Compare if one operand is less than the other. If the inner bool is `true` then this
+    /// is a signed comparison.
     Less(bool),
+    
+    /// Compare if one operand is less than or equal than the other. If the inner bool is `true` then this
+    /// is a signed comparison.
     LessEqual(bool),
 }
 
 /// The different types of registers that can occur in RISC-V code
 #[derive(Debug, Clone, Hash)]
 pub enum Register {
+    /// General purpose register
     Gp(GpRegister),
+    
+    /// Floating point register
     Fp(FpRegister),
+    
+    /// Control/status register
     Csr(CsrRegister),
 }
 
@@ -103,6 +117,7 @@ impl Var {
 }
 
 /// For operations that have 128-bit results, this determines which 64-bit half to use
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Hash)]
 pub enum Half {
     Lower,
@@ -110,6 +125,7 @@ pub enum Half {
 }
 
 /// Some ΑΩ-operations behave differently depending on the signedness of their arguments
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Hash)]
 pub enum Signedness {
     Signed,
@@ -130,6 +146,7 @@ pub enum Signedness {
 /// 
 /// You cannot directly synthesize [`Op`]s, you have to use the builder methods
 /// in [`BasicBlock`](crate::frontend::ao::BasicBlock).
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Hash)]
 pub enum Op {
     /// A meta-op that signals that a new instruction from the original

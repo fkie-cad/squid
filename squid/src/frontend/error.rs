@@ -6,6 +6,7 @@ use crate::{
 };
 
 /// This enum contains all error cases that can occur during creation of the process image
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum LoaderError {
     #[error("The dependency '{0}' cannot be found in the search paths")]

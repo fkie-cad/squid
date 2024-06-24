@@ -7,6 +7,7 @@ use crate::frontend::{
 
 /// This error type shows everything that can go wrong when lifting RISC-V code
 /// into the ΑΩ IR.
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum AoError {
     #[error("Invalid operation size: {0}")]

@@ -197,6 +197,7 @@ impl ClangBackendBuilder {
 }
 
 /// This error shows everything that can go wrong during the operations of the ClangBackend.
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum ClangBackendError {
     #[error("One of the ELF files makes use of thread local storage, which is not supported by this backend")]

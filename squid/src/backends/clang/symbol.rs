@@ -6,6 +6,7 @@ use crate::frontend::{
 };
 
 /// The type of a symbol in the runtime's symbol store
+#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub enum SymbolType {
     Function,
@@ -13,6 +14,7 @@ pub enum SymbolType {
 }
 
 /// The visibility of a symbol in the runtime's symbol store
+#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub enum SymbolVisibility {
     Public,
