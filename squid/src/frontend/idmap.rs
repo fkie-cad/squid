@@ -9,12 +9,14 @@ use std::{
     },
 };
 
+/// The ID of an element in the ProcessImage
 pub type Id = usize;
 
 pub(crate) trait HasIdMut {
     fn id_mut(&mut self) -> &mut Id;
 }
 
+/// This trait provides access to the ID of elements in the process image
 pub trait HasId {
     fn id(&self) -> Id;
 }
@@ -144,19 +146,26 @@ where
 
 macro_rules! idmap_functions {
     ($parent:ty, $child:ty, $suffix:ident) => {
+        /// Accessor methods that handle the children of this process image element
         impl $parent {
+            /// Get the cursor of this process image element
             pub fn cursor(&self) -> usize {
                 self.cursor
             }
 
+            /// Set the cursor of this process image element
             pub fn set_cursor(&mut self, cursor: usize) {
                 self.cursor = cursor;
             }
 
+            /// Move the cursor of this process image element to the end of its children list.
+            /// This enables appending children.
             pub fn move_cursor_beyond_end(&mut self) {
                 self.cursor = self.idmap.len();
             }
 
+            /// Increment the cursor of this process image element or return `false` if the cursor
+            /// is already at the last child
             pub fn move_cursor_forward(&mut self) -> bool {
                 if self.cursor >= self.idmap.len().saturating_sub(1) {
                     false
@@ -166,6 +175,8 @@ macro_rules! idmap_functions {
                 }
             }
 
+            /// Decrement the cursor of this process image element or return `false` if it's already
+            /// at the first child
             pub fn move_cursor_backwards(&mut self) -> bool {
                 if self.cursor == 0 {
                     false
@@ -175,39 +186,48 @@ macro_rules! idmap_functions {
                 }
             }
 
+            /// Retrieve the child with the given ID of this process image element
             pub fn $suffix(&self, id: Id) -> Option<&$child> {
                 self.idmap.get(id)
             }
 
             paste! {
+                /// Get the number of children for this process image element
                 pub fn [<num_ $suffix s>](&self) -> usize {
                     self.idmap.len()
                 }
 
+                /// Get the child at the current cursor position for this process image element
                 pub fn [<cursor_ $suffix>](&self) -> Option<&$child> {
                     self.idmap.get_at(self.cursor)
                 }
 
+                /// Get the child at the current cursor position for this process image element
                 pub fn [<cursor_ $suffix _mut>](&mut self) -> Option<&mut $child> {
                     self.idmap.get_at_mut(self.cursor)
                 }
 
+                /// Insert the given child into the list of children at the current cursor position for this process image element
                 pub fn [<insert_ $suffix>](&mut self, child: $child) -> Id {
                     self.idmap.insert_at(self.cursor, child)
                 }
 
+                /// Delete the child at the current cursor position of this process image element and return it
                 pub fn [<delete_ $suffix>](&mut self) -> $child {
                     self.idmap.remove_at(self.cursor)
                 }
 
+                /// Iterate over all children of this process image element independent of the current cursor position
                 pub fn [<iter_ $suffix s>](&self) -> IdMapValues<$child> {
                     self.idmap.values()
                 }
 
+                /// Iterate over all children of this process image element independent of the current cursor position
                 pub fn [<iter_ $suffix s_mut>](&mut self) -> IdMapValuesMut<$child> {
                     self.idmap.values_mut()
                 }
 
+                /// Retrieve the child with the given ID of this process image element
                 pub fn [<$suffix _mut>](&mut self, id: Id) -> Option<&mut $child> {
                     self.idmap.get_mut(id)
                 }

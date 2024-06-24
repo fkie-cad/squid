@@ -33,6 +33,8 @@ use crate::{
     listing::ListingManager,
 };
 
+/// A Symbol in the process image is the same as an ELF symbol: a sequence of bytes that belongs to one
+/// variable or function.
 #[derive(Debug, Hash)]
 pub struct Symbol {
     id: Id,
@@ -93,22 +95,27 @@ impl Symbol {
         }
     }
 
+    /// The virtual address of this symbol
     pub fn vaddr(&self) -> VAddr {
         self.vaddr
     }
 
+    /// The size of this symbol
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// The last virtual address occupied by this symbol (size - 1)
     pub fn last_addr(&self) -> VAddr {
         self.vaddr + self.size as VAddr - 1
     }
 
+    /// Check whether this symbol contains the given address
     pub fn contains_address(&self, vaddr: VAddr) -> bool {
         self.vaddr <= vaddr && vaddr <= self.last_addr()
     }
 
+    /// Check whether this symbol has the given name and return its virtual address if so
     pub fn name<S: AsRef<str>>(&self, name: S) -> Option<VAddr> {
         if let Some(vaddr) = self.public_name(&name) {
             return Some(vaddr);
@@ -121,42 +128,52 @@ impl Symbol {
         None
     }
 
+    /// Check whether this symbol has the given public name (from .dynsyms)
     pub fn public_name<S: AsRef<str>>(&self, name: S) -> Option<VAddr> {
         self.public_names.get(name.as_ref()).map(|offset| self.vaddr + *offset)
     }
 
+    /// Check whether this symbol has the given private name (from .symtab)
     pub fn private_name<S: AsRef<str>>(&self, name: S) -> Option<VAddr> {
         self.private_names.get(name.as_ref()).map(|offset| self.vaddr + *offset)
     }
 
+    /// Get all public names of this symbol
     pub fn public_names(&self) -> Keys<String, VAddr> {
         self.public_names.keys()
     }
 
+    /// Get all private names of this symbol
     pub fn private_names(&self) -> Keys<String, VAddr> {
         self.private_names.keys()
     }
 
+    /// Get the source file, which this symbol belongs to
     pub fn file(&self) -> Option<&str> {
         self.file.as_deref()
     }
 
+    /// Change the size of this symbol
     pub fn set_size(&mut self, size: usize) {
         self.size = size;
     }
 
+    /// Change the virtual address of this symbol
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = vaddr;
     }
 
+    /// Add/change the given public name for this symbol
     pub fn set_public_name<S: Into<String>>(&mut self, name: S, value: VAddr) {
         self.public_names.insert(name.into(), value - self.vaddr);
     }
 
+    /// Add/change the given private name for this symbol
     pub fn set_private_name<S: Into<String>>(&mut self, name: S, value: VAddr) {
         self.private_names.insert(name.into(), value - self.vaddr);
     }
 
+    /// Create the [`SymbolBuilder`] to create a new Symbol from scratch
     pub fn builder() -> SymbolBuilder {
         SymbolBuilder {
             public_names: HashSet::new(),
@@ -181,6 +198,7 @@ impl HasIdMut for Symbol {
     }
 }
 
+/// The SymbolBuilder can create new Symbols from scratch
 pub struct SymbolBuilder {
     public_names: HashSet<String>,
     private_names: HashSet<String>,
@@ -189,26 +207,31 @@ pub struct SymbolBuilder {
 }
 
 impl SymbolBuilder {
+    /// Add a public name to this symbol
     pub fn public_name<S: Into<String>>(mut self, name: S) -> Self {
         self.public_names.insert(name.into());
         self
     }
 
+    /// Add a private name to this symbol
     pub fn private_name<S: Into<String>>(mut self, name: S) -> Self {
         self.private_names.insert(name.into());
         self
     }
 
+    /// Set the virtual address of this symbol
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
         self.vaddr = Some(vaddr);
         self
     }
 
+    /// Set the size of this symbol
     pub fn size(mut self, size: usize) -> Self {
         self.size = Some(size);
         self
     }
 
+    /// Create the [`Symbol`]
     pub fn build(self) -> Result<Symbol, &'static str> {
         let vaddr = self.vaddr.ok_or("Symbol address was not set")?;
         let size = self.size.ok_or("Symbol size was not set")?;

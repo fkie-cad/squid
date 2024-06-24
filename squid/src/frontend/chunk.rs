@@ -46,10 +46,17 @@ use crate::{
     },
 };
 
+/// The ChunkContent determines how the bytes of a [`Chunk`] shall be interpreted.
+/// This can either as code, data or as a pointer.
 #[derive(Hash)]
 pub enum ChunkContent {
+    /// This chunk holds executable RISC-V code that was lifted into the IR
     Code(Function),
+    
+    /// This chunk contains data with the given permissions
     Data { bytes: FixedVec<u8>, perms: FixedVec<Perms> },
+    
+    /// This chunk contains a pointer
     Pointer(Pointer),
 }
 
@@ -71,6 +78,8 @@ enum Stage {
     Resolved(ChunkContent),
 }
 
+/// Chunks are the leafs of the ProcessImage and they contain the actual data of an ELF file.
+/// How the data is interpreted is determined by the [`ChunkContent`].
 #[derive(Debug, Hash)]
 pub struct Chunk {
     id: Id,
@@ -109,6 +118,7 @@ impl Chunk {
         self.stage = Stage::Resolved(ChunkContent::Pointer(pointer));
     }
 
+    /// Access the content of this chunk
     pub fn content(&self) -> &ChunkContent {
         match &self.stage {
             Stage::Pending(_) => unreachable!(),
@@ -116,6 +126,7 @@ impl Chunk {
         }
     }
 
+    /// Access the content of this chunk
     pub fn content_mut(&mut self) -> &mut ChunkContent {
         match &mut self.stage {
             Stage::Pending(_) => unreachable!(),
@@ -123,34 +134,42 @@ impl Chunk {
         }
     }
 
+    /// Get the virtual address of this chunk
     pub fn vaddr(&self) -> VAddr {
         self.vaddr
     }
 
+    /// Get the size of ths chunk
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// Get the last virtual address that this chunk occupies (size - 1)
     pub fn last_addr(&self) -> VAddr {
         self.vaddr + self.size as VAddr - 1
     }
 
+    /// Check whether this chunk contains the given address
     pub fn contains_address(&self, vaddr: VAddr) -> bool {
         self.vaddr <= vaddr && vaddr <= self.last_addr()
     }
 
+    /// Change the size of this chunk
     pub fn set_size(&mut self, size: usize) {
         self.size = size;
     }
 
+    /// Change the virtual address of this chunk
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = vaddr;
     }
 
+    /// Change the content of this chunk
     pub fn set_content(&mut self, content: ChunkContent) {
         self.stage = Stage::Resolved(content);
     }
 
+    /// Create a [`ChunkBuilder`] that can create Chunks from scratch
     pub fn builder() -> ChunkBuilder {
         ChunkBuilder {
             content: None,
@@ -172,6 +191,7 @@ impl HasIdMut for Chunk {
     }
 }
 
+/// The ChunkBuilder can create [`Chunk`]s from scratch
 pub struct ChunkBuilder {
     content: Option<ChunkContent>,
     size: Option<usize>,
@@ -179,12 +199,14 @@ pub struct ChunkBuilder {
 }
 
 impl ChunkBuilder {
+    /// Set the content of the chunk to be code
     pub fn code(mut self, cfg: CFG) -> Result<Self, CFGError> {
         let perfect = cfg.verify()?;
         self.content = Some(ChunkContent::Code(Function::new(cfg, perfect)));
         Ok(self)
     }
 
+    /// Set the content of the chunk to be data
     pub fn initialized_data<D: Into<Vec<u8>>, P: Into<Vec<Perms>>>(mut self, data: D, perms: P) -> Self {
         let bytes = FixedVec::lock(data);
         self.size = Some(bytes.len());
@@ -195,6 +217,8 @@ impl ChunkBuilder {
         self
     }
 
+    /// Set the content of the chunk to be uninitialized data.
+    /// Uninitialized means that the bytes will be zero.
     pub fn uninitialized_data(mut self, size: usize, perms: Perms) -> Self {
         self.size = Some(size);
         self.content = Some(ChunkContent::Data {
@@ -204,22 +228,26 @@ impl ChunkBuilder {
         self
     }
 
+    /// Set the content of this chunk to be a symbolic pointer
     pub fn pointer(mut self, pointer: Pointer) -> Self {
         self.size = Some(8);
         self.content = Some(ChunkContent::Pointer(pointer));
         self
     }
 
+    /// Set the virtual address of this chunk
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
         self.vaddr = Some(vaddr);
         self
     }
 
+    /// Set the size of this chunk
     pub fn size(mut self, size: usize) -> Self {
         self.size = Some(size);
         self
     }
 
+    /// Create a [`Chunk`] from the current configuration
     pub fn build(self) -> Result<Chunk, &'static str> {
         let content = self.content.ok_or("Chunk content was not set")?;
         let size = self.size.ok_or("Chunk size was not set")?;

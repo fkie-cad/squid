@@ -1,3 +1,6 @@
+//! The frontend handles everything related to symbolic ELF-loading and the creation
+//! of the process image
+
 mod chunk;
 mod dependency;
 mod elf;

@@ -37,6 +37,7 @@ use crate::{
     logger::Logger,
 };
 
+/// An Elf file in the process image is a container for [`Section`]s
 #[derive(Debug, Hash)]
 pub struct Elf {
     id: Id,
@@ -47,18 +48,22 @@ pub struct Elf {
 }
 
 impl Elf {
+    /// The path to the underlying ELF file, this Elf struct was generated from
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Retrieve the thread-local storage area of this Elf file
     pub fn tls(&self) -> &Tls {
         &self.tls
     }
-
+    
+    /// Retrieve the thread-local storage area of this Elf file
     pub fn tls_mut(&mut self) -> &mut Tls {
         &mut self.tls
     }
 
+    /// Create an [`ElfBuilder`] to create Elf files from scratch
     pub fn builder() -> ElfBuilder {
         ElfBuilder {
             path: None,
@@ -80,16 +85,19 @@ impl HasIdMut for Elf {
     }
 }
 
+/// The ElfBuilder can build [`Elf`] structs from scratch
 pub struct ElfBuilder {
     path: Option<PathBuf>,
 }
 
 impl ElfBuilder {
+    /// Set the path of this Elf file
     pub fn path<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.path = Some(path.into());
         self
     }
 
+    /// Create the [`Elf`] file
     pub fn build(self) -> Result<Elf, &'static str> {
         let path = self.path.ok_or("Elf path was not set")?;
         Ok(Elf {

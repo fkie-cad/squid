@@ -4,6 +4,7 @@ const PERM_X: u8 = 1;
 const PERM_W: u8 = 2;
 const PERM_R: u8 = 4;
 
+/// The permissions memory and elements in the process image can have
 #[derive(Copy, Clone, PartialEq, Debug, Default, Hash)]
 pub struct Perms(u8);
 

@@ -27,8 +27,10 @@ use crate::frontend::{
     reloc::parse_relocations,
 };
 
+/// The offset into the TLS region
 pub type TlsOffset = u64;
 
+/// A ThreadLocal is a variable that occupies a certain number of bytes in the TLS area
 #[derive(Debug, Hash)]
 pub struct ThreadLocal {
     id: Id,
@@ -93,46 +95,57 @@ impl ThreadLocal {
         }
     }
 
+    /// The public names of the thread local (from .dynsym)
     pub fn public_names(&self) -> &BTreeSet<String> {
         &self.public_names
     }
 
+    /// The private names of the thread local (from .symtab)
     pub fn private_names(&self) -> &BTreeSet<String> {
         &self.private_names
     }
 
+    /// The offset of this variable in the TLS area
     pub fn offset(&self) -> TlsOffset {
         self.offset
     }
 
+    /// The size of the variabe
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// The last index into the TLS area that this variable occupies (length - 1)
     pub fn last_offset(&self) -> TlsOffset {
         self.offset + self.size as TlsOffset - 1
     }
 
+    /// The last address that this variable occupies
     pub fn last_addr(&self) -> VAddr {
         self.vaddr + self.size as VAddr - 1
     }
 
+    /// Check whether this thread local contains the given offset
     pub fn contains_offset(&self, offset: TlsOffset) -> bool {
         self.offset <= offset && offset <= self.last_offset()
     }
 
+    /// The virtual address of this thread local
     pub fn vaddr(&self) -> VAddr {
         self.vaddr
     }
 
+    /// Change the offset of this thread local
     pub fn set_offset(&mut self, offset: TlsOffset) {
         self.offset = offset;
     }
 
+    /// Change the size of this thread local
     pub fn set_size(&mut self, size: usize) {
         self.size = size;
     }
 
+    /// Change the virtual address of this thread local
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = vaddr;
     }
@@ -152,6 +165,7 @@ impl HasIdMut for ThreadLocal {
     }
 }
 
+/// The Tls is the thread-local storage area that contains all the thread-local variables.
 #[derive(Debug, Hash)]
 pub struct Tls {
     idmap: IdMap<ThreadLocal>,

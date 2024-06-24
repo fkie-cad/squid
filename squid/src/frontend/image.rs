@@ -43,8 +43,15 @@ use crate::{
     logger::Logger,
 };
 
+/// An address that points somewhere into the virtual address space of the target application
 pub type VAddr = u64;
 
+/// The ProcessImage contains all necessary ELF files for emulation
+/// 
+/// It
+/// - parses its binaries into a tree structure instead of a linear memory image
+/// - symbolizes all pointers in the ELF files
+/// - lifts all RISC-V instructions into an IR
 #[derive(Debug, Hash)]
 pub struct ProcessImage {
     idmap: IdMap<Elf>,
@@ -56,22 +63,27 @@ pub struct ProcessImage {
 idmap_functions!(ProcessImage, Elf, elf);
 
 impl ProcessImage {
+    /// The entrypoint of the ProcessImage determines where to start execution
     pub fn entrypoint(&self) -> &FunctionPointer {
         &self.entrypoint
     }
 
+    /// Change the entrypoint of this ProcessImage
     pub fn set_entrypoint(&mut self, entrypoint: FunctionPointer) {
         self.entrypoint = entrypoint;
     }
 
+    /// The constructors that are to be run before the entrypoint in the order given by this slice
     pub fn constructors(&self) -> &[FunctionPointer] {
         &self.constructors
     }
 
+    /// Change the constructors of this ProcessImage
     pub fn constructors_mut(&mut self) -> &mut Vec<FunctionPointer> {
         &mut self.constructors
     }
 
+    /// Get an ELF file by its filename
     pub fn elf_by_filename<S: AsRef<str>>(&self, filename: S) -> Option<&Elf> {
         let filename = filename.as_ref();
 
@@ -86,6 +98,7 @@ impl ProcessImage {
         None
     }
 
+    /// Get an ELF file by its filename
     pub fn elf_by_filename_mut<S: AsRef<str>>(&mut self, filename: S) -> Option<&mut Elf> {
         let filename = filename.as_ref();
 

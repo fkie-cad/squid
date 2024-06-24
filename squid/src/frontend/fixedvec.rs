@@ -10,26 +10,31 @@ use std::{
     slice::SliceIndex,
 };
 
+/// A FixedVec is a vector that cannot change its length, only its content
 #[derive(Hash)]
 pub struct FixedVec<T> {
     inner: Vec<T>,
 }
 
 impl<T> FixedVec<T> {
+    /// Fixate a vector and return a FixedVec
     pub fn lock<V: Into<Vec<T>>>(inner: V) -> Self {
         Self {
             inner: inner.into(),
         }
     }
 
+    /// Unfixate this vector
     pub fn unlock(self) -> Vec<T> {
         self.inner
     }
 
+    /// The length of this vector
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
+    /// Check whether this vector is empty
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }

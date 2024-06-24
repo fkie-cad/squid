@@ -26,6 +26,7 @@ use crate::{
     listing::ListingManager,
 };
 
+/// A Section is consecutive group of symbols that share the same permissions
 #[derive(Debug, Hash)]
 pub struct Section {
     id: Id,
@@ -54,38 +55,47 @@ impl Section {
         self.offset
     }
 
+    /// The last virtual address occupied by this section (size - 1)
     pub fn last_addr(&self) -> VAddr {
         self.vaddr + self.size as VAddr - 1
     }
 
+    /// Check whether this section contains the givem virtual address
     pub fn contains_address(&self, vaddr: VAddr) -> bool {
         self.vaddr <= vaddr && vaddr <= self.last_addr()
     }
 
+    /// The size of this section
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// The permissions of this section
     pub fn perms(&self) -> Perms {
         self.perms
     }
 
+    /// The virtual address of this section
     pub fn vaddr(&self) -> VAddr {
         self.vaddr
     }
 
+    /// Change the size of this section
     pub fn set_size(&mut self, size: usize) {
         self.size = size;
     }
-
+    
+    /// Change the permissions of this section
     pub fn set_perms(&mut self, perms: Perms) {
         self.perms = perms;
     }
 
+    /// Change the virtual address of this section
     pub fn set_vaddr(&mut self, vaddr: VAddr) {
         self.vaddr = vaddr;
     }
 
+    /// Create a [`SectionBuilder`] that can build Sections from scratch
     pub fn builder() -> SectionBuilder {
         SectionBuilder {
             perms: None,
@@ -109,6 +119,7 @@ impl HasIdMut for Section {
     }
 }
 
+/// The SectionBuilder can be used to build a [`Section`] from scratch
 pub struct SectionBuilder {
     perms: Option<Perms>,
     vaddr: Option<VAddr>,
@@ -116,21 +127,25 @@ pub struct SectionBuilder {
 }
 
 impl SectionBuilder {
+    /// Set the permissions of this section
     pub fn perms(mut self, perms: Perms) -> Self {
         self.perms = Some(perms);
         self
     }
 
+    /// Set the virtual address of this section
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
         self.vaddr = Some(vaddr);
         self
     }
 
+    /// Set the size of this section
     pub fn size(mut self, size: usize) -> Self {
         self.size = Some(size);
         self
     }
 
+    /// Finally, create the [`Section`]
     pub fn build(self) -> Result<Section, &'static str> {
         let perms = self.perms.ok_or("Section permissions were not set")?;
         let vaddr = self.vaddr.ok_or("Section address was not set")?;
