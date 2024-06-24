@@ -62,6 +62,7 @@ use crate::{
     },
 };
 
+/// This error type represents everything that can go wrong when generating C code.
 #[derive(Error, Debug)]
 pub enum CLifterError {
     #[error("The engine exploded: {0}")]

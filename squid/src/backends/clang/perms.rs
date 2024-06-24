@@ -1,3 +1,5 @@
+//! The permission bits used by the ClangBackend
+
 use crate::frontend::Perms;
 
 pub const PERM_NONE: u8 = 0;

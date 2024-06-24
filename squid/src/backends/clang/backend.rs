@@ -40,6 +40,9 @@ use crate::{
     Logger,
 };
 
+/// The ClangBackendBuilder configures the [`ClangBackend`] with the values
+/// that you provide.
+/// Use the [`ClangBackend::builder`] method to create this builder.
 pub struct ClangBackendBuilder {
     source_file: Option<PathBuf>,
     heap_size: usize,
@@ -57,61 +60,76 @@ pub struct ClangBackendBuilder {
 }
 
 impl ClangBackendBuilder {
+    /// Whenever a stackframe is allocated or deallocated, mark its contents as uninitialized.
     pub fn enable_uninit_stack(mut self, flag: bool) -> Self {
         self.uninit_stack = flag;
         self
     }
 
+    /// Set the compiler to use for compiling the AOT-code.
     pub fn cc<S: Into<String>>(mut self, cc: S) -> Self {
         self.cc = cc.into();
         self
     }
 
+    /// Pass this flag to the c compiler when AOT-compiling the code
     pub fn cflag<S: Into<String>>(mut self, arg: S) -> Self {
         self.cflags.push(arg.into());
         self
     }
 
+    /// Store the AOT-code into this file
     pub fn source_file<P: Into<PathBuf>>(mut self, source_file: P) -> Self {
         self.source_file = Some(source_file.into());
         self
     }
 
+    /// Generate a [`ClangRuntimeFault::Timeout`](crate::backends::clang::ClangRuntimeFault::Timeout) error after the given number of RISC-V instructions
     pub fn timeout(mut self, timeout: usize) -> Self {
         self.timeout = timeout;
         self
     }
 
+    /// If this is set to true, the backend emits code that tracks how many RISC-V instructions were executed each run.
+    /// The number of instructions can be access via [`ClangRuntime::get_executed_instructions`](crate::backends::clang::ClangRuntime::get_executed_instructions).
     pub fn count_instructions(mut self, flag: bool) -> Self {
         self.count_instructions = flag;
         self
     }
 
+    /// If this is set to true, build a symbol table in the runtime with all the names from the process image.
     pub fn build_symbol_table(mut self, flag: bool) -> Self {
         self.build_symbol_table = flag;
         self
     }
 
+    /// If this is set to true, the backend emits code that updates the pc with the address of the basic block that is going to be executed next.
     pub fn update_pc(mut self, flag: bool) -> Self {
         self.update_pc = flag;
         self
     }
 
+    /// If this is set to true, the backend emits code that stores which RISC-V instruction was executed last. Note that this is the virtual address
+    /// of the RISC-V instruction inside the ELF file and has nothing to do with the virtual address the ClangRuntime uses.
+    /// You can access this value in the runtime via the [`ClangRuntime::get_last_instruction`](crate::backends::clang::ClangRuntime::get_last_instruction) method.
     pub fn update_last_instruction(mut self, flag: bool) -> Self {
         self.update_last_instr = flag;
         self
     }
 
+    /// Set the size of the heap in bytes.
     pub fn heap_size(mut self, heap_size: usize) -> Self {
         self.heap_size = heap_size;
         self
     }
 
+    /// Set the size of the stack in bytes.
     pub fn stack_size(mut self, stack_size: usize) -> Self {
         self.stack_size = Some(stack_size);
         self
     }
 
+    /// Insert an environment variable into the environment of the guest.
     pub fn env<K, V>(mut self, key: K, value: V) -> Self
     where
         K: Into<String>,
@@ -121,6 +139,7 @@ impl ClangBackendBuilder {
         self
     }
 
+    /// Add the argument to the argv of the guest.
     pub fn arg<S>(mut self, arg: S) -> Self
     where
         S: Into<String>,
@@ -129,6 +148,7 @@ impl ClangBackendBuilder {
         self
     }
 
+    /// Add multiple args to the argv of the guest.
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -140,6 +160,7 @@ impl ClangBackendBuilder {
         self
     }
 
+    /// Set argv\[0\] of the guest to the given name.
     pub fn progname<S>(mut self, progname: S) -> Self
     where
         S: Into<String>,
@@ -152,6 +173,7 @@ impl ClangBackendBuilder {
         self
     }
 
+    /// Create the [`ClangBackend`].
     pub fn build(self) -> Result<ClangBackend, &'static str> {
         let source_file = self.source_file.ok_or("Source file was not set")?;
         let stack_size = self.stack_size.ok_or("Stack size was not set")?;
@@ -174,6 +196,7 @@ impl ClangBackendBuilder {
     }
 }
 
+/// This error shows everything that can go wrong during the operations of the ClangBackend.
 #[derive(Error, Debug)]
 pub enum ClangBackendError {
     #[error("One of the ELF files makes use of thread local storage, which is not supported by this backend")]
@@ -186,6 +209,8 @@ pub enum ClangBackendError {
     StackError,
 }
 
+/// The ClangBackend generates C code from the code in the process image and compiles that
+/// with clang for optimal codegen. It constructs the [`ClangRuntime`].
 pub struct ClangBackend {
     source_file: PathBuf,
     heap_size: usize,
@@ -203,6 +228,7 @@ pub struct ClangBackend {
 }
 
 impl ClangBackend {
+    /// Create a [`ClangBackendBuilder`] that can configure this backend.
     pub fn builder() -> ClangBackendBuilder {
         ClangBackendBuilder {
             source_file: None,

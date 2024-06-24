@@ -17,6 +17,7 @@ use crate::{
     frontend::VAddr,
 };
 
+/// The raw return code of the "JIT", i.e. the AOT-compiled C code.
 #[repr(u32)]
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum JITReturnCode {

@@ -1,3 +1,15 @@
+//! The `clang` backend provided by `squid`.
+//! 
+//! This backend generates C code from the functions in the process
+//! image, compiles the C code with clang as a shared object file and
+//! loads that via dlopen() into the address space.
+//! We take little detour over clang to get the best possible LLVM codegen
+//! and thus the best performance.
+//! 
+//! Our original idea was to just emit the LLVM IR ourselves but no LLVM frontend is
+//! as good as clang anyways and C is a lot easier to generate than the LLVM IR, so this solution was
+//! less work and yielded better results.
+
 mod address;
 #[allow(clippy::module_inception)]
 mod backend;

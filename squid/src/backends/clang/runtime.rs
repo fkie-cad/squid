@@ -40,9 +40,10 @@ use crate::{
     },
 };
 
+/// This type shows all errors that can occur during runtime
 #[derive(Error, Debug, Clone)]
 pub enum ClangRuntimeFault {
-    #[error("There was an error with the internal state of the JIT: {0}")]
+    #[error("There was an error with the internal state of the code: {0}")]
     InternalError(String),
 
     #[error("Encountered an invalid pc address: {0:#x}")]
@@ -306,6 +307,7 @@ struct SnapshotData {
     var_storage: Vec<u64>,
 }
 
+/// The ClangRuntime gives you access to registers, memory, the event channel and the AOT-compiled code of the ClangBackend.
 pub struct ClangRuntime {
     memory: Memory,
     event_channel: EventChannel,
@@ -606,11 +608,14 @@ impl Runtime for ClangRuntime {
     }
 }
 
+/// Misc functions of the ClangRuntime
 impl ClangRuntime {
+    /// Get the raw return code of the generated code
     pub fn jit_return_code(&self) -> JITReturnCode {
         self.executor.return_code()
     }
 
+    /// Get access to the permission bytes at the given address
     pub fn permissions(&self, address: VAddr, size: usize) -> Result<&[u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
@@ -619,6 +624,7 @@ impl ClangRuntime {
         result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
     }
 
+    /// Get access to the permission bytes at the given address
     pub fn permissions_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
@@ -627,10 +633,14 @@ impl ClangRuntime {
         result.ok_or(ClangRuntimeFault::MemoryWriteError(address, size))
     }
 
+    /// Return the virtual address of the RISC-V instruction that was executed last.
+    /// Note that this is the virtual address from the ELF file, not the virtual addresses
+    /// used by the ClangRuntime!
     pub fn get_last_instruction(&self) -> VAddr {
         self.registers.get_last_instr()
     }
 
+    /// Get mutable access to a slice of bytes in the memory of the guest, starting at the given address
     pub fn load_slice_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], ClangRuntimeFault> {
         let result = match AddressSpace::decode(address) {
             AddressSpace::Code(_) => None,
@@ -639,13 +649,16 @@ impl ClangRuntime {
         result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
     }
 
+    /// Get the number of executed instructions of the last [`ClangRuntime::run`] invocation.
+    /// Note that this counter resets every time [`ClangRuntime::run`] is called.
     pub fn get_executed_instructions(&self) -> usize {
         self.executor.executed_instructions()
     }
 }
 
-/// Symbol store
+/// The symbol store of the ClangRuntime
 impl ClangRuntime {
+    /// Get all the symbols that are at the given address
     pub fn lookup_symbol_from_address(&self, mut addr: VAddr) -> Vec<(&str, &Symbol)> {
         let mut ret = Vec::new();
 
@@ -666,6 +679,7 @@ impl ClangRuntime {
         ret
     }
 
+    /// Get all the symbols that match the given private name
     pub fn lookup_symbol_from_private_name<S: AsRef<str>>(&self, name: S) -> Vec<(&str, &Symbol)> {
         let name = name.as_ref();
         let mut ret = Vec::new();
@@ -681,6 +695,7 @@ impl ClangRuntime {
         ret
     }
 
+    /// Get all the symbols that match the given public name
     pub fn lookup_symbol_from_public_name<S: AsRef<str>>(&self, name: S) -> Vec<(&str, &Symbol)> {
         let name = name.as_ref();
         let mut ret = Vec::new();
@@ -697,13 +712,15 @@ impl ClangRuntime {
     }
 }
 
-/// Dynstore
+/// The dynstore methods of the ClangRuntime
 impl ClangRuntime {
+    /// Allocate a chunk of a given size in the heap of the ClangRuntime.
     pub fn dynstore_allocate(&mut self, size: usize) -> Result<VAddr, ClangRuntimeFault> {
         let offset = self.heap_mgr.malloc(&mut self.memory, size)?;
         Ok(AddressSpace::Data(offset).encode())
     }
 
+    /// Free a chunk at the given address.
     pub fn dynstore_deallocate(&mut self, addr: VAddr) -> Result<(), ClangRuntimeFault> {
         if addr == 0 {
             return Ok(());
@@ -720,10 +737,12 @@ impl ClangRuntime {
         Ok(())
     }
 
+    /// Get a list of all allocated heap chunks in the heap.
     pub fn dynstore_get_all_chunks(&self) -> Vec<HeapChunk> {
         self.heap_mgr.get_heap_chunks(&self.memory)
     }
 
+    /// Get metadata about the heap chunk at the given address.
     pub fn dynstore_get_single_chunk(&self, addr: VAddr) -> Result<HeapChunk, ClangRuntimeFault> {
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
@@ -736,10 +755,12 @@ impl ClangRuntime {
         Ok(chunk)
     }
 
+    /// Check whether all allocated chunks have been freed since the last time the leak tracker was reset
     pub fn dynstore_has_memory_leaks(&self) -> bool {
         self.heap_mgr.has_mem_leaks()
     }
 
+    /// Reallocate the heap chunk at the given address and resize it to the given `new_size`
     pub fn dynstore_reallocate(&mut self, addr: VAddr, new_size: usize) -> Result<VAddr, ClangRuntimeFault> {
         if addr == 0 || new_size == 0 {
             return Err(ClangRuntimeFault::MemoryManagementError("Called dynstore_reallocate() with invalid parameters".to_string()));
@@ -755,10 +776,12 @@ impl ClangRuntime {
         Ok(AddressSpace::Data(new_offset).encode())
     }
 
+    /// Resets the leak tracker of the heap
     pub fn dynstore_reset_leak_tracker(&mut self) {
         self.heap_mgr.reset_count();
     }
 
+    /// Get the number of bytes used by all heap chunks
     pub fn dynstore_memory_usage(&self) -> usize {
         self.heap_mgr.memory_usage(&self.memory)
     }

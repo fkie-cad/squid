@@ -5,18 +5,21 @@ use crate::frontend::{
     VAddr,
 };
 
+/// The type of a symbol in the runtime's symbol store
 #[derive(Debug, Clone)]
 pub enum SymbolType {
     Function,
     Data,
 }
 
+/// The visibility of a symbol in the runtime's symbol store
 #[derive(Debug, Clone)]
 pub enum SymbolVisibility {
     Public,
     Private,
 }
 
+/// A Symbol that has exactly one name for a variable/function at the given address.
 #[derive(Debug, Clone)]
 pub struct Symbol {
     name: String,
@@ -27,34 +30,42 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    /// Return true if this symbol is a function
     pub fn is_function(&self) -> bool {
         matches!(self.typ, SymbolType::Function)
     }
 
+    /// Return true if this symbol holds data
     pub fn is_data(&self) -> bool {
         matches!(self.typ, SymbolType::Data)
     }
 
+    /// Get the virtual address of this symbol
     pub fn address(&self) -> VAddr {
         self.address
     }
 
+    /// Get the size of this symbol
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// Return true if this is a publicly exported symbol (from the .dynsym)
     pub fn is_public(&self) -> bool {
         matches!(self.visibility, SymbolVisibility::Public)
     }
 
+    /// Return true if this is a private symbol (from .symtab)
     pub fn is_private(&self) -> bool {
         matches!(self.visibility, SymbolVisibility::Private)
     }
 
+    /// Get the name of this symbol
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Check whether this symbol contains the given address
     pub fn contains_address(&self, addr: VAddr) -> bool {
         self.address <= addr && addr < self.address + self.size as VAddr
     }

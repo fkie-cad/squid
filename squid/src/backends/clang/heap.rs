@@ -15,6 +15,7 @@ use crate::{
 const PERM_CHUNK_START: u8 = 16;
 const PERM_CHUNK_END: u8 = 32;
 
+/// The HeapError shows everything that can go wrong when operating with the heap.
 #[derive(Error, Debug, Clone)]
 pub enum HeapError {
     #[error("Attempted to allocate a zero-length chunk")]
@@ -30,6 +31,7 @@ pub enum HeapError {
     NotAChunk(VAddr),
 }
 
+/// The HeapChunk represents a single chunk on the heap of the runtime.
 #[derive(Debug, Clone)]
 pub struct HeapChunk {
     addr: VAddr,
@@ -37,10 +39,12 @@ pub struct HeapChunk {
 }
 
 impl HeapChunk {
+    /// The virtual address of the heap chunk
     pub fn address(&self) -> VAddr {
         self.addr
     }
 
+    /// The size of the heap chunk
     pub fn size(&self) -> usize {
         self.size
     }
