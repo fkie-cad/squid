@@ -4,7 +4,7 @@
 //! and reconstruct basic block boundaries in machine code.
 //! This enables CFG reconstruction from C code making use of the `goto*` extension.
 //!
-//! This crate is a helper for [squid](https://github.com/fkie-cad/squid) and not meant to be
+//! This crate is a helper for [squid](https://github.com/fkie-cad/squid) and is not meant to be
 //! generally usable. Use at your own risk.
 
 mod asm;

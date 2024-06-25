@@ -10,9 +10,9 @@ docker pull archlinux:latest
 docker build -t squid-toolchain --build-arg="jobs=$(nproc)" .
 ```
 
-Or you can download a pre-built image from docker hub (2.56GB):
+Or you can download a pre-built image from docker hub (900MB):
 ```
-docker pull pdfkie/squid-toolchain
+docker pull pdfkie/squid-toolchain:1.0.0
 ```
 
 Inside the container, you can find the cross-compiler at `/riscv/bin/riscv64-unknown-linux-gnu-gcc` and the sysroot at

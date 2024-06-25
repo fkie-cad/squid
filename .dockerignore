@@ -2,5 +2,6 @@
 .*
 !ewe/
 !squid/
+!tests/
 !Cargo.toml
 !Cargo.lock
