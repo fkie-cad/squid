@@ -62,3 +62,21 @@ cargo run --release --example readelf_fuzzer -- fuzz \
     --native-binary binutils-gdb/binutils/readelf
 ```
 
+## Performance remarks
+The following stats were collected executing `readelf -a` over and over again with the same input from the corpus.
+
+Empty file (1 byte):
+- squid: 31k exec/s with ~700M instr/s
+- native: 3k exec/s
+
+Tiny, valid ELF file (14776 bytes):
+- squid: 400 exec/s with ~870M instr/s
+- native: 1.5k exec/s
+
+Medium, valid ELF file (68024 bytes):
+- squid: 215 exec/s with ~870M instr/s
+- native: 1250 exec/s
+
+Big, valid ELF file (2292568 bytes):
+- squid: 25 exec/s with ~900M instr/s
+- native: 1150 exec/s

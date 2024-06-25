@@ -3,6 +3,7 @@ use std::{
     ffi::OsStr,
     marker::PhantomData,
     path::PathBuf,
+    borrow::Cow,
 };
 
 use clap::Parser;
@@ -24,7 +25,6 @@ use libafl::prelude::{
     Feedback,
     ForkserverExecutor,
     Fuzzer,
-    HasBytesVec,
     HasExecutions,
     HasObservers,
     HitcountsMapObserver,
@@ -58,12 +58,13 @@ use libafl::prelude::{
     UsesInput,
     UsesObservers,
     UsesState,
+    HasMutatorBytes,
 };
 use libafl_bolts::prelude::{
     current_nanos,
     current_time,
     tuple_list,
-    AsMutSlice,
+    AsSliceMut,
     CoreId,
     Cores,
     Error,
@@ -74,6 +75,10 @@ use libafl_bolts::prelude::{
     StdRand,
     StdShMemProvider,
     UnixShMemProvider,
+    RefIndexable,
+    MatchNameRef,
+    Handle,
+    Handled,
 };
 use mimalloc::MiMalloc;
 use squid::{
@@ -662,6 +667,7 @@ where
 {
     kernel: Linux<8>,
     observers: OT,
+    handle: Handle<SquidObserver>,
     runtime: &'a mut ClangRuntime,
     phantom: PhantomData<S>,
 }
@@ -671,7 +677,7 @@ where
     S: State,
     OT: ObserversTuple<S>,
 {
-    fn new(observers: OT, runtime: &'a mut ClangRuntime) -> Self {
+    fn new(handle: Handle<SquidObserver>, observers: OT, runtime: &'a mut ClangRuntime) -> Self {
         let disk = fs::Fs::new();
         let mut kernel = Linux::new(disk, 0);
 
@@ -681,6 +687,7 @@ where
         Self {
             kernel,
             observers,
+            handle,
             runtime,
             phantom: PhantomData,
         }
@@ -1009,7 +1016,7 @@ where
         match self.run(input.bytes()) {
             Ok(num_instrs) => {
                 let secs = start.elapsed().as_secs_f64();
-                let observer = self.observers.match_name_mut::<SquidObserver>("instructions").unwrap();
+                let observer = self.observers.get_mut(&self.handle).unwrap();
                 observer.update(num_instrs, secs);
                 Ok(ExitKind::Ok)
             },
@@ -1036,12 +1043,12 @@ where
     S: State,
     OT: ObserversTuple<S>,
 {
-    fn observers(&self) -> &Self::Observers {
-        &self.observers
+    fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
+        (&self.observers).into()
     }
 
-    fn observers_mut(&mut self) -> &mut Self::Observers {
-        &mut self.observers
+    fn observers_mut(&mut self) -> RefIndexable<&mut Self::Observers, Self::Observers> {
+        (&mut self.observers).into()
     }
 }
 
@@ -1054,7 +1061,7 @@ use serde::{
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct SquidObserver {
-    name: String,
+    name: Cow<'static, str>,
     last_runtime: Option<Duration>,
     total_instrs: f64,
     total_secs: f64,
@@ -1063,7 +1070,7 @@ struct SquidObserver {
 impl SquidObserver {
     fn new(name: &'static str) -> Self {
         Self {
-            name: name.to_string(),
+            name: Cow::Borrowed(name),
             last_runtime: None,
             total_instrs: 0.0,
             total_secs: 0.0,
@@ -1110,22 +1117,10 @@ where
     fn post_exec_child(&mut self, _state: &mut S, _input: &<S as UsesInput>::Input, _exit_kind: &ExitKind) -> Result<(), Error> {
         Ok(())
     }
-
-    fn observes_stdout(&self) -> bool {
-        false
-    }
-
-    fn observes_stderr(&self) -> bool {
-        false
-    }
-
-    fn observe_stdout(&mut self, _stdout: &[u8]) {}
-
-    fn observe_stderr(&mut self, _stderr: &[u8]) {}
 }
 
 impl Named for SquidObserver {
-    fn name(&self) -> &str {
+    fn name(&self) -> &Cow<'static, str> {
         &self.name
     }
 }
@@ -1138,12 +1133,14 @@ fn within_window<const W: usize>(value: f64, base: f64) -> bool {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SquidFeedback {
     last_instr_per_sec: f64,
+    handle: Handle<SquidObserver>,
 }
 
 impl SquidFeedback {
-    fn new() -> Self {
+    fn new(observer: &SquidObserver) -> Self {
         Self {
             last_instr_per_sec: 0.0,
+            handle: observer.handle(),
         }
     }
 }
@@ -1157,14 +1154,14 @@ where
         EM: EventFirer<State = S>,
         OT: ObserversTuple<S>,
     {
-        let observer = observers.match_name::<SquidObserver>("instructions").unwrap();
+        let observer = observers.get(&self.handle).unwrap();
         let instr_per_sec = observer.instr_per_sec();
 
         if !within_window::<{ 10 * 1024 * 1024 }>(instr_per_sec, self.last_instr_per_sec) {
             mgr.fire(
                 state,
                 Event::UpdateUserStats {
-                    name: "instr/sec".to_string(),
+                    name: "instr/sec".to_string().into(),
                     value: UserStats::new(UserStatsValue::Float(instr_per_sec), AggregatorOps::Sum),
                     phantom: PhantomData,
                 },
@@ -1180,15 +1177,15 @@ where
         OT: ObserversTuple<S>,
         EM: EventFirer<State = S>,
     {
-        let observer = observers.match_name::<SquidObserver>("instructions").unwrap();
+        let observer = observers.get(&self.handle).unwrap();
         *testcase.exec_time_mut() = observer.last_runtime().copied();
         Ok(())
     }
 }
 
 impl Named for SquidFeedback {
-    fn name(&self) -> &str {
-        "SquidFeedback"
+    fn name(&self) -> &Cow<'static, str> {
+        &Cow::Borrowed("SquidFeedback")
     }
 }
 
@@ -1271,7 +1268,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let squid_observer = SquidObserver::new("instructions");
 
         let map_feedback = MaxMapFeedback::new(&map_observer);
-        let squid_feedback = SquidFeedback::new();
+        let squid_feedback = SquidFeedback::new(&squid_observer);
 
         let calibration_stage = CalibrationStage::new(&map_feedback);
 
@@ -1292,14 +1289,17 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         };
 
         let mutator = StdMOptMutator::new(&mut state, havoc_mutations(), 7, 5)?;
-
         let mutational_stage = StdPowerMutationalStage::new(mutator);
+        
+        // For perf measurements:
+        // let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
+        // let mutational_stage = libafl::prelude::StdMutationalStage::new(mutator);
 
         let scheduler = IndexesLenTimeMinimizerScheduler::new(&map_observer, StdWeightedScheduler::with_schedule(&mut state, &map_observer, Some(powerschedule)));
 
         let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
-        let mut executor = SquidExecutor::new(tuple_list!(squid_observer, map_observer), &mut runtime);
+        let mut executor = SquidExecutor::new(squid_observer.handle(), tuple_list!(squid_observer, map_observer), &mut runtime);
 
         let mut stages = tuple_list!(calibration_stage, mutational_stage);
 
@@ -1319,7 +1319,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let mut shmem_provider = UnixShMemProvider::new().unwrap();
         let mut shmem = shmem_provider.new_shmem(MAP_SIZE).unwrap();
         shmem.write_to_env("__AFL_SHM_ID").unwrap();
-        let shmem_buf = shmem.as_mut_slice();
+        let shmem_buf = shmem.as_slice_mut();
         std::env::set_var("AFL_MAP_SIZE", format!("{}", MAP_SIZE));
 
         let edges_observer = unsafe { HitcountsMapObserver::new(StdMapObserver::new("shared_mem", shmem_buf)).track_indices() };
@@ -1328,7 +1328,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let map_feedback = MaxMapFeedback::new(&edges_observer);
         let calibration = CalibrationStage::new(&map_feedback);
 
-        let mut feedback = feedback_or!(map_feedback, TimeFeedback::with_observer(&time_observer));
+        let mut feedback = feedback_or!(map_feedback, TimeFeedback::new(&time_observer));
 
         let mut objective = CrashFeedback::new();
 
@@ -1345,8 +1345,11 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         };
 
         let mutator = StdMOptMutator::new(&mut state, havoc_mutations(), 7, 5)?;
-
         let power = StdPowerMutationalStage::new(mutator);
+        
+        // For perf measurements:
+        // let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
+        // let power = libafl::prelude::StdMutationalStage::new(mutator);
 
         let scheduler = IndexesLenTimeMinimizerScheduler::new(&edges_observer, StdWeightedScheduler::with_schedule(&mut state, &edges_observer, Some(powerschedule)));
 
@@ -1405,7 +1408,7 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
 
     let squid_observer = SquidObserver::new("instructions");
 
-    let mut feedback = SquidFeedback::new();
+    let mut feedback = SquidFeedback::new(&squid_observer);
     let mut objective = feedback_or!(CrashFeedback::new(), TimeoutFeedback::new());
 
     let mut state = StdState::new(StdRand::with_seed(current_nanos()), InMemoryCorpus::<BytesInput>::new(), InMemoryCorpus::<BytesInput>::new(), &mut feedback, &mut objective)?;
@@ -1415,7 +1418,7 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
     let mut fuzzer: StdFuzzer<_, _, _, (SquidObserver, ())> = StdFuzzer::new(scheduler, feedback, objective);
 
     let mut runtime = create_runtime(&binaries, "/tmp", breakpoints);
-    let mut executor = SquidExecutor::new(tuple_list!(squid_observer), &mut runtime);
+    let mut executor = SquidExecutor::new(squid_observer.handle(), tuple_list!(squid_observer), &mut runtime);
 
     executor.run_target(&mut fuzzer, &mut state, &mut mgr, &input)?;
 

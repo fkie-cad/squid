@@ -21,8 +21,8 @@ ahash = "0.8"
 
 [dev-dependencies]
 rand = "0.8.5"
-libafl = "0.12.0"
-libafl_bolts = "0.12.0"
+libafl = "0.13.0"
+libafl_bolts = "0.13.0"
 clap = { version = "4.4", features = ["derive"] }
 serde = "1.0"
 mimalloc = { version = "0.1", default-features = false }

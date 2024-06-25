@@ -1,4 +1,4 @@
 binaries/
 output/
 corpus/
-
+.cur_input_*
