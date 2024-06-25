@@ -1292,8 +1292,8 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let mutational_stage = StdPowerMutationalStage::new(mutator);
         
         // For perf measurements:
-        // let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
-        // let mutational_stage = libafl::prelude::StdMutationalStage::new(mutator);
+        //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
+        //let mutational_stage = libafl::prelude::StdMutationalStage::new(mutator);
 
         let scheduler = IndexesLenTimeMinimizerScheduler::new(&map_observer, StdWeightedScheduler::with_schedule(&mut state, &map_observer, Some(powerschedule)));
 
@@ -1348,8 +1348,8 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let power = StdPowerMutationalStage::new(mutator);
         
         // For perf measurements:
-        // let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
-        // let power = libafl::prelude::StdMutationalStage::new(mutator);
+        //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
+        //let power = libafl::prelude::StdMutationalStage::new(mutator);
 
         let scheduler = IndexesLenTimeMinimizerScheduler::new(&edges_observer, StdWeightedScheduler::with_schedule(&mut state, &edges_observer, Some(powerschedule)));
 
