@@ -1,4 +1,4 @@
-//! The rounding modes of the RISC-V ISA that might appear in the `frm` CSR
+//! The rounding modes of the RISC-V ISA that might appear in the `frm` CSR or in floating point instructions
 
 /// Round to nearest, ties to even
 pub const RNE: u64 = 0b000;

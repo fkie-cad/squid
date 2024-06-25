@@ -24,7 +24,7 @@ pub enum Comparison {
     /// is a signed comparison.
     Less(bool),
 
-    /// Compare if one operand is less than or equal than the other. If the inner bool is `true` then this
+    /// Compare if one operand is less than or equal to the other. If the inner bool is `true` then this
     /// is a signed comparison.
     LessEqual(bool),
 }
@@ -62,7 +62,7 @@ impl Register {
 /// Every ΑΩ-variable has one of these types
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum VarType {
-    /// A 64-bit integer (signed or unsigned). Also used for pointers.
+    /// A 64-bit integer (signed or unsigned). Also used for virtual addresses.
     Number,
 
     /// A single-precision floating point number
@@ -72,7 +72,10 @@ pub enum VarType {
     Float64,
 }
 
-/// An ΑΩ-variable is an [SSA variable](https://en.wikipedia.org/wiki/Static_single-assignment_form) of the ΑΩ IR
+/// An ΑΩ-variable is an [SSA variable](https://en.wikipedia.org/wiki/Static_single-assignment_form) of the ΑΩ IR.
+/// 
+/// ΑΩ has a block-local SSA form, meaning that the Vars in ΑΩ-operations are unique only to their containing basic block,
+/// not globally to their containing function.
 #[derive(Debug, Copy, Clone, Hash)]
 pub struct Var {
     id: u32,
@@ -87,7 +90,7 @@ impl Var {
         }
     }
 
-    /// Get the unique ID of this variable (ΑΩ-variables are numbered starting from zero)
+    /// Get the basic-block unique ID of this variable (ΑΩ-variables are numbered starting from zero)
     pub fn id(&self) -> usize {
         self.id as usize
     }
@@ -125,11 +128,13 @@ pub enum Half {
 }
 
 /// Some ΑΩ-operations behave differently depending on the signedness of their arguments
-#[allow(missing_docs)]
 #[derive(Debug, Clone, Hash)]
 pub enum Signedness {
+    /// Both arguments are signed integers
     Signed,
+    /// Both arguments are unsigned integers
     Unsigned,
+    /// One argument is signed, the other argument is unsigned
     Mixed,
 }
 
@@ -142,9 +147,9 @@ pub enum Signedness {
 /// 3. Perform add
 /// 4. Write result to register a0
 ///
-/// The ΑΩ IR provides operations for all of the four steps.
+/// The ΑΩ IR provides operations for all of these four steps.
 ///
-/// You cannot directly synthesize [`Op`]s, you have to use the builder methods
+/// You cannot directly synthesize [`Op`]s, you have to use their corresponding builder methods
 /// in [`BasicBlock`](crate::frontend::ao::BasicBlock).
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Hash)]

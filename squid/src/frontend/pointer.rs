@@ -55,7 +55,7 @@ pub enum Pointer {
     /// This pointer points to a thread-local variable
     Local(ThreadLocalPointer),
 
-    /// This pointer points to a specific bb of a function
+    /// This pointer points to a specific basic block of a function
     BasicBlock(BasicBlockPointer),
 
     /// This pointer points to a specific function

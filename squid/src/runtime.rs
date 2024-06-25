@@ -27,11 +27,11 @@ pub trait Runtime {
     fn get_pc(&self) -> VAddr;
     /// Store a value into a general puporse register
     fn set_gp_register(&mut self, register: GpRegister, value: u64);
-    /// Retrieve the content of a general purpose register
+    /// Retrieve the value of a general purpose register
     fn get_gp_register(&self, register: GpRegister) -> u64;
     /// Store a value into a floating point register
     fn set_fp_register(&mut self, register: FpRegister, value: f64);
-    /// Retrieve the content of a floating point register
+    /// Retrieve the value of a floating point register
     fn get_fp_register(&self, register: FpRegister) -> f64;
     /// Store a value into one of the control/status registers
     fn set_csr_register(&mut self, register: CsrRegister, value: u64);
@@ -39,7 +39,7 @@ pub trait Runtime {
     fn get_csr_register(&self, register: CsrRegister) -> u64;
 
     /* Interact with the code */
-    /// Execute the program starting at the program counter until an event is thrown
+    /// Execute the program starting at the current program counter until an event is thrown
     fn run(&mut self) -> Result<Self::Event, Self::Error>;
 
     /* Snapshot handling */
@@ -84,6 +84,6 @@ pub trait Runtime {
     /// Depending on the implementation, the return value might or might not contain the NUL byte.
     fn load_string(&self, address: VAddr) -> Result<&[u8], Self::Error>;
     /// Store the provided string as is at the given address.
-    /// Depending on the implementation, a NUL byte be appended or might not be appended.
+    /// Depending on the implementation, a NUL byte might be appended or might not be appended.
     fn store_string<S: AsRef<str>>(&mut self, address: VAddr, value: S) -> Result<(), Self::Error>;
 }

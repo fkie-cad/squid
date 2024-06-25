@@ -46,7 +46,7 @@ use crate::{
     },
 };
 
-/// The ChunkContent determines how the bytes of a [`Chunk`] shall be interpreted.
+/// The ChunkContent determines how the contents of a [`Chunk`] shall be interpreted.
 /// This can either as code, data or as a pointer.
 #[derive(Hash)]
 pub enum ChunkContent {

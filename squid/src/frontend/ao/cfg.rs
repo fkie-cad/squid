@@ -66,7 +66,7 @@ pub enum CFGError {
     MultipleNextBasicBlocks(Id),
 }
 
-/// An Edge is an edge in the CFG
+/// An Edge is an outgoing edge in the CFG and contains the destination basic block it points to
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Edge {
     /// The "next" edge points to the basic block that immediately follows the source basic block
@@ -166,7 +166,7 @@ impl BasicBlock {
         None
     }
 
-    /// Check if this basic block has an outgoing `Edge::Next` edge and return its destination
+    /// Check if this basic block has an outgoing [`Edge::Next`] edge and return its destination
     pub fn next_basic_block(&self) -> Option<Id> {
         for edge in &self.edges {
             if let Edge::Next(id) = edge {
@@ -177,7 +177,7 @@ impl BasicBlock {
         None
     }
 
-    /// Check if this basic block has an outgoing `Edge::Jump` edge and return its destination
+    /// Check if this basic block has an outgoing [`Edge::Jump`] edge and return its destination
     pub fn jump_target(&self) -> Option<Id> {
         for edge in &self.edges {
             if let Edge::Jump(id) = edge {
@@ -262,7 +262,8 @@ impl BasicBlock {
         old
     }
 
-    /// Check whether this basic block ends with an op that explicitly overwrites the program counter (unconditionally)
+    /// Check whether this basic block ends with an op that explicitly and unconditionally overwrites the program counter,
+    /// i.e. if it ends with a [`Op::Jump`]
     pub fn has_continuous_flow(&self) -> bool {
         !matches!(self.ops().last(), Some(Op::Jump { .. }))
     }

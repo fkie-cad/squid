@@ -355,7 +355,7 @@ pub trait MemoryProvider {
     fn store_hword(&mut self, vaddr: VAddr, value: u16) -> Result<(), MemoryError>;
     fn store_word(&mut self, vaddr: VAddr, value: u32) -> Result<(), MemoryError>;
     fn store_dword(&mut self, vaddr: VAddr, value: u64) -> Result<(), MemoryError>;
-    /// Given a symbolic pointer, return its virtual address
+    /// Given a symbolic pointer, return a concrete virtual address
     fn translate_pointer(&self, pointer: &Pointer) -> Result<VAddr, MemoryError>;
 }
 
@@ -397,8 +397,7 @@ impl MemoryProvider for () {
     }
 }
 
-/// After interpreting a [`BasicBlock`], the next basic block to interpret is determined
-/// by this enum.
+/// Determines how the basic block that the [`Engine`] interprets ends
 #[derive(Debug)]
 pub enum JumpTarget {
     /// The jump target is unknown
@@ -414,7 +413,7 @@ pub enum JumpTarget {
 }
 
 /// The Engine is an interpreter for ΑΩ-operations and is used to execute basic blocks.
-/// After execution you can inspect the concrete values inside registers / memory / ΑΩ-variables.
+/// After execution you can inspect the concrete values of registers / memory / ΑΩ-variables.
 pub struct Engine<'a, M>
 where
     M: MemoryProvider,
@@ -452,7 +451,7 @@ where
         self.event
     }
 
-    /// Access the event channel that the bb wrote to
+    /// Access the event channel that the basic block wrote to
     pub fn event_channel(&self) -> &[Var] {
         &self.event_channel
     }
@@ -487,7 +486,7 @@ where
         &self.vars[var.id()]
     }
 
-    /// Check if the basic block has made a jump during execution
+    /// If the basic block ended with some kind of jump, this value is set
     pub fn jump(&self) -> Option<&JumpTarget> {
         self.jump.as_ref()
     }

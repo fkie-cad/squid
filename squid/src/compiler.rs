@@ -51,7 +51,7 @@ impl Compiler {
     ///
     /// # Arguments
     /// 1. `binary`: Path to the ELF binary that is being run by `squid`
-    /// 2. `search_paths`: Similar to LD_LIBRARY_PATH, a list of directory names where the binaries dependencies
+    /// 2. `search_paths`: Similar to LD_LIBRARY_PATH, a list of directory names where the binaries' dependencies
     ///    are searched
     /// 3. `preloads`: Similar to LD_PRELOAD, a list of shared objects that are to be preloaded into the process image
     ///     before all other dependencies
@@ -134,7 +134,7 @@ impl Compiler {
         &self.image
     }
 
-    /// Access the event pool
+    /// Access the event pool, which manages all events that can be thrown at runtime
     pub fn event_pool(&self) -> &EventPool {
         &self.event_pool
     }
