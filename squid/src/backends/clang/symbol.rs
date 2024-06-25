@@ -21,7 +21,9 @@ pub enum SymbolVisibility {
     Private,
 }
 
-/// A Symbol that has exactly one name for a variable/function at the given address.
+/// The Symbols in the ClangRuntime are constructed from the symbols in the
+/// process image except that there is one runtime Symbol for every private +
+/// public name of a process image symbol.
 #[derive(Debug, Clone)]
 pub struct Symbol {
     name: String,

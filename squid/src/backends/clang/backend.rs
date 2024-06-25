@@ -103,7 +103,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// If this is set to true, the backend emits code that updates the pc with the address of the basic block that is going to be executed next.
+    /// If this is set to true, the backend emits code that updates the pc with the address of the basic block that has been executed last
     pub fn update_pc(mut self, flag: bool) -> Self {
         self.update_pc = flag;
         self
