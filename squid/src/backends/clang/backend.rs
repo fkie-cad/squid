@@ -266,6 +266,7 @@ impl ClangBackend {
         hasher.write_usize(self.timeout);
         hasher.write_u8(self.count_instructions as u8);
         hasher.write_u8(self.uninit_stack as u8);
+        hasher.write_u8(self.allow_div_by_zero as u8);
         for cflag in &self.cflags {
             hasher.write_usize(cflag.len());
             hasher.write(cflag.as_bytes());
