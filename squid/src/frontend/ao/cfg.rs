@@ -321,7 +321,7 @@ impl BasicBlock {
     }
 
     /// Split this basic block in two by splitting the list of ΑΩ-operations at the current cursor position.
-    /// Note that this leaves the current basic block with no edges, all the edges belong to the returned basic block.
+    /// Note that this leaves this basic block with no edges, all the edges belong to the returned basic block.
     pub fn split(&mut self) -> Self {
         let ops = self.ops.split_off(self.cursor);
         let var_cursor = self.var_cursor;
