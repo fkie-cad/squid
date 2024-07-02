@@ -87,6 +87,7 @@ pub(crate) struct CLifter {
     config_hash: u64,
     num_functions: usize,
     uninit_stack: bool,
+    allow_div_by_zero: bool,
 }
 
 impl CLifter {
@@ -100,6 +101,7 @@ impl CLifter {
         config_hash: u64,
         basic_block_table_size: usize,
         uninit_stack: bool,
+        allow_div_by_zero: bool,
     ) -> Self {
         let mut out_binary = out_source.clone();
         out_binary.set_extension("so");
@@ -115,6 +117,7 @@ impl CLifter {
             config_hash,
             num_functions: 0,
             uninit_stack,
+            allow_div_by_zero,
         }
     }
 
@@ -1384,9 +1387,17 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     ..
                 } => {
                     if dst.vartype() == VarType::Number {
-                        writeln!(out_file, "if (UNLIKELY({} == 0)) return (void*) fault_div_by_zero(ctx);", var_name(src2))?;
+                        if self.allow_div_by_zero {
+                            writeln!(out_file, "{};", var_type_and_name(dst))?;
+                            writeln!(out_file, "if (UNLIKELY({} == 0)) {{ {} = 0; }}", var_name(src2), var_name(dst))?;
+                            writeln!(out_file, "else {{ {} = {} / {}; }}", var_name(dst), var_name(src1), var_name(src2))?;
+                        } else {
+                            writeln!(out_file, "if (UNLIKELY({} == 0)) return (void*) fault_div_by_zero(ctx);", var_name(src2))?;
+                            writeln!(out_file, "{} = {} / {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                        }
+                    } else {
+                        writeln!(out_file, "{} = {} / {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
                     }
-                    writeln!(out_file, "{} = {} / {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
                 },
                 Op::Sqrt {
                     dst,

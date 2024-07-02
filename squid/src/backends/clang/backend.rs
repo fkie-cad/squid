@@ -57,16 +57,23 @@ pub struct ClangBackendBuilder {
     cflags: Vec<String>,
     cc: String,
     uninit_stack: bool,
+    allow_div_by_zero: bool,
 }
 
 impl ClangBackendBuilder {
-    /// Whenever a stackframe is allocated or deallocated, mark its contents as uninitialized.
+    /// Do not throw an error when dividing by zero and set the result to 0 instead (default: `false`)
+    pub fn allow_div_by_zero(mut self, flag: bool) -> Self {
+        self.allow_div_by_zero = flag;
+        self
+    }
+    
+    /// Whenever a stackframe is allocated or deallocated, mark its contents as uninitialized (default: `true`)
     pub fn enable_uninit_stack(mut self, flag: bool) -> Self {
         self.uninit_stack = flag;
         self
     }
 
-    /// Set the compiler to use for compiling the AOT-code.
+    /// Set the compiler to use for compiling the AOT-code
     pub fn cc<S: Into<String>>(mut self, cc: S) -> Self {
         self.cc = cc.into();
         self
@@ -97,7 +104,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// If this is set to true, build a symbol table in the runtime with all the names from the process image.
+    /// If this is set to true, build a symbol table in the runtime with all the names from the process image
     pub fn build_symbol_table(mut self, flag: bool) -> Self {
         self.build_symbol_table = flag;
         self
@@ -117,19 +124,19 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// Set the size of the heap in bytes.
+    /// Set the size of the heap in bytes
     pub fn heap_size(mut self, heap_size: usize) -> Self {
         self.heap_size = heap_size;
         self
     }
 
-    /// Set the size of the stack in bytes.
+    /// Set the size of the stack in bytes
     pub fn stack_size(mut self, stack_size: usize) -> Self {
         self.stack_size = Some(stack_size);
         self
     }
 
-    /// Insert an environment variable into the environment of the guest.
+    /// Insert an environment variable into the environment of the guest
     pub fn env<K, V>(mut self, key: K, value: V) -> Self
     where
         K: Into<String>,
@@ -139,7 +146,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// Add the argument to the argv of the guest.
+    /// Add the argument to the argv of the guest
     pub fn arg<S>(mut self, arg: S) -> Self
     where
         S: Into<String>,
@@ -148,7 +155,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// Add multiple args to the argv of the guest.
+    /// Add multiple args to the argv of the guest
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -160,7 +167,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// Set argv\[0\] of the guest to the given name.
+    /// Set argv\[0\] of the guest to the given name
     pub fn progname<S>(mut self, progname: S) -> Self
     where
         S: Into<String>,
@@ -173,7 +180,7 @@ impl ClangBackendBuilder {
         self
     }
 
-    /// Create the [`ClangBackend`].
+    /// Create the [`ClangBackend`]
     pub fn build(self) -> Result<ClangBackend, &'static str> {
         let source_file = self.source_file.ok_or("Source file was not set")?;
         let stack_size = self.stack_size.ok_or("Stack size was not set")?;
@@ -192,6 +199,7 @@ impl ClangBackendBuilder {
             cflags: self.cflags,
             cc: self.cc,
             uninit_stack: self.uninit_stack,
+            allow_div_by_zero: self.allow_div_by_zero,
         })
     }
 }
@@ -226,6 +234,7 @@ pub struct ClangBackend {
     cflags: Vec<String>,
     cc: String,
     uninit_stack: bool,
+    allow_div_by_zero: bool,
 }
 
 impl ClangBackend {
@@ -240,11 +249,12 @@ impl ClangBackend {
             build_symbol_table: true,
             update_pc: true,
             update_last_instr: true,
-            timeout: 400_000_000 * 180,
+            timeout: 800_000_000 * 60,
             count_instructions: true,
             cflags: Vec::new(),
             cc: "clang".to_string(),
             uninit_stack: true,
+            allow_div_by_zero: false,
         }
     }
 }
@@ -320,6 +330,7 @@ impl Backend for ClangBackend {
             config_hash,
             layouter.code_size(),
             self.uninit_stack,
+            self.allow_div_by_zero,
         );
         let executor = clifter.lift(&image, &memory, &varstore, logger, &self.cflags, &self.cc)?;
 
