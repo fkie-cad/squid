@@ -12,9 +12,6 @@ use crate::{
     runtime::SnapshotId,
 };
 
-const PERM_CHUNK_START: u8 = 16;
-const PERM_CHUNK_END: u8 = 32;
-
 /// The HeapError shows everything that can go wrong when operating with the heap.
 #[allow(missing_docs)]
 #[derive(Error, Debug, Clone)]

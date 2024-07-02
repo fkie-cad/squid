@@ -4,10 +4,15 @@
 use crate::frontend::Perms;
 
 pub const PERM_NONE: u8 = 0;
+/// Indicates that a byte has not been written to. Gets cleared on write.
 pub const PERM_UNINIT: u8 = 8;
 pub const PERM_READ: u8 = 4;
 pub const PERM_WRITE: u8 = 2;
 pub const PERM_EXEC: u8 = 1;
+/// Metadata for the heap: signal the start of a heap chunk
+pub const PERM_CHUNK_START: u8 = 16;
+/// Metadata for the heap: signal the end of a heap chunk
+pub const PERM_CHUNK_END: u8 = 32;
 
 pub(crate) fn convert_loader_perms(perms: Perms) -> u8 {
     let mut new_perms = 0;
