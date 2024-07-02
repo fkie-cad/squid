@@ -81,9 +81,8 @@ pub trait Runtime {
     /// Store the given byte array at the given address
     fn store_slice<S: AsRef<[u8]>>(&mut self, address: VAddr, value: S) -> Result<(), Self::Error>;
     /// Retreive a NUL-terminated string at the given address.
-    /// Depending on the implementation, the return value might or might not contain the NUL byte.
+    /// The NUL terminator must not be included in the return value but exists in memory.
     fn load_string(&self, address: VAddr) -> Result<&[u8], Self::Error>;
-    /// Store the provided string as is at the given address.
-    /// Depending on the implementation, a NUL byte might be appended or might not be appended.
+    /// Store the provided string as is at the given address. A NUL-terminator must be added by the implementation.
     fn store_string<S: AsRef<str>>(&mut self, address: VAddr, value: S) -> Result<(), Self::Error>;
 }
