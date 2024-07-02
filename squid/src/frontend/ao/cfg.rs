@@ -256,9 +256,18 @@ impl BasicBlock {
         op
     }
 
-    pub(crate) fn replace_op(&mut self, new_op: Op) -> Op {
-        let old = self.ops[self.cursor].clone();
-        self.ops[self.cursor] = new_op;
+    /// Replace the ΑΩ-operation at the current cursor position with `new_op` and return the
+    /// old op. If the cursor does not point to an existing op than `None` is returned.
+    /// 
+    /// __Disclaimer__: Use this with caution since it enables you to manipulate the internal values
+    /// of ΑΩ-ops that are hidden for good reason.
+    pub fn replace_op(&mut self, new_op: Op) -> Option<Op> {
+        let old = self.ops.get(self.cursor).cloned();
+        
+        if old.is_some() {
+            self.ops[self.cursor] = new_op;
+        }
+        
         old
     }
 
