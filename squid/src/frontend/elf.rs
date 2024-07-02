@@ -128,7 +128,7 @@ fn has_no_tls(elf: &goblin::elf::Elf) -> bool {
             return false;
         }
     }
-    
+
     true
 }
 

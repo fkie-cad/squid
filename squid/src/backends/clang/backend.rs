@@ -66,7 +66,7 @@ impl ClangBackendBuilder {
         self.allow_div_by_zero = flag;
         self
     }
-    
+
     /// Whenever a stackframe is allocated or deallocated, mark its contents as uninitialized (default: `true`)
     pub fn enable_uninit_stack(mut self, flag: bool) -> Self {
         self.uninit_stack = flag;

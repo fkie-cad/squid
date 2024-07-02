@@ -16,13 +16,13 @@ use crate::{
     backends::clang::{
         address::POINTER_CODE_MASK,
         perms::*,
+        AOTExecutor,
+        AOTReturnCode,
         AddressSpace,
         EventChannel,
         Heap,
         HeapChunk,
         HeapError,
-        AOTExecutor,
-        AOTReturnCode,
         Memory,
         Registers,
         Symbol,
@@ -629,8 +629,9 @@ impl ClangRuntime {
     pub fn get_last_instruction(&self) -> VAddr {
         self.registers.get_last_instr()
     }
-    
-    /// Return a raw u8 pointer to the content of the memory at the given address
+
+    /// Return a raw u8 pointer to the content of the memory at the given address.
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn raw_pointer(&self, address: VAddr) -> Result<*const u8, ClangRuntimeFault> {
         match AddressSpace::decode(address) {
             AddressSpace::Code(_) => Err(ClangRuntimeFault::MemoryReadError(address, 0)),
@@ -638,13 +639,14 @@ impl ClangRuntime {
                 if !self.memory.is_in_bounds(offset, 1) {
                     return Err(ClangRuntimeFault::MemoryReadError(address, 0));
                 }
-                
+
                 Ok(self.memory.content(offset, 1).as_ptr())
             },
         }
     }
-    
+
     /// Return a raw u8 pointer to the content of the memory at the given address
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn raw_pointer_mut(&mut self, address: VAddr) -> Result<*mut u8, ClangRuntimeFault> {
         match AddressSpace::decode(address) {
             AddressSpace::Code(_) => Err(ClangRuntimeFault::MemoryReadError(address, 0)),
@@ -652,7 +654,7 @@ impl ClangRuntime {
                 if !self.memory.is_in_bounds(offset, 1) {
                     return Err(ClangRuntimeFault::MemoryReadError(address, 0));
                 }
-                
+
                 Ok(self.memory.content_mut(offset, 1).as_mut_ptr())
             },
         }

@@ -1,9 +1,9 @@
 use std::{
+    borrow::Cow,
     collections::HashMap,
     ffi::OsStr,
     marker::PhantomData,
     path::PathBuf,
-    borrow::Cow,
 };
 
 use clap::Parser;
@@ -26,6 +26,7 @@ use libafl::prelude::{
     ForkserverExecutor,
     Fuzzer,
     HasExecutions,
+    HasMutatorBytes,
     HasObservers,
     HitcountsMapObserver,
     InMemoryCorpus,
@@ -58,7 +59,6 @@ use libafl::prelude::{
     UsesInput,
     UsesObservers,
     UsesState,
-    HasMutatorBytes,
 };
 use libafl_bolts::prelude::{
     current_nanos,
@@ -68,17 +68,17 @@ use libafl_bolts::prelude::{
     CoreId,
     Cores,
     Error,
+    Handle,
+    Handled,
+    MatchNameRef,
     Named,
     OwnedMutSlice,
+    RefIndexable,
     ShMem,
     ShMemProvider,
     StdRand,
     StdShMemProvider,
     UnixShMemProvider,
-    RefIndexable,
-    MatchNameRef,
-    Handle,
-    Handled,
 };
 use mimalloc::MiMalloc;
 use squid::{
@@ -1291,7 +1291,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
 
         let mutator = StdMOptMutator::new(&mut state, havoc_mutations(), 7, 5)?;
         let mutational_stage = StdPowerMutationalStage::new(mutator);
-        
+
         // For perf measurements:
         //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
         //let mutational_stage = libafl::prelude::StdMutationalStage::new(mutator);
@@ -1347,7 +1347,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
 
         let mutator = StdMOptMutator::new(&mut state, havoc_mutations(), 7, 5)?;
         let power = StdPowerMutationalStage::new(mutator);
-        
+
         // For perf measurements:
         //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
         //let power = libafl::prelude::StdMutationalStage::new(mutator);

@@ -73,7 +73,7 @@ pub enum VarType {
 }
 
 /// An ΑΩ-variable is an [SSA variable](https://en.wikipedia.org/wiki/Static_single-assignment_form) of the ΑΩ IR.
-/// 
+///
 /// ΑΩ has a block-local SSA form, meaning that the Vars in ΑΩ-operations are unique only to their containing basic block,
 /// not globally to their containing function.
 #[derive(Debug, Copy, Clone, Hash)]
