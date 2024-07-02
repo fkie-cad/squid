@@ -764,9 +764,9 @@ impl ClangRuntime {
         Ok(chunk)
     }
 
-    /// Check whether all allocated chunks have been freed since the last time the leak tracker was reset
-    pub fn dynstore_has_memory_leaks(&self) -> bool {
-        self.heap_mgr.has_mem_leaks()
+    /// Return the number of chunks that have been allocated but not freed yet
+    pub fn dynstore_number_of_chunks(&self) -> usize {
+        self.heap_mgr.allocated_chunks()
     }
 
     /// Reallocate the heap chunk at the given address and resize it to the given `new_size`
@@ -783,11 +783,6 @@ impl ClangRuntime {
 
         let new_offset = self.heap_mgr.realloc(&mut self.memory, offset, new_size)?;
         Ok(AddressSpace::Data(new_offset).encode())
-    }
-
-    /// Resets the leak tracker of the heap
-    pub fn dynstore_reset_leak_tracker(&mut self) {
-        self.heap_mgr.reset_count();
     }
 
     /// Get the number of bytes used by all heap chunks

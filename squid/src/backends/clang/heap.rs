@@ -322,16 +322,12 @@ impl Heap {
     }
 
     #[inline]
-    pub(crate) fn has_mem_leaks(&self) -> bool {
-        self.count > 0
+    pub(crate) fn allocated_chunks(&self) -> usize {
+        self.count
     }
 
     #[inline]
     pub(crate) fn memory_usage(&self, memory: &Memory) -> usize {
         self.cursor - memory.heap()
-    }
-
-    pub(crate) fn reset_count(&mut self) {
-        self.count = 0;
     }
 }
