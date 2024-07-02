@@ -13,7 +13,6 @@ mod pointer;
 mod reloc;
 mod section;
 mod symbol;
-mod tls;
 
 pub(crate) mod symbolization_passes;
 
@@ -46,7 +45,6 @@ pub use pointer::{
     FunctionPointer,
     GlobalPointer,
     Pointer,
-    ThreadLocalPointer,
 };
 pub use section::{
     Section,
@@ -55,9 +53,4 @@ pub use section::{
 pub use symbol::{
     Symbol,
     SymbolBuilder,
-};
-pub use tls::{
-    ThreadLocal,
-    Tls,
-    TlsOffset,
 };

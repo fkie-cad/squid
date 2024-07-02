@@ -208,9 +208,6 @@ impl ClangBackendBuilder {
 #[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum ClangBackendError {
-    #[error("One of the ELF files makes use of thread local storage, which is not supported by this backend")]
-    HasTls,
-
     #[error("Codegen failed: {0}")]
     CodegenError(#[from] CLifterError),
 
@@ -289,13 +286,6 @@ impl Backend for ClangBackend {
     }
 
     fn create_runtime(&mut self, mut image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error> {
-        /* Check if there is TLS anywhere */
-        for elf in image.iter_elfs() {
-            if elf.tls().num_thread_locals() > 0 {
-                return Err(ClangBackendError::HasTls);
-            }
-        }
-
         /* Add missing things to progam image */
         insert_entrypoint(&mut image, &event_pool);
         insert_guard_pages(&mut image);

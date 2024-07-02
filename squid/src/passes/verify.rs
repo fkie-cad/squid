@@ -19,8 +19,6 @@ use crate::{
         ProcessImage,
         Section,
         Symbol,
-        Tls,
-        TlsOffset,
         VAddr,
     },
     passes::Pass,
@@ -190,43 +188,6 @@ fn verify_basic_block(bb: &BasicBlock) {
     assert!(max_var <= bb.num_variables());
 }
 
-fn verify_tls(tls: &Tls, verify_vaddr: bool) {
-    for local in tls.iter_thread_locals() {
-        assert_ne!(local.id(), Id::default());
-        assert_ne!(local.size(), 0);
-        assert_ne!(local.iter_chunks().len(), 0);
-
-        for chunk in local.iter_chunks() {
-            verify_chunk(chunk);
-        }
-    }
-
-    /* Verify layout */
-    let mut cursor = 0;
-
-    for local in tls.iter_thread_locals() {
-        assert_eq!(local.offset(), cursor);
-        cursor += local.size() as TlsOffset;
-    }
-
-    if verify_vaddr {
-        let mut cursor = if let Some(local) = tls.iter_thread_locals().next() {
-            local.vaddr()
-        } else {
-            return;
-        };
-
-        for local in tls.iter_thread_locals() {
-            assert_eq!(cursor, local.vaddr());
-
-            for chunk in local.iter_chunks() {
-                assert_eq!(cursor, chunk.vaddr());
-                cursor += chunk.size() as VAddr;
-            }
-        }
-    }
-}
-
 fn verify_pointer(image: &ProcessImage, pointer: &Pointer) {
     match pointer {
         Pointer::Null => {},
@@ -234,10 +195,6 @@ fn verify_pointer(image: &ProcessImage, pointer: &Pointer) {
             let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
             assert!(pointer.offset < chunk.size());
             assert!(matches!(chunk.content(), ChunkContent::Data { .. } | ChunkContent::Pointer(_)));
-        },
-        Pointer::Local(pointer) => {
-            let local = image.elf(pointer.elf).unwrap().tls().thread_local(pointer.local).unwrap();
-            assert!(pointer.offset < local.size());
         },
         Pointer::BasicBlock(pointer) => {
             let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
@@ -292,7 +249,6 @@ impl Pass for VerifyerPass {
             logger.debug(format!("Verifying {}", elf.path().file_name().unwrap().to_str().unwrap()));
 
             verify_elf(elf, self.verify_vaddr);
-            verify_tls(elf.tls(), self.verify_vaddr);
 
             for section in elf.iter_sections() {
                 verify_section(section, self.verify_vaddr);

@@ -10,14 +10,11 @@ use crate::frontend::{
     HasId,
     Pointer,
     Relocation,
-    ThreadLocalPointer,
-    TlsOffset,
     VAddr,
 };
 
 pub(crate) struct SymbolizerPass {
     addr_map: HashMap<VAddr, Pointer>,
-    tls_map: HashMap<TlsOffset, Pointer>,
 }
 
 impl SymbolizerPass {
@@ -25,32 +22,6 @@ impl SymbolizerPass {
     pub(crate) fn new() -> Self {
         Self {
             addr_map: HashMap::new(),
-            tls_map: HashMap::new(),
-        }
-    }
-
-    fn resolve_tls_local(&mut self, elf: &Elf, offset: TlsOffset) {
-        let mut pointer = None;
-
-        if self.tls_map.contains_key(&offset) {
-            return;
-        }
-
-        for local in elf.tls().iter_thread_locals() {
-            if local.offset() == offset {
-                assert!(pointer.is_none());
-                pointer = Some(Pointer::Local(ThreadLocalPointer {
-                    elf: elf.id(),
-                    local: local.id(),
-                    offset: 0,
-                }));
-            }
-        }
-
-        if let Some(pointer) = pointer {
-            self.tls_map.insert(offset, pointer);
-        } else {
-            panic!("Unable to symbolize thread local at {} in {}", offset, elf.path().display());
         }
     }
 
@@ -160,7 +131,6 @@ impl SymbolizerPass {
                     if let Some(reloc) = chunk.pending() {
                         match reloc {
                             Relocation::Offset(addr) => self.resolve_address(elf, *addr as VAddr),
-                            Relocation::TlsOffset(offset) => self.resolve_tls_local(elf, *offset as TlsOffset),
                             _ => panic!("Encountered an unresolved symbol import in symbolizer pass"),
                         }
                     } else if let ChunkContent::Code(func) = chunk.content() {
@@ -179,18 +149,6 @@ impl SymbolizerPass {
                 }
             }
         }
-
-        for thread_local in elf.tls().iter_thread_locals() {
-            for chunk in thread_local.iter_chunks() {
-                if let Some(reloc) = chunk.pending() {
-                    match reloc {
-                        Relocation::Offset(addr) => self.resolve_address(elf, *addr as VAddr),
-                        Relocation::TlsOffset(offset) => self.resolve_tls_local(elf, *offset as TlsOffset),
-                        _ => panic!("Encountered an unresolved symbol import in symbolizer pass"),
-                    }
-                }
-            }
-        }
     }
 
     fn rewrite_addresses(&self, elf: &mut Elf) {
@@ -200,7 +158,6 @@ impl SymbolizerPass {
                     if let Some(reloc) = chunk.pending() {
                         let pointer = match reloc {
                             Relocation::Offset(addr) => self.addr_map.get(&(*addr as VAddr)).unwrap().clone(),
-                            Relocation::TlsOffset(offset) => self.tls_map.get(&(*offset as TlsOffset)).unwrap().clone(),
                             _ => panic!("Encountered an unresolved symbol import in symbolizer pass"),
                         };
                         chunk.resolve(pointer);
@@ -227,19 +184,6 @@ impl SymbolizerPass {
                             }
                         }
                     }
-                }
-            }
-        }
-
-        for thread_local in elf.tls_mut().iter_thread_locals_mut() {
-            for chunk in thread_local.iter_chunks_mut() {
-                if let Some(reloc) = chunk.pending() {
-                    let pointer = match reloc {
-                        Relocation::Offset(addr) => self.addr_map.get(&(*addr as VAddr)).unwrap().clone(),
-                        Relocation::TlsOffset(offset) => self.tls_map.get(&(*offset as TlsOffset)).unwrap().clone(),
-                        _ => panic!("Encountered an unresolved symbol import in symbolizer pass"),
-                    };
-                    chunk.resolve(pointer);
                 }
             }
         }

@@ -99,7 +99,6 @@ impl ImageDOTPass {
                                     } => "data".to_string(),
                                     ChunkContent::Pointer(pointer) => match pointer {
                                         Pointer::Global(pointer) => format!("{:?}", pointer),
-                                        Pointer::Local(pointer) => format!("{:?}", pointer),
                                         Pointer::Function(pointer) => format!("{:?}", pointer),
                                         Pointer::BasicBlock(pointer) => format!("{:?}", pointer),
                                         pointer => format!("{:?}", pointer),

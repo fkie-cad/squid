@@ -34,7 +34,6 @@ fn lookup_pointer(image: &ProcessImage, pointer: &Pointer, table: &mut HashMap<P
             let addr = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap().vaddr();
             addr + pointer.offset as VAddr
         },
-        Pointer::Local(_) => unreachable!(),
         Pointer::Null => 0,
     };
 

@@ -28,10 +28,6 @@ use crate::{
             Section,
             SectionParser,
         },
-        tls::{
-            Tls,
-            TlsParser,
-        },
     },
     listing::ListingManager,
     logger::Logger,
@@ -42,7 +38,6 @@ use crate::{
 pub struct Elf {
     id: Id,
     path: PathBuf,
-    tls: Tls,
     idmap: IdMap<Section>,
     cursor: usize,
 }
@@ -51,16 +46,6 @@ impl Elf {
     /// The path to the underlying ELF file, this Elf struct was generated from
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    /// Retrieve the thread-local storage area of this Elf file
-    pub fn tls(&self) -> &Tls {
-        &self.tls
-    }
-
-    /// Retrieve the thread-local storage area of this Elf file
-    pub fn tls_mut(&mut self) -> &mut Tls {
-        &mut self.tls
     }
 
     /// Create an [`ElfBuilder`] to create Elf files from scratch
@@ -103,7 +88,6 @@ impl ElfBuilder {
         Ok(Elf {
             id: Id::default(),
             path,
-            tls: Tls::new(),
             idmap: IdMap::new(),
             cursor: 0,
         })
@@ -135,7 +119,17 @@ fn get_dependencies(elf: &goblin::elf::Elf) -> Vec<String> {
 }
 
 fn verify_elf(elf: &goblin::elf::Elf) -> bool {
-    elf.is_64 && elf.little_endian && elf.header.e_type == goblin::elf::header::ET_DYN && elf.header.e_machine == goblin::elf::header::EM_RISCV
+    elf.is_64 && elf.little_endian && elf.header.e_type == goblin::elf::header::ET_DYN && elf.header.e_machine == goblin::elf::header::EM_RISCV && has_no_tls(elf)
+}
+
+fn has_no_tls(elf: &goblin::elf::Elf) -> bool {
+    for ph in &elf.program_headers {
+        if ph.p_type == goblin::elf::program_header::PT_TLS {
+            return false;
+        }
+    }
+    
+    true
 }
 
 #[derive(Clone, Debug)]
@@ -254,13 +248,11 @@ impl ElfParser {
         }
 
         let sections = SectionParser::parse(&elf, &file[..], &listing, event_pool)?;
-        let tls = TlsParser::parse(&elf, &file[..])?;
 
         Ok(Elf {
             path: path.to_path_buf(),
             id: Id::default(),
             idmap: sections,
-            tls,
             cursor: 0,
         })
     }

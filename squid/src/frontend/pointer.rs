@@ -11,15 +11,6 @@ pub struct GlobalPointer {
     pub offset: usize,
 }
 
-/// A symbolic pointer to a thread-local variable in the process image
-#[allow(missing_docs)]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ThreadLocalPointer {
-    pub elf: Id,
-    pub local: Id,
-    pub offset: usize,
-}
-
 /// A symbolic pointer to a basic block in a function of the process image
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,9 +42,6 @@ pub enum Pointer {
 
     /// This pointer points to a global variable
     Global(GlobalPointer),
-
-    /// This pointer points to a thread-local variable
-    Local(ThreadLocalPointer),
 
     /// This pointer points to a specific basic block of a function
     BasicBlock(BasicBlockPointer),

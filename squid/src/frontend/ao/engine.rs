@@ -35,11 +35,6 @@ fn register_index(reg: &Register) -> usize {
 fn pointer_add(p: &Pointer, i: u64) -> Option<Pointer> {
     match p {
         Pointer::BasicBlock(_) | Pointer::Function(_) | Pointer::Null => None,
-        Pointer::Local(p) => {
-            let mut ret = p.clone();
-            ret.offset += i as usize;
-            Some(Pointer::Local(ret))
-        },
         Pointer::Global(p) => {
             let mut ret = p.clone();
             ret.offset += i as usize;
@@ -51,11 +46,6 @@ fn pointer_add(p: &Pointer, i: u64) -> Option<Pointer> {
 fn pointer_sub(p: &Pointer, i: u64) -> Option<Pointer> {
     match p {
         Pointer::BasicBlock(_) | Pointer::Function(_) | Pointer::Null => None,
-        Pointer::Local(p) => {
-            let mut ret = p.clone();
-            ret.offset -= i as usize;
-            Some(Pointer::Local(ret))
-        },
         Pointer::Global(p) => {
             let mut ret = p.clone();
             ret.offset -= i as usize;

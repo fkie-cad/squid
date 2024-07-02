@@ -3,7 +3,6 @@ use crate::frontend::error::LoaderError;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Relocation {
     Offset(usize),
-    TlsOffset(usize),
     SymbolImport(String),
     TlsSymbolImport(String),
 }
@@ -41,7 +40,6 @@ pub(crate) fn parse_relocations(elf: &goblin::elf::Elf, parent_start: u64, paren
 
                 match rela.r_type {
                     goblin::elf::reloc::R_RISCV_RELATIVE => Relocation::Offset(addend as usize),
-                    goblin::elf::reloc::R_RISCV_TLS_TPREL64 => Relocation::TlsOffset(addend as usize),
                     t => todo!("{}", t),
                 }
             } else {

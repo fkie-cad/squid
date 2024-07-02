@@ -26,7 +26,6 @@ use crate::{
             FunctionPointer,
             GlobalPointer,
             Pointer,
-            ThreadLocalPointer,
         },
         reloc::Relocation,
         symbolization_passes::{
@@ -447,71 +446,9 @@ impl ProcessImageBuilder {
         Ok(())
     }
 
-    fn resolve_local_symbols(&mut self, logger: &Logger) -> Result<(), LoaderError> {
-        for i in 0..self.elfs.len() {
-            let walk = self.graph.walk(i);
-            let mut imports = Vec::<(String, Id, Id, Id)>::new();
-
-            /* First find all symbol imports for the current ELF file */
-            for section in self.elfs[i].iter_sections() {
-                for symbol in section.iter_symbols() {
-                    for chunk in symbol.iter_chunks() {
-                        if let Some(Relocation::TlsSymbolImport(name)) = chunk.pending() {
-                            imports.push((name.clone(), section.id(), symbol.id(), chunk.id()));
-                        }
-                    }
-                }
-            }
-
-            /* For each symbol find out which dependency defines it */
-            for (name, src_section, src_symbol, src_chunk) in imports {
-                let mut definition = None;
-
-                for &dep in &walk {
-                    let elf_id = self.elfs[dep].id();
-                    assert_ne!(elf_id, Id::default());
-
-                    for thread_local in self.elfs[dep].tls().iter_thread_locals() {
-                        if thread_local.public_names().contains(&name) {
-                            if definition.is_some() {
-                                return Err(LoaderError::SymbolResolutionError(format!("{} has multiple exports of {}", self.elfs[dep].path().display(), name)));
-                            }
-
-                            definition = Some(ThreadLocalPointer {
-                                elf: elf_id,
-                                local: thread_local.id(),
-                                offset: 0,
-                            });
-                        }
-                    }
-
-                    if definition.is_some() {
-                        break;
-                    }
-                }
-
-                let pointer = if let Some(pointer) = definition {
-                    Pointer::Local(pointer)
-                } else if is_optional_import(&name) {
-                    logger.warning(format!("Ignoring unresolved symbol '{}' from {}", name, self.elfs[i].path().display()));
-                    Pointer::Null
-                } else {
-                    let msg = format!("Unable to resolve '{}' from {}", name, self.elfs[i].path().display());
-                    logger.error(&msg);
-                    return Err(LoaderError::SymbolResolutionError(msg));
-                };
-
-                self.elfs[i].section_mut(src_section).unwrap().symbol_mut(src_symbol).unwrap().chunk_mut(src_chunk).unwrap().resolve(pointer);
-            }
-        }
-
-        Ok(())
-    }
-
     fn resolve_symbols(&mut self, logger: &Logger) -> Result<(), LoaderError> {
         logger.info("Resolving symbol imports");
         self.resolve_global_symbols(logger)?;
-        self.resolve_local_symbols(logger)?;
         Ok(())
     }
 
