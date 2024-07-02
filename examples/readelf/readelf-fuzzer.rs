@@ -656,8 +656,9 @@ fn get_real_pointer_to_symbol(runtime: &mut ClangRuntime, symbol: &str) -> Owned
     let symbols = runtime.lookup_symbol_from_private_name(symbol);
     assert_eq!(symbols.len(), 1);
     let cov_map = symbols[0].1;
-    let slice = runtime.load_slice_mut(cov_map.address(), cov_map.size()).unwrap();
-    unsafe { OwnedMutSlice::from_raw_parts_mut(slice.as_mut_ptr(), slice.len()) }
+    let len = cov_map.size();
+    let ptr = unsafe { runtime.raw_pointer_mut(cov_map.address()) }.unwrap();
+    unsafe { OwnedMutSlice::from_raw_parts_mut(ptr, len) }
 }
 
 struct SquidExecutor<'a, S, OT>

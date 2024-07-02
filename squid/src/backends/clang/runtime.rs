@@ -151,6 +151,7 @@ where
     Some(content)
 }
 
+#[inline]
 fn load_slice(memory: &Memory, offset: usize, size: usize) -> Option<&[u8]> {
     if !memory.is_in_bounds(offset, size) {
         return None;
@@ -165,23 +166,6 @@ fn load_slice(memory: &Memory, offset: usize, size: usize) -> Option<&[u8]> {
 
     /* Read content */
     let content = memory.content(offset, size);
-    Some(content)
-}
-
-fn load_slice_mut(memory: &mut Memory, offset: usize, size: usize) -> Option<&mut [u8]> {
-    if !memory.is_in_bounds(offset, size) {
-        return None;
-    }
-
-    /* Check permissions */
-    for perm in memory.perms(offset, size) {
-        if (*perm & PERM_UNINIT) != 0 || (*perm & PERM_READ) != PERM_READ {
-            return None;
-        }
-    }
-
-    /* Read content */
-    let content = memory.content_mut(offset, size);
     Some(content)
 }
 
@@ -217,6 +201,7 @@ where
     true
 }
 
+#[inline]
 fn store_slice(memory: &mut Memory, offset: usize, value: &[u8]) -> bool {
     let size = value.len();
 
@@ -239,6 +224,7 @@ fn store_slice(memory: &mut Memory, offset: usize, value: &[u8]) -> bool {
     true
 }
 
+#[inline]
 fn load_perms(memory: &Memory, offset: usize, size: usize) -> Option<&[u8]> {
     if !memory.is_in_bounds(offset, size) {
         return None;
@@ -247,6 +233,7 @@ fn load_perms(memory: &Memory, offset: usize, size: usize) -> Option<&[u8]> {
     Some(memory.perms(offset, size))
 }
 
+#[inline]
 fn load_perms_mut(memory: &mut Memory, offset: usize, size: usize) -> Option<&mut [u8]> {
     if !memory.is_in_bounds(offset, size) {
         return None;
@@ -255,6 +242,7 @@ fn load_perms_mut(memory: &mut Memory, offset: usize, size: usize) -> Option<&mu
     Some(memory.perms_mut(offset, size))
 }
 
+#[inline]
 fn load_string(memory: &Memory, offset: usize) -> Option<&[u8]> {
     if !memory.is_in_bounds(offset, 1) {
         return None;
@@ -278,6 +266,7 @@ fn load_string(memory: &Memory, offset: usize) -> Option<&[u8]> {
     None
 }
 
+#[inline]
 fn store_string(memory: &mut Memory, offset: usize, value: &[u8]) -> bool {
     let len = value.len() + 1;
 
@@ -640,14 +629,33 @@ impl ClangRuntime {
     pub fn get_last_instruction(&self) -> VAddr {
         self.registers.get_last_instr()
     }
-
-    /// Get mutable access to a slice of bytes in the memory of the guest, starting at the given address
-    pub fn load_slice_mut(&mut self, address: VAddr, size: usize) -> Result<&mut [u8], ClangRuntimeFault> {
-        let result = match AddressSpace::decode(address) {
-            AddressSpace::Code(_) => None,
-            AddressSpace::Data(offset) => load_slice_mut(&mut self.memory, offset, size),
-        };
-        result.ok_or(ClangRuntimeFault::MemoryReadError(address, size))
+    
+    /// Return a raw u8 pointer to the content of the memory at the given address
+    pub unsafe fn raw_pointer(&self, address: VAddr) -> Result<*const u8, ClangRuntimeFault> {
+        match AddressSpace::decode(address) {
+            AddressSpace::Code(_) => Err(ClangRuntimeFault::MemoryReadError(address, 0)),
+            AddressSpace::Data(offset) => {
+                if !self.memory.is_in_bounds(offset, 1) {
+                    return Err(ClangRuntimeFault::MemoryReadError(address, 0));
+                }
+                
+                Ok(self.memory.content(offset, 1).as_ptr())
+            },
+        }
+    }
+    
+    /// Return a raw u8 pointer to the content of the memory at the given address
+    pub unsafe fn raw_pointer_mut(&mut self, address: VAddr) -> Result<*mut u8, ClangRuntimeFault> {
+        match AddressSpace::decode(address) {
+            AddressSpace::Code(_) => Err(ClangRuntimeFault::MemoryReadError(address, 0)),
+            AddressSpace::Data(offset) => {
+                if !self.memory.is_in_bounds(offset, 1) {
+                    return Err(ClangRuntimeFault::MemoryReadError(address, 0));
+                }
+                
+                Ok(self.memory.content_mut(offset, 1).as_mut_ptr())
+            },
+        }
     }
 
     /// Get the number of executed instructions of the last [`ClangRuntime::run`] invocation.
