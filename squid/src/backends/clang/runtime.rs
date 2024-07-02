@@ -21,8 +21,8 @@ use crate::{
         Heap,
         HeapChunk,
         HeapError,
-        JITExecutor,
-        JITReturnCode,
+        AOTExecutor,
+        AOTReturnCode,
         Memory,
         Registers,
         Symbol,
@@ -302,7 +302,7 @@ pub struct ClangRuntime {
     memory: Memory,
     event_channel: EventChannel,
     registers: Registers,
-    executor: JITExecutor,
+    executor: AOTExecutor,
     next_pc: VAddr,
     symbols: HashMap<String, Vec<Symbol>>,
     next_event_channel_length: usize,
@@ -317,7 +317,7 @@ impl ClangRuntime {
         memory: Memory,
         event_channel: EventChannel,
         registers: Registers,
-        executor: JITExecutor,
+        executor: AOTExecutor,
         next_pc: VAddr,
         symbols: HashMap<String, Vec<Symbol>>,
         var_storage: Vec<u64>,
@@ -375,7 +375,7 @@ impl Runtime for ClangRuntime {
     }
 
     fn run(&mut self) -> Result<Self::Event, Self::Error> {
-        /* Prepare JIT execution */
+        /* Prepare AOT execution */
         self.event_channel.set_length(self.next_event_channel_length);
         self.registers.set_pc(self.next_pc);
         self.registers.set_last_instr(0);
@@ -384,35 +384,35 @@ impl Runtime for ClangRuntime {
         self.next_pc = self.executor.run(&mut self.memory, &mut self.event_channel, &mut self.registers, &mut self.var_storage);
         self.next_event_channel_length = 0;
 
-        /* Translate jit exit code to runtime event / fault */
+        /* Translate aot exit code to runtime event / fault */
         match self.executor.return_code() {
-            JITReturnCode::Event => {
+            AOTReturnCode::Event => {
                 let id = self.executor.return_arg0();
                 Ok(id)
             },
-            JITReturnCode::InvalidState => Err(ClangRuntimeFault::InternalError("JIT code returned but did not set an event or fault".to_string())),
-            JITReturnCode::InvalidJumpTarget => {
+            AOTReturnCode::InvalidState => Err(ClangRuntimeFault::InternalError("AOT code returned but did not set an event or fault".to_string())),
+            AOTReturnCode::InvalidJumpTarget => {
                 let addr = self.executor.return_arg0() as VAddr;
                 Err(ClangRuntimeFault::InvalidPc(addr))
             },
-            JITReturnCode::UninitializedRead | JITReturnCode::InvalidRead => {
+            AOTReturnCode::UninitializedRead | AOTReturnCode::InvalidRead => {
                 let addr = self.executor.return_arg0() as VAddr;
                 let size = self.executor.return_arg1();
                 Err(ClangRuntimeFault::MemoryReadError(addr, size))
             },
-            JITReturnCode::End => Err(ClangRuntimeFault::End),
-            JITReturnCode::InvalidWrite => {
+            AOTReturnCode::End => Err(ClangRuntimeFault::End),
+            AOTReturnCode::InvalidWrite => {
                 let addr = self.executor.return_arg0() as VAddr;
                 let size = self.executor.return_arg1();
                 Err(ClangRuntimeFault::MemoryWriteError(addr, size))
             },
-            JITReturnCode::InvalidEventChannel => {
+            AOTReturnCode::InvalidEventChannel => {
                 let req_size = self.executor.return_arg0();
                 let act_size = self.executor.return_arg1();
                 Err(ClangRuntimeFault::InvalidEventChannel(req_size, act_size))
             },
-            JITReturnCode::DivByZero => Err(ClangRuntimeFault::DivisionByZero),
-            JITReturnCode::Timeout => Err(ClangRuntimeFault::Timeout),
+            AOTReturnCode::DivByZero => Err(ClangRuntimeFault::DivisionByZero),
+            AOTReturnCode::Timeout => Err(ClangRuntimeFault::Timeout),
         }
     }
 
@@ -600,8 +600,8 @@ impl Runtime for ClangRuntime {
 
 /// Misc functions of the ClangRuntime
 impl ClangRuntime {
-    /// Get the raw return code of the generated code
-    pub fn jit_return_code(&self) -> JITReturnCode {
+    /// Get the raw return code of the AOT-compiled code
+    pub fn raw_return_code(&self) -> AOTReturnCode {
         self.executor.return_code()
     }
 

@@ -31,8 +31,8 @@ use crate::{
         memory::SNAPSHOT_REGION_SIZE,
         perms,
         runtime::broadcast_perm,
-        JITExecutor,
-        JITReturnCode,
+        AOTExecutor,
+        AOTReturnCode,
         Memory,
         VariableStorage,
     },
@@ -151,7 +151,7 @@ impl CLifter {
         logger: &Logger,
         cflags: &[String],
         cc: &str,
-    ) -> Result<JITExecutor, CLifterError> {
+    ) -> Result<AOTExecutor, CLifterError> {
         logger.debug(format!("Config hash: {:016x}", self.config_hash));
 
         if self.needs_recompilation() {
@@ -161,7 +161,7 @@ impl CLifter {
             logger.info(format!("Reusing existing {}", self.out_binary.display()));
         }
 
-        Ok(JITExecutor::new(&self.out_binary))
+        Ok(AOTExecutor::new(&self.out_binary))
     }
 
     fn compile_code(&mut self, cc: &str, cflags: &[String], logger: &Logger) -> Result<(), CLifterError> {
@@ -301,18 +301,18 @@ impl CLifter {
         /* Event channel */
         writeln!(out_file, "typedef struct __attribute__((packed)) {{ uint64_t length; uint64_t data[]; }} EventChannel;")?;
 
-        /* JIT return codes */
-        writeln!(out_file, "enum JITReturnCode {{")?;
-        writeln!(out_file, "    RETURN_EVENT = {},", JITReturnCode::Event as u32)?;
-        writeln!(out_file, "    RETURN_INVALID_STATE = {},", JITReturnCode::InvalidState as u32)?;
-        writeln!(out_file, "    RETURN_INVALID_JUMP_TARGET = {},", JITReturnCode::InvalidJumpTarget as u32)?;
-        writeln!(out_file, "    RETURN_INVALID_READ = {},", JITReturnCode::InvalidRead as u32)?;
-        writeln!(out_file, "    RETURN_UNINIT_READ = {},", JITReturnCode::UninitializedRead as u32)?;
-        writeln!(out_file, "    RETURN_END = {},", JITReturnCode::End as u32)?;
-        writeln!(out_file, "    RETURN_INVALID_WRITE = {},", JITReturnCode::InvalidWrite as u32)?;
-        writeln!(out_file, "    RETURN_INVALID_EVENT_CHANNEL = {},", JITReturnCode::InvalidEventChannel as u32)?;
-        writeln!(out_file, "    RETURN_DIV_BY_ZERO = {},", JITReturnCode::DivByZero as u32)?;
-        writeln!(out_file, "    RETURN_TIMEOUT = {},", JITReturnCode::Timeout as u32)?;
+        /* AOT return codes */
+        writeln!(out_file, "enum AOTReturnCode {{")?;
+        writeln!(out_file, "    RETURN_EVENT = {},", AOTReturnCode::Event as u32)?;
+        writeln!(out_file, "    RETURN_INVALID_STATE = {},", AOTReturnCode::InvalidState as u32)?;
+        writeln!(out_file, "    RETURN_INVALID_JUMP_TARGET = {},", AOTReturnCode::InvalidJumpTarget as u32)?;
+        writeln!(out_file, "    RETURN_INVALID_READ = {},", AOTReturnCode::InvalidRead as u32)?;
+        writeln!(out_file, "    RETURN_UNINIT_READ = {},", AOTReturnCode::UninitializedRead as u32)?;
+        writeln!(out_file, "    RETURN_END = {},", AOTReturnCode::End as u32)?;
+        writeln!(out_file, "    RETURN_INVALID_WRITE = {},", AOTReturnCode::InvalidWrite as u32)?;
+        writeln!(out_file, "    RETURN_INVALID_EVENT_CHANNEL = {},", AOTReturnCode::InvalidEventChannel as u32)?;
+        writeln!(out_file, "    RETURN_DIV_BY_ZERO = {},", AOTReturnCode::DivByZero as u32)?;
+        writeln!(out_file, "    RETURN_TIMEOUT = {},", AOTReturnCode::Timeout as u32)?;
         writeln!(out_file, "}};")?;
 
         /* Return buffer */

@@ -34,7 +34,7 @@ pub(crate) use codegen::CLifter;
 pub use codegen::CLifterError;
 pub(crate) use concretize::concretize;
 pub(crate) use event::EventChannel;
-pub(crate) use exec::JITExecutor;
+pub(crate) use exec::AOTExecutor;
 pub(crate) use heap::Heap;
 pub(crate) use memory::{
     populate_stack,
@@ -53,7 +53,7 @@ pub use backend::{
     ClangBackendBuilder,
     ClangBackendError,
 };
-pub use exec::JITReturnCode;
+pub use exec::AOTReturnCode;
 pub use heap::{
     HeapChunk,
     HeapError,
