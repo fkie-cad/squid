@@ -17,7 +17,7 @@ Check out [this blog post (todo)]() to get an overview over `squid` and a demons
 covering SQL injections, command injections, memory corruptions, and information disclosures.
 
 ## Features
-`squid` is an emulator that is designed to augment traditional _greybox_ fuzzers with advanced crash oracles.
+`squid` is an emulator that is designed to augment traditional _greybox_ fuzzing with advanced crash oracles.
 It is best combined with native fuzzers to achieve both, high throughput and enhanced bug finding capabilities.
 
 `squid` offers
@@ -33,7 +33,6 @@ with this specific set of flags:
 ```
 -fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
 ```
-Thus it is not designed for blackbox fuzzing.
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
