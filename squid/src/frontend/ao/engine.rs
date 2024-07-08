@@ -533,8 +533,16 @@ where
                         &self.vars[src2.id()],
                         |&a, &b| match behavior {
                             ArithmeticBehavior::Wrapping => Some(a.wrapping_add(b)),
-                            ArithmeticBehavior::Saturating => Some(a.saturating_add(b)),
-                            ArithmeticBehavior::Checked => a.checked_add(b),
+                            ArithmeticBehavior::Saturating(signed) => if *signed {
+                                Some((a as i64).saturating_add(b as i64) as u64)
+                             } else {
+                                Some(a.saturating_add(b))
+                             },
+                            ArithmeticBehavior::Checked(signed) => if *signed {
+                                (a as i64).checked_add(b as i64).map(|x| x as u64)
+                             } else {
+                                a.checked_add(b)
+                             },
                         },
                         |&a, &b| Some(riscv::ieee754::add(a, b)),
                         |&a, &b| Some(riscv::ieee754::add(a, b)),

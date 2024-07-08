@@ -11,15 +11,19 @@ use crate::{
     },
 };
 
-/// ArithmeticBehavior determines what happens when an arithmetic operation overflows/underflows.
+/// ArithmeticBehavior determines what happens when an overflow occurs.
 #[derive(Debug, Clone, Hash)]
 pub enum ArithmeticBehavior {
     /// Wrap around zero
     Wrapping,
-    /// Clamp the result to the maximum/minimum of the data-type range
-    Saturating,
-    /// Throw an error if an overflow/underflow occurs
-    Checked,
+    
+    /// Clamp the result to the maximum of the data-type range. If the inner value is `true` use
+    /// LONG_MAX as the limit, else ULONG_MAX is used.
+    Saturating(bool),
+    
+    /// Throw an error if an overflow occurs. If the inner value is `true` use LONG_MAX as the limit, else
+    /// ULONG_MAX is used.
+    Checked(bool),
 }
 
 impl Default for ArithmeticBehavior {

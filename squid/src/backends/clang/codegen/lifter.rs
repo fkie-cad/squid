@@ -273,6 +273,7 @@ impl CLifter {
         /* Used headers */
         writeln!(out_file, "#include <stddef.h>")?;
         writeln!(out_file, "#include <stdint.h>")?;
+        writeln!(out_file, "#include <limits.h>")?;
 
         /* Used macros */
         writeln!(out_file, "#define UNLIKELY(x) __builtin_expect(!!(x), 0)")?;
@@ -640,10 +641,14 @@ static void mark_stack_uninit (Memory* memory, uint64_t pre, uint64_t post) {{
     }}
 }}
 
-static inline __attribute__((always_inline)) uint64_t saturating_add64 (uint64_t a, uint64_t b) {{
+static inline __attribute__((always_inline)) uint64_t saturating_add64_unsigned (uint64_t a, uint64_t b) {{
     uint64_t c = a + b;
-    if (c < a) c = -1LL;
+    if (c < a) c = ULONG_MAX;
     return c;
+}}
+
+static inline __attribute__((always_inline)) uint64_t saturating_add64_signed (uint64_t a, uint64_t b) {{
+    return (a > ULONG_MAX - b) ? ULONG_MAX : (a + b);
 }}
 ",
             self.basic_block_table_size,
@@ -671,7 +676,7 @@ static inline __attribute__((always_inline)) uint64_t saturating_add64 (uint64_t
             out_file,
             "
 static int store_memory_byte (Context* ctx, uint64_t address, uint64_t value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Byte)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Byte)) > {0}ULL)) {{
         return 0;
     }}
     
@@ -693,7 +698,7 @@ static int store_memory_byte (Context* ctx, uint64_t address, uint64_t value) {{
 }}
 
 static int store_memory_hword (Context* ctx, uint64_t address, uint64_t value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Hword)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Hword)) > {0}ULL)) {{
         return 0;
     }}
     
@@ -715,7 +720,7 @@ static int store_memory_hword (Context* ctx, uint64_t address, uint64_t value) {
 }}
 
 static int store_memory_word (Context* ctx, uint64_t address, uint64_t value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Word)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Word)) > {0}ULL)) {{
         return 0;
     }}
     
@@ -737,7 +742,7 @@ static int store_memory_word (Context* ctx, uint64_t address, uint64_t value) {{
 }}
 
 static int store_memory_dword (Context* ctx, uint64_t address, uint64_t value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Dword)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Dword)) > {0}ULL)) {{
         return 0;
     }}
     
@@ -785,7 +790,7 @@ static int store_memory_dword (Context* ctx, uint64_t address, uint64_t value) {
             out_file,
             "
 static int load_memory_byte (Context* ctx, uint64_t address, uint64_t* value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Byte)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Byte)) > {0}ULL)) {{
         ctx->return_buf->code = RETURN_INVALID_READ;
         return 0;
     }}
@@ -804,7 +809,7 @@ static int load_memory_byte (Context* ctx, uint64_t address, uint64_t* value) {{
 }}
 
 static int load_memory_hword (Context* ctx, uint64_t address, uint64_t* value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Hword)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Hword)) > {0}ULL)) {{
         ctx->return_buf->code = RETURN_INVALID_READ;
         return 0;
     }}
@@ -823,7 +828,7 @@ static int load_memory_hword (Context* ctx, uint64_t address, uint64_t* value) {
 }}
 
 static int load_memory_word (Context* ctx, uint64_t address, uint64_t* value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Word)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Word)) > {0}ULL)) {{
         ctx->return_buf->code = RETURN_INVALID_READ;
         return 0;
     }}
@@ -842,7 +847,7 @@ static int load_memory_word (Context* ctx, uint64_t address, uint64_t* value) {{
 }}
 
 static int load_memory_dword (Context* ctx, uint64_t address, uint64_t* value) {{
-    if (UNLIKELY(saturating_add64(address, sizeof(Dword)) > {0}ULL)) {{
+    if (UNLIKELY(saturating_add64_unsigned(address, sizeof(Dword)) > {0}ULL)) {{
         ctx->return_buf->code = RETURN_INVALID_READ;
         return 0;
     }}
@@ -1078,8 +1083,15 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                 } => match dst.vartype() {
                     VarType::Number => match behavior {
                         ArithmeticBehavior::Wrapping => writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
-                        ArithmeticBehavior::Saturating => writeln!(out_file, "{} = saturating_add64({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?,
-                        ArithmeticBehavior::Checked => {
+                        ArithmeticBehavior::Saturating(signed) => if *signed {
+                            writeln!(out_file, "{} = saturating_add64_signed({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                         } else {
+                            writeln!(out_file, "{} = saturating_add64_unsigned({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                         },
+                        ArithmeticBehavior::Checked(signed) => if *signed {
+                            writeln!(out_file, "if ({0} > ULONG_MAX - {1}) {{ return fault_integer_overflow(ctx, {0}, {1}); }}", var_name(src1), var_name(src2))?;
+                            writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                         } else {
                             writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
                             writeln!(out_file, "if ({0} < {1}) {{ return fault_integer_overflow(ctx, {1}, {2}); }}", var_name(dst), var_name(src1), var_name(src2))?;
                         },
