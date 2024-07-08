@@ -48,6 +48,7 @@ use crate::{
             Var,
             VarType,
             CFG,
+            ArithmeticBehavior,
         },
         ChunkContent,
         HasId,
@@ -316,6 +317,7 @@ impl CLifter {
         writeln!(out_file, "    RETURN_INVALID_EVENT_CHANNEL = {},", AOTReturnCode::InvalidEventChannel as u32)?;
         writeln!(out_file, "    RETURN_DIV_BY_ZERO = {},", AOTReturnCode::DivByZero as u32)?;
         writeln!(out_file, "    RETURN_TIMEOUT = {},", AOTReturnCode::Timeout as u32)?;
+        writeln!(out_file, "    RETURN_INTEGER_OVERFLOW = {},", AOTReturnCode::IntegerOverflow as u32)?;
         writeln!(out_file, "}};")?;
 
         /* Return buffer */
@@ -423,6 +425,14 @@ impl CLifter {
         writeln!(
             out_file,
             "
+static inline BasicBlockFn fault_integer_overflow (Context* ctx, uint64_t a, uint64_t b) {{
+    ReturnBuffer* return_buf = ctx->return_buf;
+    return_buf->code = RETURN_INTEGER_OVERFLOW;
+    return_buf->arg0 = a;
+    return_buf->arg1 = b;
+    return NULL;
+}}
+            
 static inline BasicBlockFn fault_end (Context* ctx) {{
     ctx->return_buf->code = RETURN_END;
     return NULL;
@@ -1064,8 +1074,17 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     dst,
                     src1,
                     src2,
-                } => {
-                    writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2),)?;
+                    behavior
+                } => match dst.vartype() {
+                    VarType::Number => match behavior {
+                        ArithmeticBehavior::Wrapping => writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
+                        ArithmeticBehavior::Saturating => writeln!(out_file, "{} = saturating_add64({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?,
+                        ArithmeticBehavior::Checked => {
+                            writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                            writeln!(out_file, "if ({0} < {1}) {{ return fault_integer_overflow(ctx, {1}, {2}); }}", var_name(dst), var_name(src1), var_name(src2))?;
+                        },
+                    },
+                    _ => writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
                 },
                 Op::Compare {
                     dst,

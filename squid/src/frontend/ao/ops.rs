@@ -11,6 +11,23 @@ use crate::{
     },
 };
 
+/// ArithmeticBehavior determines what happens when an arithmetic operation overflows/underflows.
+#[derive(Debug, Clone, Hash)]
+pub enum ArithmeticBehavior {
+    /// Wrap around zero
+    Wrapping,
+    /// Clamp the result to the maximum/minimum of the data-type range
+    Saturating,
+    /// Throw an error if an overflow/underflow occurs
+    Checked,
+}
+
+impl Default for ArithmeticBehavior {
+    fn default() -> Self {
+        Self::Wrapping
+    }
+}
+
 /// The different types of comparisons that can occur in RISC-V code
 #[derive(Debug, Clone, Hash)]
 pub enum Comparison {
@@ -178,7 +195,7 @@ pub enum Op {
     LoadRegister { var: Var, reg: Register },
 
     /// Add `src1` to `src2` and store the result in `dst`.
-    Add { dst: Var, src1: Var, src2: Var },
+    Add { dst: Var, src1: Var, src2: Var, behavior: ArithmeticBehavior },
 
     /// Evaluate `<lhs> <comp> <rhs>` and store a 1 into variable `dst` if it
     /// evaluates to true. Otherwise store 0 into `dst`.

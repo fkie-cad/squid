@@ -98,6 +98,7 @@ use squid::{
             Edge,
             Function,
             Op,
+            ArithmeticBehavior,
         },
         Chunk,
         ChunkContent,
@@ -499,7 +500,7 @@ impl Pass for CoveragePass {
                             }));
                             let old_value = bb.load_byte(ptr).unwrap();
                             let imm = bb.load_immediate(1);
-                            let new_value = bb.add(old_value, imm).unwrap();
+                            let new_value = bb.add(old_value, imm, ArithmeticBehavior::Wrapping).unwrap();
                             bb.store_byte(ptr, new_value).unwrap();
 
                             cursor += 1;

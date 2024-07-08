@@ -26,4 +26,5 @@ pub use ops::{
     Signedness,
     Var,
     VarType,
+    ArithmeticBehavior,
 };

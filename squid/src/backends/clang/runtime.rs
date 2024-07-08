@@ -79,6 +79,9 @@ pub enum ClangRuntimeFault {
 
     #[error("Execution cannot continue")]
     End,
+    
+    #[error("The application had an integer overflow with {0} and {1}")]
+    IntegerOverflow(u64, u64),
 }
 
 pub(crate) trait RiscvType: Sized + Copy {
@@ -413,6 +416,11 @@ impl Runtime for ClangRuntime {
             },
             AOTReturnCode::DivByZero => Err(ClangRuntimeFault::DivisionByZero),
             AOTReturnCode::Timeout => Err(ClangRuntimeFault::Timeout),
+            AOTReturnCode::IntegerOverflow => {
+                let a = self.executor.return_arg0();
+                let b = self.executor.return_arg1();
+                Err(ClangRuntimeFault::IntegerOverflow(a as u64, b as u64))
+            },
         }
     }
 

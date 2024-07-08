@@ -403,6 +403,7 @@ mod tests {
         frontend::ao::{
             BasicBlock,
             CFG,
+            ArithmeticBehavior,
         },
         riscv::register::GpRegister,
     };
@@ -418,7 +419,7 @@ mod tests {
         let cpy = bb.copy(addr);
         //let arg = bb.load_immediate(192);
         let arg = bb.load_gp_register(GpRegister::t0);
-        let result = bb.add(cpy, arg).unwrap();
+        let result = bb.add(cpy, arg, ArithmeticBehavior::default()).unwrap();
         //bb.store_gp_register(10, result).unwrap();
         bb.jump(result).unwrap();
 
@@ -473,12 +474,12 @@ mod tests {
         // addi	s0,s0,748
         let imm = bb1.load_immediate(748);
         let s0 = bb1.copy(addr); // bb1.load_gp_register(GpRegister::s0);
-        let result = bb1.add(imm, s0).unwrap();
+        let result = bb1.add(imm, s0, ArithmeticBehavior::default()).unwrap();
         bb1.store_gp_register(GpRegister::s0, result).unwrap();
         // ld	a0,1304(s0)
         let s0 = bb1.copy(result); // bb1.load_gp_register(GpRegister::s0);
         let imm = bb1.load_immediate(1304);
-        let addr = bb1.add(s0, imm).unwrap();
+        let addr = bb1.add(s0, imm, ArithmeticBehavior::default()).unwrap();
         let value = bb1.load_dword(addr).unwrap();
         bb1.store_gp_register(GpRegister::a0, value).unwrap();
         // auipc	ra,0xfffb3
@@ -487,7 +488,7 @@ mod tests {
         // jalr	ra,344(ra)
         let ra = bb1.copy(addr); //bb1.load_gp_register(GpRegister::ra);
         let imm = bb1.load_immediate(344);
-        let addr = bb1.add(ra, imm).unwrap();
+        let addr = bb1.add(ra, imm, ArithmeticBehavior::default()).unwrap();
         let ret = bb1.load_virt_addr(0x58290);
         bb1.store_gp_register(GpRegister::ra, ret).unwrap();
         bb1.jump(addr).unwrap();
@@ -496,18 +497,18 @@ mod tests {
         // sd	zero,1304(s0)
         let s0 = bb2.load_gp_register(GpRegister::s0);
         let imm = bb2.load_immediate(1304);
-        let addr = bb2.add(s0, imm).unwrap();
+        let addr = bb2.add(s0, imm, ArithmeticBehavior::default()).unwrap();
         let value = bb2.load_immediate(0);
         bb2.store_dword(addr, value).unwrap();
         let imm = bb2.load_immediate(1);
-        let s0 = bb2.add(s0, imm).unwrap();
+        let s0 = bb2.add(s0, imm, ArithmeticBehavior::default()).unwrap();
         bb2.store_gp_register(GpRegister::s0, s0).unwrap();
 
         let mut bb3 = BasicBlock::new();
         // sd	zero,1304(s0)
         let s0 = bb3.load_gp_register(GpRegister::s0);
         let imm = bb3.load_immediate(1304);
-        let addr = bb3.add(s0, imm).unwrap();
+        let addr = bb3.add(s0, imm, ArithmeticBehavior::default()).unwrap();
         let value = bb3.load_immediate(0);
         bb3.store_dword(addr, value).unwrap();
         // halt the program

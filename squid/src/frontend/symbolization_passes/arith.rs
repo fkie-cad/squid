@@ -36,6 +36,7 @@ impl EliminateArithmeticPass {
                         dst,
                         src1,
                         src2,
+                        ..
                     } => {
                         if let Value::Integer(0) = &vars[src1.id()] {
                             bb.replace_op(Op::Copy {

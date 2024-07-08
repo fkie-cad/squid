@@ -23,6 +23,7 @@ use crate::{
             Comparison,
             Half,
             Signedness,
+            ArithmeticBehavior,
         },
         idmap::{
             HasId,
@@ -340,7 +341,7 @@ impl Lifter {
                 RV32I::JALR(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let jump_target = bb.add(rs1, imm)?;
+                    let jump_target = bb.add(rs1, imm, ArithmeticBehavior::default())?;
 
                     let ret_addr = addr + 4;
                     let var = bb.load_virt_addr(ret_addr);
@@ -441,7 +442,7 @@ impl Lifter {
                 RV32I::LB(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let byte = bb.load_byte(addr)?;
                     let result = bb.sign_extend(byte, 1)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
@@ -449,7 +450,7 @@ impl Lifter {
                 RV32I::LH(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let hword = bb.load_hword(addr)?;
                     let result = bb.sign_extend(hword, 2)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
@@ -457,7 +458,7 @@ impl Lifter {
                 RV32I::LW(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let word = bb.load_word(addr)?;
                     let result = bb.sign_extend(word, 4)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
@@ -465,42 +466,42 @@ impl Lifter {
                 RV32I::LBU(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let byte = bb.load_byte(addr)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), byte)?;
                 },
                 RV32I::LHU(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let hword = bb.load_hword(addr)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), hword)?;
                 },
                 RV32I::SB(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let value = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     bb.store_byte(addr, value)?;
                 },
                 RV32I::SH(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let value = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     bb.store_hword(addr, value)?;
                 },
                 RV32I::SW(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let value = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     bb.store_word(addr, value)?;
                 },
                 RV32I::ADDI(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let result = bb.add(rs1, imm)?;
+                    let result = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
                 RV32I::SLTI(args) => {
@@ -539,7 +540,7 @@ impl Lifter {
                 RV32I::ADD(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let rs2 = bb.load_gp_register(GpRegister::from_usize(args.rs2));
-                    let result = bb.add(rs1, rs2)?;
+                    let result = bb.add(rs1, rs2, ArithmeticBehavior::default())?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
                 RV32I::SUB(args) => {
@@ -615,21 +616,21 @@ impl Lifter {
                 RV64I::LWU(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let result = bb.load_word(addr)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
                 RV64I::LD(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let result = bb.load_dword(addr)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
                 RV64I::SD(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let value = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     bb.store_dword(addr, value)?;
                 },
@@ -654,7 +655,7 @@ impl Lifter {
                 RV64I::ADDIW(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let sum = bb.add(rs1, imm)?;
+                    let sum = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let result = bb.sign_extend(sum, 4)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
@@ -693,7 +694,7 @@ impl Lifter {
                     let rs2 = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     let rs1 = bb.zero_extend(rs1, 4)?;
                     let rs2 = bb.zero_extend(rs2, 4)?;
-                    let result = bb.add(rs1, rs2)?;
+                    let result = bb.add(rs1, rs2, ArithmeticBehavior::default())?;
                     let result = bb.sign_extend(result, 4)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
@@ -767,7 +768,7 @@ impl Lifter {
                     let word = bb.load_word(address)?;
                     let dword = bb.sign_extend(word, 4)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), dword)?;
-                    let result = bb.add(rs2, word)?;
+                    let result = bb.add(rs2, word, ArithmeticBehavior::default())?;
                     bb.store_word(address, result)?;
                 },
                 RV32A::AMOXOR(args) => {
@@ -866,7 +867,7 @@ impl Lifter {
                     let rs2 = bb.load_gp_register(GpRegister::from_usize(args.rs2));
                     let dword = bb.load_dword(address)?;
                     bb.store_gp_register(GpRegister::from_usize(args.rd), dword)?;
-                    let result = bb.add(dword, rs2)?;
+                    let result = bb.add(dword, rs2, ArithmeticBehavior::default())?;
                     bb.store_dword(address, result)?;
                 },
                 RV64A::AMOXOR(args) => {
@@ -930,7 +931,7 @@ impl Lifter {
                 RV32F::FLW(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let float = bb.load_float32(addr)?;
                     let double = bb.nan_box(float)?;
                     bb.store_fp_register(FpRegister::from_usize(args.rd), double)?;
@@ -938,7 +939,7 @@ impl Lifter {
                 RV32F::FSW(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let double = bb.load_fp_register(FpRegister::from_usize(args.rs2));
                     let float = bb.reinterpret_as_float32(double);
                     bb.store_float32(addr, float)?;
@@ -1000,7 +1001,7 @@ impl Lifter {
                     let rs1 = bb.nan_unbox(rs1)?;
                     let rs2 = bb.load_fp_register(FpRegister::from_usize(args.rs2));
                     let rs2 = bb.nan_unbox(rs2)?;
-                    let result = bb.add(rs1, rs2)?;
+                    let result = bb.add(rs1, rs2, ArithmeticBehavior::default())?;
                     let result = bb.convert_nan(result)?;
                     let result = bb.nan_box(result)?;
                     bb.store_fp_register(FpRegister::from_usize(args.rd), result)?;
@@ -1224,14 +1225,14 @@ impl Lifter {
                 RV32D::FLD(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let double = bb.load_float64(addr)?;
                     bb.store_fp_register(FpRegister::from_usize(args.rd), double)?;
                 },
                 RV32D::FSD(args) => {
                     let rs1 = bb.load_gp_register(GpRegister::from_usize(args.rs1));
                     let imm = bb.load_immediate(args.imm as u64);
-                    let addr = bb.add(rs1, imm)?;
+                    let addr = bb.add(rs1, imm, ArithmeticBehavior::default())?;
                     let double = bb.load_fp_register(FpRegister::from_usize(args.rs2));
                     bb.store_float64(addr, double)?;
                 },
@@ -1274,7 +1275,7 @@ impl Lifter {
                 RV32D::FADD(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
                     let rs2 = bb.load_fp_register(FpRegister::from_usize(args.rs2));
-                    let result = bb.add(rs1, rs2)?;
+                    let result = bb.add(rs1, rs2, ArithmeticBehavior::default())?;
                     let result = bb.convert_nan(result)?;
                     bb.store_fp_register(FpRegister::from_usize(args.rd), result)?;
                 },

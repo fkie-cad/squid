@@ -16,6 +16,7 @@ use crate::{
             Signedness,
             Var,
             VarType,
+            ArithmeticBehavior,
         },
         Pointer,
         VAddr,
@@ -527,10 +528,14 @@ where
                 Op::LoadRegister { var, reg } => {
                     self.vars[var.id()] = self.registers[register_index(reg)].clone();
                 },
-                Op::Add { dst, src1, src2 } => {
+                Op::Add { dst, src1, src2, behavior } => {
                     self.vars[dst.id()] = self.vars[src1.id()].calculate_binary(
                         &self.vars[src2.id()],
-                        |&a, &b| Some(a.wrapping_add(b)),
+                        |&a, &b| match behavior {
+                            ArithmeticBehavior::Wrapping => Some(a.wrapping_add(b)),
+                            ArithmeticBehavior::Saturating => Some(a.saturating_add(b)),
+                            ArithmeticBehavior::Checked => a.checked_add(b),
+                        },
                         |&a, &b| Some(riscv::ieee754::add(a, b)),
                         |&a, &b| Some(riscv::ieee754::add(a, b)),
                         |p, &i| pointer_add(p, i),

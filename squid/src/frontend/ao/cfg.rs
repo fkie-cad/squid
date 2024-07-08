@@ -16,6 +16,7 @@ use crate::{
                 Signedness,
                 Var,
                 VarType,
+                ArithmeticBehavior,
             },
         },
         idmap::{
@@ -439,7 +440,7 @@ impl BasicBlock {
         }
     }
 
-    pub fn add(&mut self, src1: Var, src2: Var) -> Result<Var, AoError> {
+    pub fn add(&mut self, src1: Var, src2: Var, behavior: ArithmeticBehavior) -> Result<Var, AoError> {
         if src1.vartype() != src2.vartype() {
             return Err(AoError::InvalidVarType(format!("Addition of variables with incompatible types: {:?} and {:?}", src1.vartype(), src2.vartype())));
         }
@@ -448,6 +449,7 @@ impl BasicBlock {
             dst,
             src1,
             src2,
+            behavior,
         });
         Ok(dst)
     }

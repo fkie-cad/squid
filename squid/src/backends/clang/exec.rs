@@ -41,6 +41,8 @@ pub enum AOTReturnCode {
     DivByZero = 8,
     /// The guest exceed the maximum number of allowed RISC-V instructions
     Timeout = 9,
+    /// The guest attempted an addition that overflowed
+    IntegerOverflow = 10,
 }
 
 #[repr(C)]
@@ -90,7 +92,7 @@ impl AOTExecutor {
 
     #[inline]
     pub(crate) fn return_code(&self) -> AOTReturnCode {
-        debug_assert!(self.return_buf.code <= 9);
+        debug_assert!(self.return_buf.code <= 10);
         unsafe { std::mem::transmute::<u32, AOTReturnCode>(self.return_buf.code) }
     }
 
