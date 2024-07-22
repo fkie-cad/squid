@@ -312,7 +312,7 @@ pub(crate) fn populate_stack(memory: &mut Memory, args: &[String], env: &BTreeMa
         let mut cursor = sp;
         store_slice(memory, cursor, key)?;
         cursor += key.len();
-        store_slice(memory, cursor, &[b'='])?;
+        store_slice(memory, cursor, b"=")?;
         cursor += 1;
         store_slice(memory, cursor, value)?;
         cursor += value.len();

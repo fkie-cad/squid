@@ -10,8 +10,8 @@ panic = "abort"
 debug = true
 
 [workspace.package]
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Patrick D."]
 edition = "2021"
-license-file = "LICENSE"
+license = "MIT"
 

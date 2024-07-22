@@ -16,8 +16,6 @@ pub(crate) const SINGLE_NAN: u32 = 0x7fc00000;
 pub(crate) const DOUBLE_NAN: u64 = 0x7ff8000000000000;
 
 pub(crate) trait RiscvFloat: Float {
-    const PRECISION: u32;
-
     fn is_half(&self) -> bool;
     fn is_odd(&self) -> bool;
     fn is_signaling(&self) -> bool;
@@ -29,8 +27,6 @@ pub(crate) trait RiscvFloat: Float {
 }
 
 impl RiscvFloat for f32 {
-    const PRECISION: u32 = 24;
-
     fn is_half(&self) -> bool {
         self.abs() == 0.5f32
     }
@@ -49,8 +45,6 @@ impl RiscvFloat for f32 {
 }
 
 impl RiscvFloat for f64 {
-    const PRECISION: u32 = 53;
-
     fn is_half(&self) -> bool {
         self.abs() == 0.5f64
     }
