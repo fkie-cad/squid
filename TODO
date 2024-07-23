@@ -1,0 +1,14 @@
+- for blog post, fuzz a real target
+    - exim ?
+    - higher-level vulns
+        - directory traversal and invalid file write in attachment (CVE-2006-5487)
+        - auth bypass ?
+        - ACL bypass (https://bugs.exim.org/show_bug.cgi?id=3099#c4)
+    - focus on partial part of code using snapshot-based fuzzing
+- better demo in README
+- frontend builder methods: default vaddr = 0 because after symbolization address values dont matter anymore
+- AsanPass from readme-demo example into crate ?
+- delete piranha and supply a series of patches to musl for each function to make it byte-level compatible
+    - adjust readelf fuzzer
+- asciinema of demo
+- improve Getting Started in README
