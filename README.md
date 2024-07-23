@@ -86,7 +86,26 @@ fn main() {
 }
 ```
 
-Let's create an example program that has either an out-of-bounds or an uninitialized access:
+Our target program is:
+```c
+int main (int argc, char** argv) {
+    if (argc < 2) {
+        return 1;
+    }
+
+    int* array = malloc(16 * sizeof(int));
+    int index = atoi(argv[1]);
+
+    // Partially initialize array
+    array[0] = 123;
+    array[1] = 456;
+    array[2] = 789;
+
+    printf("array[%d] = %d\n", index, array[index]);
+
+    return 0;
+}
+```
 
 And when we run it we get:
 
