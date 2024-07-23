@@ -40,3 +40,7 @@ path = "../examples/readelf/readelf-fuzzer.rs"
 [[example]]
 name = "helloworld"
 path = "../examples/helloworld/run-helloworld.rs"
+
+[[example]]
+name = "readme-demo"
+path = "../examples/readme-demo/demo.rs"

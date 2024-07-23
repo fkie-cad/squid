@@ -17,22 +17,80 @@ Check out [this blog post (todo)]() to get an overview over `squid` and a demons
 covering SQL injections, command injections, memory corruptions, and information disclosures.
 
 ## Features
-`squid` is an emulator that is designed to augment traditional _greybox_ fuzzing with advanced crash oracles.
-It is best combined with native fuzzers to achieve both, high throughput and enhanced bug finding capabilities.
-
 `squid` offers
+
 - Fast snapshots
 - Byte-level permissions on memory
-- Ability to rewrite the binaries before emulation
-- Integration into LibAFL for the creation of fully-fledged fuzzers
+- Rewriting binaries before emulation
+- Integration into LibAFL
 - Decent enough performance due to AOT compilation
 
-However, it can only be used for single-threaded Linux user-space applications that are written in C.
+However, it can only run single-threaded Linux user-space applications that are written in C.  
 The source of the target _must_ be available because `squid` only supports binaries that have been compiled
-with this specific set of flags:
+with a specific set of flags.
+This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to augment greybox fuzzing with advanced crash oracles.
+It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
+
+## Demo
+Below you can see a demo program that demonstrates how to overcome common restrictions of native sanitizers with `squid`.
+One of the biggest restrictions is that multiple sanitizers cannot be combined in a single build.
+Trying something like
 ```
--fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
+clang -fsanitize=address,memory,undefined test.c
 ```
+results in
+```
+clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize=memory'
+```
+
+Since `squid` allows us to rewrite the binary before emulation we can simply recreate ASAN + MSAN instrumentation
+ourselves:
+```rs
+use squid::*;
+
+fn main() {
+    // 1) Load the binary and lift it into our custom IR
+    let mut compiler = Compiler::load_elf(
+        "helloworld", // The target binary
+        &["."], // LD_LIBRARY_PATH
+        &[]
+    ).unwrap();
+
+    // 2) Run the ASAN pass over the binary to insert redzones and interceptors for the heap functions
+    let mut asan_pass = AsanPass::new();
+    compiler.run_pass(&mut asan_pass).unwrap();
+
+    // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
+    let backend = ClangBackend::builder()
+        .stack_size(2 * 1024 * 1024)
+        .heap_size(16 * 1024 * 1024)
+        .enable_uninit_stack(true) // MemorySanitizer
+        .progname(prog) // argv[0]
+        .args(args) // argv[1..]
+        .source_file("/tmp/demo.c") // The AOT code goes into this file
+        .build()
+        .unwrap();
+    let mut runtime = compiler.compile(backend).unwrap();
+
+    // 4) Emulate the binary, forward syscalls and handle interceptors
+    loop {
+        match runtime.run() {
+            Ok(event) => match event {
+                EVENT_BREAKPOINT => panic!("Hit a breakpoint"),
+                EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
+                _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
+            },
+            Err(fault) => panic!("Found a crash: {:?}", fault),
+        }
+    }
+}
+```
+
+Let's create an example program that has either an out-of-bounds or an uninitialized access:
+
+And when we run it we get:
+
+(asciinema)
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
