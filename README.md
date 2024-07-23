@@ -32,18 +32,10 @@ This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to aug
 It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
 
 ## Demo
-Below you can see how to overcome common restrictions of native sanitizers with `squid`.
-One of the biggest restrictions is that multiple sanitizers cannot be combined in a single build.
-Trying something like
-```
-clang -fsanitize=address,memory,undefined test.c
-```
-results in
-```
-clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize=memory'
-```
+As a quick appetizer let's have a look at how we can overcome common restrictions of native sanitizers with `squid`.
 
-Consider the following program that contains both uninitialized and out-of-bounds accesses:
+One of the biggest restrictions is that multiple sanitizers cannot be combined in a single build.
+Take the following program as an example. It contains both, uninitialized reads and out-of-bounds accesses:
 ```c
 int main (int argc, char** argv) {
     if (argc < 2) {
@@ -64,8 +56,22 @@ int main (int argc, char** argv) {
 }
 ```
 
-Since `squid` allows us to rewrite the binary before emulation we can simply recreate ASAN + MSAN instrumentation
-ourselves:
+Trying something like
+```
+clang -fsanitize=address,memory,undefined test.c
+```
+results in
+```
+clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize=memory'
+```
+
+However, since `squid` allows us to do binary rewriting, we can simply recreate ASAN + MSAN instrumentation ourselves.
+We compile the test program to RISC-V with a specific set of flags:
+```
+riscv64-unknown-linux-gnu-gcc -o test -fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread= test.c
+```
+
+And create a harness that employs ASAN and MSAN instrumentation:
 ```rs
 use squid::*;
 
@@ -109,7 +115,7 @@ fn main() {
 }
 ```
 
-And when we run the above test program we get:
+Then we can detect both crashes:
 (asciinema)
 
 ## Getting started
