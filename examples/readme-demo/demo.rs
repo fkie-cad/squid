@@ -263,10 +263,30 @@ fn forward_syscall(runtime: &mut ClangRuntime) -> Result<(), ClangRuntimeFault> 
 
             runtime.set_gp_register(GpRegister::a0, ret as u64);
         },
+        syscalls::write => {
+            let fd = runtime.get_gp_register(GpRegister::a0) as i32;
+            let buf = runtime.get_gp_register(GpRegister::a1) as VAddr;
+            let len = runtime.get_gp_register(GpRegister::a2) as usize;
+            let data = runtime.load_slice(buf, len)?;
+            let ret = unsafe { libc::write(fd, data.as_ptr() as *const libc::c_void, len) };
+            runtime.set_gp_register(GpRegister::a0, ret as u64);
+        },
         _ => todo!("Syscall {} is not implemented yet", number),
     }
 
     Ok(())
+}
+
+fn display_crash_report(fault: ClangRuntimeFault, runtime: ClangRuntime) -> ! {
+    let raw_code = runtime.raw_return_code();
+    let last_instr = runtime.get_last_instruction();
+
+    println!("=================================================================");
+    println!("ERROR: {:?} at pc={:#x}", raw_code, last_instr);
+    println!("{:?}", fault);
+    println!("=================================================================");
+    
+    std::process::exit(127);
 }
 
 fn parse_args() -> (String, Vec<String>) {
@@ -319,7 +339,8 @@ fn main() {
         .enable_uninit_stack(true) // MemorySanitizer
         .progname(prog) // argv[0]
         .args(args) // argv[1..]
-        .source_file("/tmp/demo.c") // The AOT code goes into this file
+        .source_file("./aot.c") // The AOT code goes into this file
+        .update_last_instruction(true)
         .build()
         .unwrap();
     let mut runtime = compiler.compile(backend).unwrap();
@@ -332,7 +353,7 @@ fn main() {
                 EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
                 _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
             },
-            Err(fault) => panic!("Found a crash: {:?}", fault),
+            Err(fault) => display_crash_report(fault, runtime),
         }
     }
 }

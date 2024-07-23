@@ -76,9 +76,7 @@ And create a harness that employs ASAN and MSAN instrumentation:
 use squid::*;
 
 fn main() {
-    let index = std::env::args().skip(1).next().unwrap();
-
-    // 1) Load the binary and lift it into our custom IR
+    // 1) Load and lift the target binary into our custom IR
     let mut compiler = Compiler::load_elf(
         "./test", // The target binary
         &["."], // LD_LIBRARY_PATH
@@ -90,13 +88,14 @@ fn main() {
     compiler.run_pass(&mut asan_pass).unwrap();
 
     // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
+    let arg = std::env::args().skip(1).next().unwrap();
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
         .heap_size(16 * 1024 * 1024)
         .enable_uninit_stack(true) // MemorySanitizer
         .progname("test") // argv[0]
-        .arg(index) // argv[1]
-        .source_file("aot.c") // The AOT code goes into this file
+        .arg(arg) // argv[1]
+        .source_file("./aot.c") // The AOT code goes into this file
         .build()
         .unwrap();
     let mut runtime = compiler.compile(backend).unwrap();
@@ -105,11 +104,10 @@ fn main() {
     loop {
         match runtime.run() {
             Ok(event) => match event {
-                EVENT_BREAKPOINT => panic!("Hit a breakpoint"),
                 EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
                 _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
             },
-            Err(fault) => panic!("Found a crash: {:?}", fault),
+            Err(fault) => display_crash_report(fault, runtime),
         }
     }
 }
