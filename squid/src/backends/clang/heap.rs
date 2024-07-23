@@ -134,7 +134,7 @@ impl Heap {
             *elem = perm_blob;
         }
 
-        for perm in &mut perms[1 + num_qwords * 8..] {
+        for perm in &mut perms[1 + num_qwords * 8..1 + size] {
             *perm = PERM_READ | PERM_WRITE | PERM_UNINIT;
         }
 
