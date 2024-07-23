@@ -1,0 +1,28 @@
+diff --git a/src/stdio/fopen.c b/src/stdio/fopen.c
+index 80bc341e..afcf9afb 100644
+--- a/src/stdio/fopen.c
++++ b/src/stdio/fopen.c
+@@ -29,3 +29,5 @@ FILE *fopen(const char *restrict filename, const char *restrict mode)
+ 	__syscall(SYS_close, fd);
+ 	return 0;
+ }
++
++weak_alias(fopen, fopen64);
+diff --git a/src/stdio/fseek.c b/src/stdio/fseek.c
+index c7425802..97a680a9 100644
+--- a/src/stdio/fseek.c
++++ b/src/stdio/fseek.c
+@@ -46,3 +46,4 @@ int fseek(FILE *f, long off, int whence)
+ }
+ 
+ weak_alias(__fseeko, fseeko);
++weak_alias(__fseeko, fseeko64);
+diff --git a/src/stdio/ftell.c b/src/stdio/ftell.c
+index 1e1a08d8..9009e776 100644
+--- a/src/stdio/ftell.c
++++ b/src/stdio/ftell.c
+@@ -37,3 +37,4 @@ long ftell(FILE *f)
+ }
+ 
+ weak_alias(__ftello, ftello);
++weak_alias(__ftello, ftello64);

@@ -1,5 +1,5 @@
 diff --git a/ldso/dynlink.c b/ldso/dynlink.c
-index ceca3c98..8c13bdc3 100644
+index ceca3c98..9f1fa68d 100644
 --- a/ldso/dynlink.c
 +++ b/ldso/dynlink.c
 @@ -1581,7 +1581,7 @@ static void do_init_fini(struct dso **queue)
@@ -37,41 +37,12 @@ index ceca3c98..8c13bdc3 100644
  void __dls3(size_t *sp, size_t *auxv)
  {
  	static struct dso app, vdso;
-@@ -2071,7 +2083,6 @@ void __dls3(size_t *sp, size_t *auxv)
+@@ -2071,7 +2083,7 @@ void __dls3(size_t *sp, size_t *auxv)
  	errno = 0;
  
  	CRTJMP((void *)aux[AT_ENTRY], argv-1);
 -	for(;;);
++    __builtin_unreachable();
  }
  
  static void prepare_lazy(struct dso *p)
-diff --git a/src/stdio/fopen.c b/src/stdio/fopen.c
-index 80bc341e..afcf9afb 100644
---- a/src/stdio/fopen.c
-+++ b/src/stdio/fopen.c
-@@ -29,3 +29,6 @@ FILE *fopen(const char *restrict filename, const char *restrict mode)
- 	__syscall(SYS_close, fd);
- 	return 0;
- }
-+
-+weak_alias(fopen, fopen64);
-+
-diff --git a/src/stdio/fseek.c b/src/stdio/fseek.c
-index c7425802..97a680a9 100644
---- a/src/stdio/fseek.c
-+++ b/src/stdio/fseek.c
-@@ -46,3 +46,5 @@ int fseek(FILE *f, long off, int whence)
- }
- 
- weak_alias(__fseeko, fseeko);
-+weak_alias(__fseeko, fseeko64);
-+
-diff --git a/src/stdio/ftell.c b/src/stdio/ftell.c
-index 1e1a08d8..9009e776 100644
---- a/src/stdio/ftell.c
-+++ b/src/stdio/ftell.c
-@@ -37,3 +37,4 @@ long ftell(FILE *f)
- }
- 
- weak_alias(__ftello, ftello);
-+weak_alias(__ftello, ftello64);

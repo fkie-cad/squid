@@ -1,0 +1,13 @@
+diff --git a/src/string/memset.c b/src/string/memset.c
+index 5613a148..7267fe59 100644
+--- a/src/string/memset.c
++++ b/src/string/memset.c
+@@ -33,7 +33,7 @@ void *memset(void *dest, int c, size_t n)
+ 	n -= k;
+ 	n &= -4;
+ 
+-#ifdef __GNUC__
++#if 0
+ 	typedef uint32_t __attribute__((__may_alias__)) u32;
+ 	typedef uint64_t __attribute__((__may_alias__)) u64;
+ 

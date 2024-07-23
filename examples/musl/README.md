@@ -2,13 +2,14 @@
 
 This example shows how to compile [musl libc](https://musl.libc.org/) with the squid-toolchain.
 This library shall be used as a replacement for the glibc because it not just contains less code
-but the code is also less complex and easier to handle for `squid`.
+but also is patched to support emulators with byte-level permissions.
 
 ## Download the source
 ```
 git submodule update --init ./musl
 cd musl
-git apply ../musl-patch
+git apply ../tls.patch ../glibc-exports.patch
+git apply ../byte-level-permissions/*.patch
 cd ..
 ```
 
