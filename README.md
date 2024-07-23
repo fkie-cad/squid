@@ -32,7 +32,7 @@ This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to aug
 It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
 
 ## Demo
-Below you can see a demo program that demonstrates how to overcome common restrictions of native sanitizers with `squid`.
+Below you can see how to overcome common restrictions of native sanitizers with `squid`.
 One of the biggest restrictions is that multiple sanitizers cannot be combined in a single build.
 Trying something like
 ```
@@ -43,50 +43,7 @@ results in
 clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize=memory'
 ```
 
-Since `squid` allows us to rewrite the binary before emulation we can simply recreate ASAN + MSAN instrumentation
-ourselves:
-```rs
-use squid::*;
-
-fn main() {
-    // 1) Load the binary and lift it into our custom IR
-    let mut compiler = Compiler::load_elf(
-        "helloworld", // The target binary
-        &["."], // LD_LIBRARY_PATH
-        &[]
-    ).unwrap();
-
-    // 2) Run the ASAN pass over the binary to insert redzones and interceptors for the heap functions
-    let mut asan_pass = AsanPass::new();
-    compiler.run_pass(&mut asan_pass).unwrap();
-
-    // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
-    let backend = ClangBackend::builder()
-        .stack_size(2 * 1024 * 1024)
-        .heap_size(16 * 1024 * 1024)
-        .enable_uninit_stack(true) // MemorySanitizer
-        .progname(prog) // argv[0]
-        .args(args) // argv[1..]
-        .source_file("/tmp/demo.c") // The AOT code goes into this file
-        .build()
-        .unwrap();
-    let mut runtime = compiler.compile(backend).unwrap();
-
-    // 4) Emulate the binary, forward syscalls and handle interceptors
-    loop {
-        match runtime.run() {
-            Ok(event) => match event {
-                EVENT_BREAKPOINT => panic!("Hit a breakpoint"),
-                EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
-                _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
-            },
-            Err(fault) => panic!("Found a crash: {:?}", fault),
-        }
-    }
-}
-```
-
-Our target program is:
+Consider the following program that contains both uninitialized and out-of-bounds accesses:
 ```c
 int main (int argc, char** argv) {
     if (argc < 2) {
@@ -107,8 +64,52 @@ int main (int argc, char** argv) {
 }
 ```
 
-And when we run it we get:
+Since `squid` allows us to rewrite the binary before emulation we can simply recreate ASAN + MSAN instrumentation
+ourselves:
+```rs
+use squid::*;
 
+fn main() {
+    let index = std::env::args().skip(1).next().unwrap();
+
+    // 1) Load the binary and lift it into our custom IR
+    let mut compiler = Compiler::load_elf(
+        "./test", // The target binary
+        &["."], // LD_LIBRARY_PATH
+        &[]
+    ).unwrap();
+
+    // 2) Run the ASAN pass over the binary to insert redzones and interceptors for the heap functions
+    let mut asan_pass = AsanPass::new();
+    compiler.run_pass(&mut asan_pass).unwrap();
+
+    // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
+    let backend = ClangBackend::builder()
+        .stack_size(2 * 1024 * 1024)
+        .heap_size(16 * 1024 * 1024)
+        .enable_uninit_stack(true) // MemorySanitizer
+        .progname("test") // argv[0]
+        .arg(index) // argv[1]
+        .source_file("aot.c") // The AOT code goes into this file
+        .build()
+        .unwrap();
+    let mut runtime = compiler.compile(backend).unwrap();
+
+    // 4) Emulate the binary, forward syscalls and handle interceptors
+    loop {
+        match runtime.run() {
+            Ok(event) => match event {
+                EVENT_BREAKPOINT => panic!("Hit a breakpoint"),
+                EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
+                _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
+            },
+            Err(fault) => panic!("Found a crash: {:?}", fault),
+        }
+    }
+}
+```
+
+And when we run the above test program we get:
 (asciinema)
 
 ## Getting started
