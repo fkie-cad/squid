@@ -114,7 +114,8 @@ fn main() {
 ```
 
 Then we can detect both crashes:
-(asciinema)
+![](./demo-uninit.svg)  
+![](./demo-oob.svg)
 
 ## Getting started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
