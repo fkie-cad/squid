@@ -17,8 +17,6 @@ Check out [this blog post (todo)]() to get an overview over `squid` and a demons
 covering SQL injections, command injections, memory corruptions, and information disclosures.
 
 ## Features
-`squid` offers
-
 - Fast snapshots
 - Byte-level permissions on memory
 - Rewriting binaries before emulation
@@ -28,7 +26,7 @@ covering SQL injections, command injections, memory corruptions, and information
 However, it can only run single-threaded Linux user-space applications that are written in C.  
 The source of the target _must_ be available because `squid` only supports binaries that have been compiled
 with a specific set of flags.
-This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to augment greybox fuzzing with advanced crash oracles.
+This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to augment greybox fuzzing.
 It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
 
 ## Demo
@@ -74,11 +72,13 @@ fn main() {
         &[]
     ).unwrap();
 
-    // 2) Run the ASAN pass over the binary to insert redzones and interceptors for the heap functions
+    // 2) Run the ASAN pass over the binary to insert redzones
+    //    and interceptors for the heap functions
     let mut asan_pass = AsanPass::new();
     compiler.run_pass(&mut asan_pass).unwrap();
 
-    // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
+    // 3) AOT compile functions in IR down to native machine code
+    //    by generating C code that we compile with clang
     let arg = std::env::args().skip(1).next().unwrap();
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
