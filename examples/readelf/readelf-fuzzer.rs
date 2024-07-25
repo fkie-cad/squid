@@ -321,14 +321,14 @@ const EVENT_ID_REALLOC: usize = 5;
 const EVENT_ID_TAKE_SNAPSHOT: usize = 6;
 const EVENT_ID_RESTORE_SNAPSHOT: usize = 7;
 
-fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRuntime {
+fn create_runtime(binaries: &str, output: &str, debug_build: bool) -> ClangRuntime {
     let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[]).unwrap();
 
     compiler.run_pass(&mut AsanPass::new()).unwrap();
     compiler.run_pass(&mut CoveragePass::new()).unwrap();
     compiler.run_pass(&mut SnapshotPass::new()).unwrap();
 
-    if breakpoints {
+    if debug_build {
         compiler.run_pass(BreakpointPass::new().all()).unwrap();
     }
 
@@ -342,6 +342,12 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRunti
     assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_RESTORE_SNAPSHOT));
     assert_eq!(compiler.event_pool().len(), 8);
 
+    let source_file = if debug_build {
+        format!("{}/jit_debug.c", output)
+    } else {
+        format!("{}/jit.c", output)
+    };
+    
     let mut builder = ClangBackend::builder()
         .heap_size(8 * 1024 * 1024)
         .stack_size(2 * 1024 * 1024)
@@ -353,9 +359,9 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRunti
         .update_pc(cfg!(debug_assertions))
         .update_last_instruction(cfg!(debug_assertions))
         .count_instructions(true)
-        .source_file(format!("{}/jit.c", output));
+        .source_file(source_file);
 
-    if cfg!(debug_assertions) {
+    if debug_build {
         builder = builder.cflag("-O0").cflag("-g").cflag("-fno-omit-frame-pointer");
     } else {
         builder = builder.cflag("-Ofast").cflag("-ffast-math").cflag("-flto").cflag("-s").cflag("-fno-stack-protector").cflag("-march=native").cflag("-fomit-frame-pointer");
@@ -419,7 +425,7 @@ where
                     {
                         let pc = runtime.get_pc();
                         let symbols = runtime.lookup_symbol_from_address(pc);
-                        println!("Breakpoint {:?}", symbols);
+                        println!("Breakpoint at pc={:#x} {:?}", pc, symbols);
                     }
 
                     #[cfg(not(debug_assertions))]
@@ -1134,8 +1140,9 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
     let mut runtime = create_runtime(&binaries, "/tmp", breakpoints);
     let mut executor = SquidExecutor::new(squid_observer.handle(), tuple_list!(squid_observer), &mut runtime);
 
-    executor.run_target(&mut fuzzer, &mut state, &mut mgr, &input)?;
-
+    let status = executor.run_target(&mut fuzzer, &mut state, &mut mgr, &input)?;
+    println!("{:?}", status);
+    
     Ok(())
 }
 
