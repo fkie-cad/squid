@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use crate::backends::clang::{AddressSpace, address::POINTER_CODE_SHIFT};
 use crate::frontend::{
     ProcessImage,
     VAddr,
@@ -71,7 +71,14 @@ impl Symbol {
 
     /// Check whether this symbol contains the given address
     pub fn contains_address(&self, addr: VAddr) -> bool {
-        self.address <= addr && addr < self.address + self.size as VAddr
+        match AddressSpace::decode(addr) {
+            AddressSpace::Data(_) => self.address <= addr && addr < self.address + self.size as VAddr,
+            AddressSpace::Code(_) => {
+                let search_addr = addr >> POINTER_CODE_SHIFT;
+                let this_addr = self.address >> POINTER_CODE_SHIFT;
+                this_addr <= search_addr && search_addr < this_addr + self.size as VAddr
+            },
+        }
     }
 }
 

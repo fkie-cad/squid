@@ -14,7 +14,6 @@ use thiserror::Error;
 
 use crate::{
     backends::clang::{
-        address::POINTER_CODE_MASK,
         perms::*,
         AOTExecutor,
         AOTReturnCode,
@@ -678,14 +677,8 @@ impl ClangRuntime {
 /// The symbol store of the ClangRuntime
 impl ClangRuntime {
     /// Get all the symbols that are at the given address
-    pub fn lookup_symbol_from_address(&self, mut addr: VAddr) -> Vec<(&str, &Symbol)> {
+    pub fn lookup_symbol_from_address(&self, addr: VAddr) -> Vec<(&str, &Symbol)> {
         let mut ret = Vec::new();
-
-        // Codegen mixes native and virtual pointers, only keep the virtual part of code pointers
-        if let AddressSpace::Code(mut offset) = AddressSpace::decode(addr) {
-            offset &= POINTER_CODE_MASK as usize;
-            addr = AddressSpace::Code(offset).encode();
-        }
 
         for (file, symbols) in &self.symbols {
             for symbol in symbols {
