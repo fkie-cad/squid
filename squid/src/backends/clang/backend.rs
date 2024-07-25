@@ -8,7 +8,7 @@ use std::{
         Hash,
         Hasher,
     },
-    path::PathBuf,
+    path::{Path, PathBuf, Component},
 };
 
 use ahash::RandomState;
@@ -87,7 +87,17 @@ impl ClangBackendBuilder {
 
     /// Store the AOT-code into this file
     pub fn source_file<P: Into<PathBuf>>(mut self, source_file: P) -> Self {
-        self.source_file = Some(source_file.into());
+        let mut source_file = source_file.into();
+        
+        match source_file.components().next() {
+            None => unreachable!(),
+            Some(Component::Normal(_)) => {
+                source_file = Path::new(".").join(source_file);
+            },
+            _ => {},
+        }
+        
+        self.source_file = Some(source_file);
         self
     }
 
