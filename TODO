@@ -7,7 +7,4 @@
     - focus on partial part of code using snapshot-based fuzzing
     - how has exim been fuzzed already, how about other MTAs (postfix, ...), SMTP generell
     - LLM corpus generation and mutation (https://mengrj.github.io/files/chatafl-slides.pdf)
-- frontend builder methods: default vaddr = 0 because after symbolization address values dont matter anymore
 - CoveragePass from readme-demo example into crate ?
-- adjust readelf fuzzer to musl changes
-- improve Getting Started in README

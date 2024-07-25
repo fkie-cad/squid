@@ -108,10 +108,10 @@ Then we can detect both crashes:
 ![](./demo-uninit.svg)  
 ![](./demo-oob.svg)
 
-## Getting started
+## Getting Started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
-For a gentle introduction, see the [hello world](./examples/helloworld) example and for a
-full-blown "professional" fuzzer, see our [readelf fuzzer](./examples/readelf).
+For a gentle introduction, see the [hello world](./examples/helloworld) example.   
+For a fuzzer that combines native and emulation-based fuzzing, see our [readelf fuzzer](./examples/readelf).  
 Finally, consult the documentation on [docs.rs](https://docs.rs/squid).
 
 If you find that something is not properly documented / explained or you have any other questions, please
