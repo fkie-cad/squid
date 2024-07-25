@@ -1,6 +1,6 @@
 # README demo
 
-This folder holds the full code for the demo in the [README](../../README.md#demo).
+This example contains the full code for the demo in the [README](../../README.md#demo).
 To run the demo yourself you must first build the test program and then compile the harness.
 
 ## Building the target

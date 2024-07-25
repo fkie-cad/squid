@@ -4,6 +4,7 @@ mod breakpoint;
 mod dot;
 mod pass;
 mod verify;
+mod asan;
 
 pub use breakpoint::{
     BreakpointPass,
@@ -16,3 +17,4 @@ pub use dot::{
 pub use pass::Pass;
 pub(crate) use verify::VerifyerPass;
 pub use verify::VerifyerPassError;
+pub use asan::AsanPass;
