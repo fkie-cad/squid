@@ -614,7 +614,7 @@ mod tests {
         println!("Testing {}", binary_path);
 
         let mut ret = HashSet::new();
-        let listing = Listing::from_file(&format!("{}.{}", binary_path, EXTENSION));
+        let listing = Listing::from_file(format!("{}.{}", binary_path, EXTENSION));
         let buf = std::fs::read(binary_path).unwrap();
         let goblin::Object::Elf(elf) = goblin::Object::parse(&buf).unwrap() else { unreachable!() };
         let mut current_file = None;
