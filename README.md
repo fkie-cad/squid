@@ -38,20 +38,11 @@ One of the biggest restrictions is that multiple sanitizers cannot be combined i
 Take the following program as an example. It contains both, uninitialized reads and out-of-bounds accesses:
 ```c
 int main (int argc, char** argv) {
-    if (argc < 2) {
-        return 1;
-    }
-
     int* array = malloc(16 * sizeof(int));
     int index = atoi(argv[1]);
-
-    // Partially initialize array
-    array[0] = 123;
-    array[1] = 456;
-    array[2] = 789;
-
+    
     printf("array[%d] = %d\n", index, array[index]);
-
+    
     return 0;
 }
 ```
@@ -105,7 +96,7 @@ fn main() {
         match runtime.run() {
             Ok(event) => match event {
                 EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
-                _ => asan_pass.handle_event(event, &mut runtime).unwrap(),
+                _ => handle_asan_event(&asan_pass, event, &mut runtime).unwrap(),
             },
             Err(fault) => display_crash_report(fault, runtime),
         }
@@ -113,7 +104,7 @@ fn main() {
 }
 ```
 
-Then we can detect both crashes:
+Then we can detect both crashes:  
 ![](./demo-uninit.svg)  
 ![](./demo-oob.svg)
 
