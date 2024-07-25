@@ -71,7 +71,7 @@ compiler.run_pass(&mut MyPass {}).expect("Pass had an error");
 The final step before emulation is to AOT-compile all functions to the host ISA.
 This is the responsibility of a "backend".
 The backend receives a process image and produces a "runtime" that interfaces with the target program. 
-In a similar fashion like before, a backend is anything that implements the `Backend` trait and a runtime
+In a similar manner like before, a backend is anything that implements the `Backend` trait and a runtime
 is anything that implements the `Runtime` trait.
 
 Currently, `squid` comes with the `ClangBackend` and the `ClangRuntime`:
