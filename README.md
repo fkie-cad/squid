@@ -70,16 +70,16 @@ fn main() {
         "./test", // The target binary
         &["."], // LD_LIBRARY_PATH
         &[]
-    ).unwrap();
+    );
 
     // 2) Run the ASAN pass over the binary to insert redzones
     //    and interceptors for the heap functions
     let mut asan_pass = AsanPass::new();
-    compiler.run_pass(&mut asan_pass).unwrap();
+    compiler.run_pass(&mut asan_pass);
 
     // 3) AOT compile functions in IR down to native machine code
     //    by generating C code that we compile with clang
-    let arg = std::env::args().skip(1).next().unwrap();
+    let arg = std::env::args().skip(1).next();
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
         .heap_size(16 * 1024 * 1024)
@@ -87,16 +87,15 @@ fn main() {
         .progname("test") // argv[0]
         .arg(arg) // argv[1]
         .source_file("./aot.c") // The AOT code goes into this file
-        .build()
-        .unwrap();
-    let mut runtime = compiler.compile(backend).unwrap();
+        .build();
+    let mut runtime = compiler.compile(backend);
 
     // 4) Emulate the binary, forward syscalls and handle interceptors
     loop {
         match runtime.run() {
             Ok(event) => match event {
-                EVENT_SYSCALL => forward_syscall(&mut runtime).unwrap(),
-                _ => handle_asan_event(&asan_pass, event, &mut runtime).unwrap(),
+                EVENT_SYSCALL => forward_syscall(&mut runtime),
+                _ => handle_asan_event(&asan_pass, event, &mut runtime),
             },
             Err(fault) => display_crash_report(fault, runtime),
         }
@@ -111,7 +110,7 @@ Then we can detect both crashes:
 ## Getting Started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
 For a gentle introduction, see the [hello world](./examples/helloworld) example.   
-For a fuzzer that combines native and emulation-based fuzzing, see our [readelf fuzzer](./examples/readelf).  
+For an example how to combine native and emulation-based fuzzing, see our [readelf fuzzer](./examples/readelf).  
 Finally, consult the documentation on [docs.rs](https://docs.rs/squid).
 
 If you find that something is not properly documented / explained or you have any other questions, please
