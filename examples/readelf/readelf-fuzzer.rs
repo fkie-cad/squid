@@ -1,11 +1,9 @@
 use std::{
     borrow::Cow,
-    collections::HashMap,
     ffi::OsStr,
     marker::PhantomData,
     path::PathBuf,
 };
-
 use clap::Parser;
 use libafl::prelude::{
     feedback_or,
@@ -93,20 +91,16 @@ use squid::{
     frontend::{
         ao::{
             events::*,
-            AoError,
             BasicBlock,
             Edge,
-            Function,
             Op,
             ArithmeticBehavior,
         },
         Chunk,
         ChunkContent,
         Elf,
-        FunctionPointer,
         GlobalPointer,
         HasId,
-        Id,
         Perms,
         Pointer,
         ProcessImage,
@@ -125,6 +119,8 @@ use squid::{
     passes::{
         BreakpointPass,
         Pass,
+        NoPassError,
+        AsanPass,
     },
     riscv::{
         register::GpRegister,
@@ -134,290 +130,8 @@ use squid::{
     Compiler,
     Logger,
 };
-use thiserror::Error;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
-struct DislocatorPass {}
-
-impl DislocatorPass {
-    const EVENT_NAME_MALLOC: &'static str = "dislocator::malloc";
-    const EVENT_NAME_FREE: &'static str = "dislocator::free";
-    const EVENT_NAME_REALLOC: &'static str = "dislocator::realloc";
-    const EVENT_NAME_CALLOC: &'static str = "dislocator::calloc";
-
-    fn new() -> Self {
-        Self {}
-    }
-
-    fn replace_function(&self, func: &mut Function, event_pool: &mut EventPool, event_name: &str) -> Result<(), AoError> {
-        let event_id = event_pool.add_event(event_name);
-
-        func.cfg_mut().clear();
-
-        let mut bb1 = BasicBlock::new();
-        bb1.fire_event(event_id);
-
-        let mut bb2 = BasicBlock::new();
-        let ra = bb2.load_gp_register(GpRegister::ra);
-        bb2.jump(ra)?;
-
-        let bb2_id = func.cfg_mut().add_basic_block(bb2);
-
-        bb1.add_edge(Edge::Next(bb2_id));
-
-        let bb1_id = func.cfg_mut().add_basic_block(bb1);
-
-        func.cfg_mut().set_entry(bb1_id);
-
-        Ok(())
-    }
-}
-
-impl Pass for DislocatorPass {
-    type Error = AoError;
-
-    fn name(&self) -> String {
-        "DislocatorPass".to_string()
-    }
-
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), AoError> {
-        for elf in image.iter_elfs_mut() {
-            if elf.path().ends_with("libc.so.6") {
-                for section in elf.iter_sections_mut() {
-                    for symbol in section.iter_symbols_mut() {
-                        if let Some(addr) = symbol.private_name("__libc_malloc_impl") {
-                            logger.info(format!("Replacing malloc() @ {:#x}", addr));
-                            assert_eq!(symbol.num_chunks(), 1);
-
-                            for chunk in symbol.iter_chunks_mut() {
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_MALLOC)?;
-                            }
-                        } else if let Some(addr) = symbol.private_name("__libc_free") {
-                            logger.info(format!("Replacing free() @ {:#x}", addr));
-                            assert_eq!(symbol.num_chunks(), 1);
-
-                            for chunk in symbol.iter_chunks_mut() {
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_FREE)?;
-                            }
-                        } else if let Some(addr) = symbol.private_name("__libc_realloc") {
-                            logger.info(format!("Replacing realloc() @ {:#x}", addr));
-                            assert_eq!(symbol.num_chunks(), 1);
-
-                            for chunk in symbol.iter_chunks_mut() {
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_REALLOC)?;
-                            }
-                        } else if let Some(addr) = symbol.private_name("__libc_calloc") {
-                            logger.info(format!("Replacing calloc() @ {:#x}", addr));
-                            assert_eq!(symbol.num_chunks(), 1);
-
-                            for chunk in symbol.iter_chunks_mut() {
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC)?;
-                            }
-                        } else if let Some(addr) = symbol.public_name("calloc") {
-                            logger.info(format!("Replacing calloc() @ {:#x}", addr));
-                            assert_eq!(symbol.num_chunks(), 1);
-
-                            for chunk in symbol.iter_chunks_mut() {
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                self.replace_function(func, event_pool, Self::EVENT_NAME_CALLOC)?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Error, Debug)]
-#[error("")]
-struct NoError;
-
-struct RedzonePass {}
-
-impl RedzonePass {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-fn build_redzone(size: usize) -> Symbol {
-    let mut redzone = Symbol::builder().private_name("(redzone)").size(size).vaddr(0).build().unwrap();
-
-    let chunk = Chunk::builder().uninitialized_data(size, Perms::default()).vaddr(0).build().unwrap();
-
-    redzone.insert_chunk(chunk);
-    redzone
-}
-
-impl Pass for RedzonePass {
-    type Error = NoError;
-
-    fn name(&self) -> String {
-        "RedzonePass".to_string()
-    }
-
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
-        let mut total = 0;
-        let mut count = 0;
-        let mut last_size = None;
-
-        for elf in image.iter_elfs_mut() {
-            let is_binary = elf.path().ends_with("readelf");
-
-            for section in elf.iter_sections_mut() {
-                if section.perms().is_writable() {
-                    section.set_cursor(0);
-
-                    while let Some(symbol) = section.cursor_symbol() {
-                        total += 1;
-
-                        if is_binary {
-                            count += 1;
-
-                            /* Calculate redzone sizes */
-                            let left_redzone_size = if let Some(last_size) = last_size { symbol.size().saturating_sub(last_size) } else { symbol.size() };
-                            let right_redzone_size = symbol.size();
-
-                            /* Left redzone */
-                            if left_redzone_size > 0 {
-                                let redzone = build_redzone(left_redzone_size);
-                                section.insert_symbol(redzone);
-                                assert!(section.move_cursor_forward());
-                            }
-
-                            /* Right redzone */
-                            if !section.move_cursor_forward() {
-                                section.move_cursor_beyond_end();
-                            }
-
-                            let redzone = build_redzone(right_redzone_size);
-                            section.insert_symbol(redzone);
-
-                            /* Adjust section itself */
-                            let new_size = section.size() + left_redzone_size + right_redzone_size;
-                            section.set_size(new_size);
-
-                            last_size = Some(right_redzone_size);
-                        }
-
-                        if !section.move_cursor_forward() {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        logger.info(format!("Surrounded {}/{} symbols with redzones", count, total));
-
-        Ok(())
-    }
-}
-
-struct PiranhaPass {
-    exports: HashMap<String, Pointer>,
-}
-
-impl PiranhaPass {
-    fn new() -> Self {
-        Self {
-            exports: HashMap::default(),
-        }
-    }
-}
-
-fn get_chunk_id(symbol: &Symbol) -> Id {
-    assert_eq!(symbol.num_chunks(), 1);
-
-    if let Some(chunk) = symbol.iter_chunks().next() {
-        return chunk.id();
-    }
-
-    unreachable!()
-}
-
-fn rewire(func: &mut Function, target: &Pointer) {
-    func.cfg_mut().clear();
-
-    let mut bb = BasicBlock::new();
-    let pointer = bb.load_pointer(target.clone());
-    bb.jump(pointer).unwrap();
-
-    let id = func.cfg_mut().add_basic_block(bb);
-    func.cfg_mut().set_entry(id);
-}
-
-impl Pass for PiranhaPass {
-    type Error = NoError;
-
-    fn name(&self) -> String {
-        "PiranhaPass".to_string()
-    }
-
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
-        /* Collect exported piranha functions */
-        for elf in image.iter_elfs() {
-            if elf.path().ends_with("piranha.so") {
-                for section in elf.iter_sections() {
-                    if !section.perms().is_executable() {
-                        continue;
-                    }
-
-                    for symbol in section.iter_symbols() {
-                        let chunk_id = get_chunk_id(symbol);
-                        let pointer = Pointer::Function(FunctionPointer {
-                            elf: elf.id(),
-                            section: section.id(),
-                            symbol: symbol.id(),
-                            chunk: chunk_id,
-                        });
-
-                        for name in symbol.public_names() {
-                            assert!(self.exports.insert(name.to_string(), pointer.clone()).is_none());
-                        }
-                    }
-                }
-            }
-        }
-
-        /* Rewire libc functions */
-        for elf in image.iter_elfs_mut() {
-            if elf.path().ends_with("libc.so.6") {
-                for section in elf.iter_sections_mut() {
-                    if !section.perms().is_executable() {
-                        continue;
-                    }
-
-                    'next_symbol: for symbol in section.iter_symbols_mut() {
-                        for (export, pointer) in &self.exports {
-                            if symbol.public_name(export).is_some() {
-                                assert_eq!(symbol.num_chunks(), 1);
-                                let chunk = symbol.iter_chunks_mut().next().unwrap();
-
-                                logger.info(format!("Rewiring libc's {}", export));
-
-                                let ChunkContent::Code(func) = chunk.content_mut() else { unreachable!() };
-                                rewire(func, pointer);
-
-                                continue 'next_symbol;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
 
 struct CoveragePass {}
 
@@ -428,7 +142,7 @@ impl CoveragePass {
 }
 
 impl Pass for CoveragePass {
-    type Error = NoError;
+    type Error = NoPassError;
 
     fn name(&self) -> String {
         "CoveragePass".to_string()
@@ -530,7 +244,7 @@ impl SnapshotPass {
 }
 
 impl Pass for SnapshotPass {
-    type Error = NoError;
+    type Error = NoPassError;
 
     fn name(&self) -> String {
         "SnapshotPass".to_string()
@@ -601,18 +315,16 @@ impl Pass for SnapshotPass {
 const EVENT_ID_SYSCALL: usize = 0;
 const EVENT_ID_BREAKPOINT: usize = 1;
 const EVENT_ID_CALLOC: usize = 2;
-const EVENT_ID_FREE: usize = 3;
-const EVENT_ID_MALLOC: usize = 4;
+const EVENT_ID_FREE: usize = 4;
+const EVENT_ID_MALLOC: usize = 3;
 const EVENT_ID_REALLOC: usize = 5;
 const EVENT_ID_TAKE_SNAPSHOT: usize = 6;
 const EVENT_ID_RESTORE_SNAPSHOT: usize = 7;
 
 fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRuntime {
-    let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[format!("{}/piranha.so", &binaries)]).unwrap();
+    let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[]).unwrap();
 
-    compiler.run_pass(&mut PiranhaPass::new()).unwrap();
-    compiler.run_pass(&mut RedzonePass::new()).unwrap();
-    compiler.run_pass(&mut DislocatorPass::new()).unwrap();
+    compiler.run_pass(&mut AsanPass::new()).unwrap();
     compiler.run_pass(&mut CoveragePass::new()).unwrap();
     compiler.run_pass(&mut SnapshotPass::new()).unwrap();
 
@@ -622,10 +334,10 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRunti
 
     assert_eq!(compiler.event_pool().get_event(EVENT_SYSCALL).map(|x| x.id()), Some(EVENT_ID_SYSCALL));
     assert_eq!(compiler.event_pool().get_event(EVENT_BREAKPOINT).map(|x| x.id()), Some(EVENT_ID_BREAKPOINT));
-    assert_eq!(compiler.event_pool().get_event(DislocatorPass::EVENT_NAME_MALLOC).map(|x| x.id()), Some(EVENT_ID_MALLOC));
-    assert_eq!(compiler.event_pool().get_event(DislocatorPass::EVENT_NAME_FREE).map(|x| x.id()), Some(EVENT_ID_FREE));
-    assert_eq!(compiler.event_pool().get_event(DislocatorPass::EVENT_NAME_REALLOC).map(|x| x.id()), Some(EVENT_ID_REALLOC));
-    assert_eq!(compiler.event_pool().get_event(DislocatorPass::EVENT_NAME_CALLOC).map(|x| x.id()), Some(EVENT_ID_CALLOC));
+    assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_MALLOC).map(|x| x.id()), Some(EVENT_ID_MALLOC));
+    assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_FREE).map(|x| x.id()), Some(EVENT_ID_FREE));
+    assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_REALLOC).map(|x| x.id()), Some(EVENT_ID_REALLOC));
+    assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_CALLOC).map(|x| x.id()), Some(EVENT_ID_CALLOC));
     assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_TAKE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_TAKE_SNAPSHOT));
     assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_RESTORE_SNAPSHOT));
     assert_eq!(compiler.event_pool().len(), 8);
@@ -653,8 +365,8 @@ fn create_runtime(binaries: &str, output: &str, breakpoints: bool) -> ClangRunti
     compiler.compile(backend).unwrap()
 }
 
-fn get_real_pointer_to_symbol(runtime: &mut ClangRuntime, symbol: &str) -> OwnedMutSlice<'static, u8> {
-    let symbols = runtime.lookup_symbol_from_private_name(symbol);
+fn get_coverage_map(runtime: &mut ClangRuntime) -> OwnedMutSlice<'static, u8> {
+    let symbols = runtime.lookup_symbol_from_private_name("(coverage map)");
     assert_eq!(symbols.len(), 1);
     let cov_map = symbols[0].1;
     let len = cov_map.size();
@@ -1265,7 +977,7 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let powerschedule = pick_exploit_powerschedule(core_id.0);
         println!("Running exploit instance on core #{} with powerschedule {:?}", core_id.0, powerschedule);
 
-        let coverage_map = get_real_pointer_to_symbol(&mut runtime, "(coverage map)");
+        let coverage_map = get_coverage_map(&mut runtime);
         let map_observer = HitcountsMapObserver::new(StdMapObserver::from_mut_slice("hitcounters", coverage_map)).track_indices();
         let squid_observer = SquidObserver::new("instructions");
 

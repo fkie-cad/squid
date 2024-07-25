@@ -1,4 +1,4 @@
-max_width = 180
+max_width = 120
 use_small_heuristics = "Max"
 edition = "2021"
 match_block_trailing_comma = true

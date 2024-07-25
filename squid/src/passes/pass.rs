@@ -3,6 +3,13 @@ use crate::{
     frontend::ProcessImage,
     logger::Logger,
 };
+use thiserror::Error;
+
+/// This type can be used as a `Pass::Error` to signal
+/// that a pass never fails.
+#[derive(Error, Debug)]
+#[error("This pass is supposed to not throw any errors")]
+pub struct NoPassError;
 
 /// A pass in `squid` is any type that implements this trait.
 ///

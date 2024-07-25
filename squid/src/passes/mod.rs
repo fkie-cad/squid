@@ -14,7 +14,7 @@ pub use dot::{
     FunctionDOTPass,
     ImageDOTPass,
 };
-pub use pass::Pass;
+pub use pass::{Pass, NoPassError};
 pub(crate) use verify::VerifyerPass;
 pub use verify::VerifyerPassError;
 pub use asan::AsanPass;
