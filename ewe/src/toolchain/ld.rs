@@ -271,8 +271,12 @@ impl LdWrapper {
 
     pub fn link(&self) {
         /* Run linker */
-        let status =
-            Command::new(&self.args[0]).args(self.args[1..].iter().filter(|x| !OPTION_BLACKLIST.contains(&x.as_str()))).arg("--no-relax").envs(std::env::vars()).status().unwrap();
+        let status = Command::new(&self.args[0])
+            .args(self.args[1..].iter().filter(|x| !OPTION_BLACKLIST.contains(&x.as_str())))
+            .arg("--no-relax")
+            .envs(std::env::vars())
+            .status()
+            .unwrap();
 
         if let Some(code) = status.code() {
             if code != 0 {
@@ -283,7 +287,13 @@ impl LdWrapper {
         }
 
         /* Merge metadata files */
-        let mut output = OpenOptions::new().read(true).write(true).create(true).truncate(true).open(format!("{}.{}", self.output, EXTENSION)).unwrap();
+        let mut output = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(format!("{}.{}", self.output, EXTENSION))
+            .unwrap();
 
         for input in &self.inputs {
             let input = OpenOptions::new().read(true).open(format!("{input}.{EXTENSION}"));

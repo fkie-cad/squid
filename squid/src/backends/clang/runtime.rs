@@ -78,7 +78,7 @@ pub enum ClangRuntimeFault {
 
     #[error("Execution cannot continue")]
     End,
-    
+
     #[error("The application had an integer overflow with {0} and {1}")]
     IntegerOverflow(u64, u64),
 }
@@ -383,7 +383,8 @@ impl Runtime for ClangRuntime {
         self.registers.set_last_instr(0);
 
         /* Execute code */
-        self.next_pc = self.executor.run(&mut self.memory, &mut self.event_channel, &mut self.registers, &mut self.var_storage);
+        self.next_pc =
+            self.executor.run(&mut self.memory, &mut self.event_channel, &mut self.registers, &mut self.var_storage);
         self.next_event_channel_length = 0;
 
         /* Translate aot exit code to runtime event / fault */
@@ -392,7 +393,9 @@ impl Runtime for ClangRuntime {
                 let id = self.executor.return_arg0();
                 Ok(id)
             },
-            AOTReturnCode::InvalidState => Err(ClangRuntimeFault::InternalError("AOT code returned but did not set an event or fault".to_string())),
+            AOTReturnCode::InvalidState => {
+                Err(ClangRuntimeFault::InternalError("AOT code returned but did not set an event or fault".to_string()))
+            },
             AOTReturnCode::InvalidJumpTarget => {
                 let addr = self.executor.return_arg0() as VAddr;
                 Err(ClangRuntimeFault::InvalidPc(addr))
@@ -442,7 +445,13 @@ impl Runtime for ClangRuntime {
         if let Some(snapshot) = self.snapshots.get(&id) {
             self.next_pc = snapshot.next_pc;
             self.next_event_channel_length = snapshot.next_event_channel_length;
-            unsafe { std::ptr::copy_nonoverlapping(snapshot.var_storage.as_ptr(), self.var_storage.as_mut_ptr(), snapshot.var_storage.len()) };
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    snapshot.var_storage.as_ptr(),
+                    self.var_storage.as_mut_ptr(),
+                    snapshot.var_storage.len(),
+                )
+            };
         } else {
             return Err(ClangRuntimeFault::InvalidSnapshotId(id));
         }
@@ -741,7 +750,10 @@ impl ClangRuntime {
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to deallocate a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!(
+                "Tried to deallocate a non-heap address: {:#x}",
+                addr
+            )));
         };
 
         self.heap_mgr.free(&mut self.memory, offset)?;
@@ -759,7 +771,10 @@ impl ClangRuntime {
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to get a single chunk with a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!(
+                "Tried to get a single chunk with a non-heap address: {:#x}",
+                addr
+            )));
         };
 
         let chunk = self.heap_mgr.get_heap_chunk(&self.memory, offset)?;
@@ -775,13 +790,18 @@ impl ClangRuntime {
     /// Reallocate the heap chunk at the given address and resize it to the given `new_size`
     pub fn dynstore_reallocate(&mut self, addr: VAddr, new_size: usize) -> Result<VAddr, ClangRuntimeFault> {
         if addr == 0 || new_size == 0 {
-            return Err(ClangRuntimeFault::MemoryManagementError("Called dynstore_reallocate() with invalid parameters".to_string()));
+            return Err(ClangRuntimeFault::MemoryManagementError(
+                "Called dynstore_reallocate() with invalid parameters".to_string(),
+            ));
         }
 
         let offset = if let AddressSpace::Data(offset) = AddressSpace::decode(addr) {
             offset
         } else {
-            return Err(ClangRuntimeFault::MemoryManagementError(format!("Tried to reallocate a non-heap address: {:#x}", addr)));
+            return Err(ClangRuntimeFault::MemoryManagementError(format!(
+                "Tried to reallocate a non-heap address: {:#x}",
+                addr
+            )));
         };
 
         let new_offset = self.heap_mgr.realloc(&mut self.memory, offset, new_size)?;

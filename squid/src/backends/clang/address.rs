@@ -178,7 +178,15 @@ impl AddressLayouter {
 pub(crate) fn get_entrypoint_address(image: &ProcessImage) -> VAddr {
     let pointer = image.entrypoint();
 
-    let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+    let chunk = image
+        .elf(pointer.elf)
+        .unwrap()
+        .section(pointer.section)
+        .unwrap()
+        .symbol(pointer.symbol)
+        .unwrap()
+        .chunk(pointer.chunk)
+        .unwrap();
 
     let ChunkContent::Code(func) = chunk.content() else { unreachable!() };
     let entry = func.cfg().entry();

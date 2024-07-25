@@ -9,12 +9,19 @@ pub(crate) enum Relocation {
 
 fn reloc_size(typ: u32) -> usize {
     match typ {
-        goblin::elf::reloc::R_RISCV_RELATIVE | goblin::elf::reloc::R_RISCV_TLS_TPREL64 | goblin::elf::reloc::R_RISCV_JUMP_SLOT | goblin::elf::reloc::R_RISCV_64 => 8,
+        goblin::elf::reloc::R_RISCV_RELATIVE
+        | goblin::elf::reloc::R_RISCV_TLS_TPREL64
+        | goblin::elf::reloc::R_RISCV_JUMP_SLOT
+        | goblin::elf::reloc::R_RISCV_64 => 8,
         _ => todo!("{}", typ),
     }
 }
 
-pub(crate) fn parse_relocations(elf: &goblin::elf::Elf, parent_start: u64, parent_size: u64) -> Result<Vec<(Relocation, u64, usize)>, LoaderError> {
+pub(crate) fn parse_relocations(
+    elf: &goblin::elf::Elf,
+    parent_start: u64,
+    parent_size: u64,
+) -> Result<Vec<(Relocation, u64, usize)>, LoaderError> {
     if !elf.dynrels.is_empty() {
         return Err(LoaderError::InvalidELF("Binary uses rels instead of relas".to_string()));
     }
@@ -26,10 +33,14 @@ pub(crate) fn parse_relocations(elf: &goblin::elf::Elf, parent_start: u64, paren
         let size = reloc_size(rela.r_type);
 
         let has_start = parent_start <= vaddr && vaddr < parent_start + parent_size;
-        let has_end = parent_start <= (vaddr + size as u64 - 1) && (vaddr + size as u64 - 1) < parent_start + parent_size;
+        let has_end =
+            parent_start <= (vaddr + size as u64 - 1) && (vaddr + size as u64 - 1) < parent_start + parent_size;
 
         if has_start != has_end {
-            return Err(LoaderError::InvalidELF(format!("Relocation at {:#x} overlaps parent {:#x}", vaddr, parent_start)));
+            return Err(LoaderError::InvalidELF(format!(
+                "Relocation at {:#x} overlaps parent {:#x}",
+                vaddr, parent_start
+            )));
         }
 
         if has_start {
@@ -59,7 +70,9 @@ pub(crate) fn parse_relocations(elf: &goblin::elf::Elf, parent_start: u64, paren
                     }
                 } else {
                     match rela.r_type {
-                        goblin::elf::reloc::R_RISCV_64 => Relocation::Offset(linked_sym.st_value as usize + addend as usize),
+                        goblin::elf::reloc::R_RISCV_64 => {
+                            Relocation::Offset(linked_sym.st_value as usize + addend as usize)
+                        },
                         goblin::elf::reloc::R_RISCV_JUMP_SLOT => Relocation::Offset(linked_sym.st_value as usize),
                         t => todo!("{}", t),
                     }

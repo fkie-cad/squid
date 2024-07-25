@@ -20,10 +20,10 @@ use crate::{
                 EVENT_SYSCALL,
             },
             func::Function,
+            ArithmeticBehavior,
             Comparison,
             Half,
             Signedness,
-            ArithmeticBehavior,
         },
         idmap::{
             HasId,
@@ -81,7 +81,13 @@ pub(crate) struct Lifter {
 }
 
 impl Lifter {
-    pub(crate) fn lift(base_addr: VAddr, section_end: VAddr, data: &[u8], func: Option<&ListingFunction>, event_pool: &mut EventPool) -> Result<Function, AoError> {
+    pub(crate) fn lift(
+        base_addr: VAddr,
+        section_end: VAddr,
+        data: &[u8],
+        func: Option<&ListingFunction>,
+        event_pool: &mut EventPool,
+    ) -> Result<Function, AoError> {
         assert_eq!(data.len() % 4, 0);
 
         let mut lifter = Self::new(base_addr, base_addr + data.len() as VAddr, func);
@@ -128,7 +134,12 @@ impl Lifter {
         }
     }
 
-    fn ensure_continuous_flow(&mut self, section_end: VAddr, event_pool: &mut EventPool, last_bb: Id) -> Result<(), AoError> {
+    fn ensure_continuous_flow(
+        &mut self,
+        section_end: VAddr,
+        event_pool: &mut EventPool,
+        last_bb: Id,
+    ) -> Result<(), AoError> {
         let bb = self.cfg.basic_block(last_bb).unwrap();
 
         if bb.has_continuous_flow() {
@@ -242,7 +253,12 @@ impl Lifter {
                     let ret_addr = addr + 4;
                     self.insert_boundary(ret_addr)?;
                 },
-                RV32I::BNE(args) | RV32I::BLT(args) | RV32I::BGE(args) | RV32I::BLTU(args) | RV32I::BGEU(args) | RV32I::BEQ(args) => {
+                RV32I::BNE(args)
+                | RV32I::BLT(args)
+                | RV32I::BGE(args)
+                | RV32I::BLTU(args)
+                | RV32I::BGEU(args)
+                | RV32I::BEQ(args) => {
                     let branch_target = addr.wrapping_add(args.imm as VAddr);
 
                     if self.contains_address(branch_target) {
@@ -304,7 +320,13 @@ impl Lifter {
         Ok(id)
     }
 
-    fn lift_instruction(&mut self, addr: VAddr, instr: &[u8], event_pool: &mut EventPool, bb: &mut BasicBlock) -> Result<(), AoError> {
+    fn lift_instruction(
+        &mut self,
+        addr: VAddr,
+        instr: &[u8],
+        event_pool: &mut EventPool,
+        bb: &mut BasicBlock,
+    ) -> Result<(), AoError> {
         bb.next_instruction(addr);
 
         self.seen_terminator = false;
@@ -1161,7 +1183,11 @@ impl Lifter {
                 RV32F::FCVT_WS(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
                     let rs1 = bb.nan_unbox(rs1)?;
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer32(result, Signedness::Signed);
                     let result = bb.sign_extend(result, 4)?;
@@ -1170,7 +1196,11 @@ impl Lifter {
                 RV32F::FCVT_WUS(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
                     let rs1 = bb.nan_unbox(rs1)?;
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer32(result, Signedness::Unsigned);
                     let result = bb.sign_extend(result, 4)?;
@@ -1195,7 +1225,11 @@ impl Lifter {
                 RV64F::FCVT_LS(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
                     let rs1 = bb.nan_unbox(rs1)?;
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer64(result, Signedness::Signed);
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
@@ -1203,7 +1237,11 @@ impl Lifter {
                 RV64F::FCVT_LUS(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
                     let rs1 = bb.nan_unbox(rs1)?;
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer64(result, Signedness::Unsigned);
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
@@ -1402,7 +1440,11 @@ impl Lifter {
                 },
                 RV32D::FCVT_WD(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer32(result, Signedness::Signed);
                     let result = bb.sign_extend(result, 4)?;
@@ -1410,7 +1452,11 @@ impl Lifter {
                 },
                 RV32D::FCVT_WUD(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer32(result, Signedness::Unsigned);
                     let result = bb.sign_extend(result, 4)?;
@@ -1432,14 +1478,22 @@ impl Lifter {
             InstructionSet::RV64D(instr) => match instr {
                 RV64D::FCVT_LD(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer64(result, Signedness::Signed);
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;
                 },
                 RV64D::FCVT_LUD(args) => {
                     let rs1 = bb.load_fp_register(FpRegister::from_usize(args.rs1));
-                    let rm = if args.funct3 == rm::DYNAMIC { bb.load_csr(CsrRegister::frm)? } else { bb.load_immediate(args.funct3) };
+                    let rm = if args.funct3 == rm::DYNAMIC {
+                        bb.load_csr(CsrRegister::frm)?
+                    } else {
+                        bb.load_immediate(args.funct3)
+                    };
                     let result = bb.round(rs1, rm)?;
                     let result = bb.convert_to_integer64(result, Signedness::Unsigned);
                     bb.store_gp_register(GpRegister::from_usize(args.rd), result)?;

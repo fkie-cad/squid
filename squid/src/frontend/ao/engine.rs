@@ -8,6 +8,7 @@ use crate::{
     event::EventId,
     frontend::{
         ao::{
+            ArithmeticBehavior,
             BasicBlock,
             Comparison,
             Half,
@@ -16,7 +17,6 @@ use crate::{
             Signedness,
             Var,
             VarType,
-            ArithmeticBehavior,
         },
         Pointer,
         VAddr,
@@ -246,14 +246,26 @@ impl Value {
         F5: FnMut(&u64, &Pointer) -> Option<Pointer>,
     {
         let result = match (self, other) {
-            (Value::Integer(lhs), Value::Integer(rhs)) => Value::Integer(integer_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?),
-            (Value::Integer(lhs), Value::VAddr(rhs)) | (Value::VAddr(lhs), Value::Integer(rhs)) | (Value::VAddr(lhs), Value::VAddr(rhs)) => {
+            (Value::Integer(lhs), Value::Integer(rhs)) => {
+                Value::Integer(integer_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?)
+            },
+            (Value::Integer(lhs), Value::VAddr(rhs))
+            | (Value::VAddr(lhs), Value::Integer(rhs))
+            | (Value::VAddr(lhs), Value::VAddr(rhs)) => {
                 Value::VAddr(integer_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?)
             },
-            (Value::FloatSingle(lhs), Value::FloatSingle(rhs)) => Value::FloatSingle(float_single_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?),
-            (Value::FloatDouble(lhs), Value::FloatDouble(rhs)) => Value::FloatDouble(float_double_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?),
-            (Value::Pointer(a), Value::Integer(b)) => Value::Pointer(pointer_op_l(a, b).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?),
-            (Value::Integer(a), Value::Pointer(b)) => Value::Pointer(pointer_op_r(a, b).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?),
+            (Value::FloatSingle(lhs), Value::FloatSingle(rhs)) => Value::FloatSingle(
+                float_single_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?,
+            ),
+            (Value::FloatDouble(lhs), Value::FloatDouble(rhs)) => Value::FloatDouble(
+                float_double_op(lhs, rhs).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?,
+            ),
+            (Value::Pointer(a), Value::Integer(b)) => {
+                Value::Pointer(pointer_op_l(a, b).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?)
+            },
+            (Value::Integer(a), Value::Pointer(b)) => {
+                Value::Pointer(pointer_op_r(a, b).ok_or(EngineError::InvalidBinaryOp(self.clone(), other.clone()))?)
+            },
             (_, Value::Unknown) | (Value::Unknown, _) => Value::Unknown,
             _ => return Err(EngineError::InvalidTypeCombination(vec![self.clone(), other.clone()])),
         };
@@ -261,7 +273,13 @@ impl Value {
         Ok(result)
     }
 
-    fn calculate_unary<F1, F2, F3, F4>(&self, mut integer_op: F1, mut float_single_op: F2, mut float_double_op: F3, mut pointer_op: F4) -> Result<Self, EngineError>
+    fn calculate_unary<F1, F2, F3, F4>(
+        &self,
+        mut integer_op: F1,
+        mut float_single_op: F2,
+        mut float_double_op: F3,
+        mut pointer_op: F4,
+    ) -> Result<Self, EngineError>
     where
         F1: FnMut(&u64) -> Option<u64>,
         F2: FnMut(&f32) -> Option<f32>,
@@ -270,17 +288,31 @@ impl Value {
     {
         let result = match self {
             Value::Unknown => Value::Unknown,
-            Value::Integer(value) => Value::Integer(integer_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?),
+            Value::Integer(value) => {
+                Value::Integer(integer_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?)
+            },
             Value::VAddr(value) => Value::VAddr(integer_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?),
-            Value::FloatSingle(value) => Value::FloatSingle(float_single_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?),
-            Value::FloatDouble(value) => Value::FloatDouble(float_double_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?),
-            Value::Pointer(pointer) => Value::Pointer(pointer_op(pointer).ok_or(EngineError::InvalidUnaryOp(self.clone()))?),
+            Value::FloatSingle(value) => {
+                Value::FloatSingle(float_single_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?)
+            },
+            Value::FloatDouble(value) => {
+                Value::FloatDouble(float_double_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?)
+            },
+            Value::Pointer(pointer) => {
+                Value::Pointer(pointer_op(pointer).ok_or(EngineError::InvalidUnaryOp(self.clone()))?)
+            },
         };
 
         Ok(result)
     }
 
-    fn convert<F1, F2, F3, F4>(&self, mut integer_op: F1, mut float_single_op: F2, mut float_double_op: F3, mut pointer_op: F4) -> Result<Self, EngineError>
+    fn convert<F1, F2, F3, F4>(
+        &self,
+        mut integer_op: F1,
+        mut float_single_op: F2,
+        mut float_double_op: F3,
+        mut pointer_op: F4,
+    ) -> Result<Self, EngineError>
     where
         F1: FnMut(&u64) -> Option<Value>,
         F2: FnMut(&f32) -> Option<Value>,
@@ -289,7 +321,9 @@ impl Value {
     {
         let result = match self {
             Value::Unknown => Value::Unknown,
-            Value::VAddr(value) | Value::Integer(value) => integer_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?,
+            Value::VAddr(value) | Value::Integer(value) => {
+                integer_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?
+            },
             Value::FloatSingle(value) => float_single_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?,
             Value::FloatDouble(value) => float_double_op(value).ok_or(EngineError::InvalidUnaryOp(self.clone()))?,
             Value::Pointer(pointer) => pointer_op(pointer).ok_or(EngineError::InvalidUnaryOp(self.clone()))?,
@@ -298,7 +332,14 @@ impl Value {
         Ok(result)
     }
 
-    fn calculate_ternary<F1, F2, F3>(&self, other1: &Self, other2: &Self, mut integer_op: F1, mut float_single_op: F2, mut float_double_op: F3) -> Result<Self, EngineError>
+    fn calculate_ternary<F1, F2, F3>(
+        &self,
+        other1: &Self,
+        other2: &Self,
+        mut integer_op: F1,
+        mut float_single_op: F2,
+        mut float_double_op: F3,
+    ) -> Result<Self, EngineError>
     where
         F1: FnMut(&u64, &u64, &u64) -> Option<u64>,
         F2: FnMut(&f32, &f32, &f32) -> Option<f32>,
@@ -306,16 +347,24 @@ impl Value {
     {
         let result = match (self, other1, other2) {
             (Value::Unknown, _, _) | (_, Value::Unknown, _) | (_, _, Value::Unknown) => Some(Value::Unknown),
-            (Value::Integer(value1), Value::Integer(value2), Value::Integer(value3)) => integer_op(value1, value2, value3).map(Value::Integer),
+            (Value::Integer(value1), Value::Integer(value2), Value::Integer(value3)) => {
+                integer_op(value1, value2, value3).map(Value::Integer)
+            },
             (Value::VAddr(value1), Value::VAddr(value2), Value::VAddr(value3))
             | (Value::VAddr(value1), Value::VAddr(value2), Value::Integer(value3))
             | (Value::VAddr(value1), Value::Integer(value2), Value::VAddr(value3))
             | (Value::VAddr(value1), Value::Integer(value2), Value::Integer(value3))
             | (Value::Integer(value1), Value::VAddr(value2), Value::VAddr(value3))
             | (Value::Integer(value1), Value::VAddr(value2), Value::Integer(value3))
-            | (Value::Integer(value1), Value::Integer(value2), Value::VAddr(value3)) => integer_op(value1, value2, value3).map(Value::VAddr),
-            (Value::FloatSingle(value1), Value::FloatSingle(value2), Value::FloatSingle(value3)) => float_single_op(value1, value2, value3).map(Value::FloatSingle),
-            (Value::FloatDouble(value1), Value::FloatDouble(value2), Value::FloatDouble(value3)) => float_double_op(value1, value2, value3).map(Value::FloatDouble),
+            | (Value::Integer(value1), Value::Integer(value2), Value::VAddr(value3)) => {
+                integer_op(value1, value2, value3).map(Value::VAddr)
+            },
+            (Value::FloatSingle(value1), Value::FloatSingle(value2), Value::FloatSingle(value3)) => {
+                float_single_op(value1, value2, value3).map(Value::FloatSingle)
+            },
+            (Value::FloatDouble(value1), Value::FloatDouble(value2), Value::FloatDouble(value3)) => {
+                float_double_op(value1, value2, value3).map(Value::FloatDouble)
+            },
             _ => return Err(EngineError::InvalidTypeCombination(vec![self.clone(), other1.clone(), other2.clone()])),
         }
         .ok_or(EngineError::InvalidTernaryOp(self.clone(), other1.clone(), other2.clone()))?;

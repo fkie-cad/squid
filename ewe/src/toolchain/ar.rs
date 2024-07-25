@@ -94,7 +94,13 @@ impl ArWrapper {
         }
 
         /* Merge metadata files */
-        let mut output = OpenOptions::new().read(true).write(true).create(true).append(true).open(format!("{}.{}", self.output, EXTENSION)).unwrap();
+        let mut output = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .append(true)
+            .open(format!("{}.{}", self.output, EXTENSION))
+            .unwrap();
 
         for input in &self.inputs {
             let input = OpenOptions::new().read(true).open(format!("{input}.{EXTENSION}"));

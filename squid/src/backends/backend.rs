@@ -22,5 +22,10 @@ pub trait Backend {
     /// This function realizes the main functionality of a backend.
     /// It receives the process image and the event pool and constructs a runtime
     /// that enables a user to execute the code in the process image.
-    fn create_runtime(&mut self, image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error>;
+    fn create_runtime(
+        &mut self,
+        image: ProcessImage,
+        event_pool: EventPool,
+        logger: &Logger,
+    ) -> Result<Self::Runtime, Self::Error>;
 }

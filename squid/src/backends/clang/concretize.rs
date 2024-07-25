@@ -16,7 +16,15 @@ fn lookup_pointer(image: &ProcessImage, pointer: &Pointer, table: &mut HashMap<P
 
     let addr = match pointer {
         Pointer::Function(pointer) => {
-            let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+            let chunk = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap();
 
             let ChunkContent::Code(func) = chunk.content() else { unreachable!() };
             let entry = func.cfg().entry();
@@ -24,14 +32,31 @@ fn lookup_pointer(image: &ProcessImage, pointer: &Pointer, table: &mut HashMap<P
             func.cfg().basic_block(entry).unwrap().vaddr().unwrap()
         },
         Pointer::BasicBlock(pointer) => {
-            let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+            let chunk = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap();
 
             let ChunkContent::Code(func) = chunk.content() else { unreachable!() };
 
             func.cfg().basic_block(pointer.bb).unwrap().vaddr().unwrap()
         },
         Pointer::Global(pointer) => {
-            let addr = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap().vaddr();
+            let addr = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap()
+                .vaddr();
             addr + pointer.offset as VAddr
         },
         Pointer::Null => 0,

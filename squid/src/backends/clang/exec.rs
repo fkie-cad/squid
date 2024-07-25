@@ -79,7 +79,13 @@ impl AOTExecutor {
     }
 
     #[inline]
-    pub(crate) fn run(&mut self, memory: &mut Memory, event_channel: &mut EventChannel, registers: &mut Registers, var_storage: &mut Vec<u64>) -> VAddr {
+    pub(crate) fn run(
+        &mut self,
+        memory: &mut Memory,
+        event_channel: &mut EventChannel,
+        registers: &mut Registers,
+        var_storage: &mut Vec<u64>,
+    ) -> VAddr {
         let next_pc = (self.entrypoint)(
             memory.raw_pointer() as usize,
             event_channel.raw_pointer() as usize,

@@ -119,7 +119,11 @@ fn get_dependencies(elf: &goblin::elf::Elf) -> Vec<String> {
 }
 
 fn verify_elf(elf: &goblin::elf::Elf) -> bool {
-    elf.is_64 && elf.little_endian && elf.header.e_type == goblin::elf::header::ET_DYN && elf.header.e_machine == goblin::elf::header::EM_RISCV && has_no_tls(elf)
+    elf.is_64
+        && elf.little_endian
+        && elf.header.e_type == goblin::elf::header::ET_DYN
+        && elf.header.e_machine == goblin::elf::header::EM_RISCV
+        && has_no_tls(elf)
 }
 
 fn has_no_tls(elf: &goblin::elf::Elf) -> bool {
@@ -225,7 +229,12 @@ impl ElfParser {
         }
     }
 
-    pub(crate) fn parse(&mut self, path: &Path, event_pool: &mut EventPool, logger: &Logger) -> Result<Elf, LoaderError> {
+    pub(crate) fn parse(
+        &mut self,
+        path: &Path,
+        event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<Elf, LoaderError> {
         let file = mmap_file(path).map_err(|_| LoaderError::IOError(format!("Cannot read from {}", path.display())))?;
         let elf = goblin::elf::Elf::parse(&file).unwrap();
 

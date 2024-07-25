@@ -31,7 +31,13 @@ fn forward() -> ! {
 fn extract_program(args: &[String]) -> Option<&str> {
     let arg = args.first()?;
     let path = Path::new(arg);
-    path.file_name().and_then(|x| x.to_str()).map(|x| if x.starts_with(RISCV_PREFIX) { &x[RISCV_PREFIX.len() + 1..] } else { x })
+    path.file_name().and_then(|x| x.to_str()).map(|x| {
+        if x.starts_with(RISCV_PREFIX) {
+            &x[RISCV_PREFIX.len() + 1..]
+        } else {
+            x
+        }
+    })
 }
 
 fn usage(prog: &str) {

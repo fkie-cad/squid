@@ -1,15 +1,16 @@
 use squid::{
     backends::clang::{
+        perms::PERM_UNINIT,
         ClangBackend,
         ClangRuntime,
         ClangRuntimeFault,
-        perms::PERM_UNINIT,
     },
-    event::{EVENT_BREAKPOINT, EVENT_SYSCALL},
-    frontend::{
-        VAddr,
+    event::{
+        EVENT_BREAKPOINT,
+        EVENT_SYSCALL,
     },
-    passes::{AsanPass},
+    frontend::VAddr,
+    passes::AsanPass,
     riscv::{
         register::GpRegister,
         syscalls,
@@ -45,7 +46,9 @@ fn handle_asan_event(pass: &AsanPass, event: usize, runtime: &mut ClangRuntime) 
     } else if event == pass.calloc_event().map(|x| x.id()) {
         let a = runtime.get_gp_register(GpRegister::a0) as usize;
         let b = runtime.get_gp_register(GpRegister::a1) as usize;
-        let size = a.checked_mul(b).ok_or_else(|| ClangRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
+        let size = a
+            .checked_mul(b)
+            .ok_or_else(|| ClangRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
         let addr = runtime.dynstore_allocate(size)?;
         for perm in runtime.permissions_mut(addr, size)? {
             *perm &= !PERM_UNINIT;
@@ -54,14 +57,13 @@ fn handle_asan_event(pass: &AsanPass, event: usize, runtime: &mut ClangRuntime) 
     } else {
         unreachable!()
     }
-    
+
     Ok(())
 }
 
 fn forward_syscall(runtime: &mut ClangRuntime) -> Result<(), ClangRuntimeFault> {
     let number = runtime.get_gp_register(GpRegister::a7);
 
-   
     match number {
         syscalls::exit_group => {
             let code = runtime.get_gp_register(GpRegister::a0) as i32;
@@ -121,7 +123,7 @@ fn display_crash_report(fault: ClangRuntimeFault, runtime: ClangRuntime) -> ! {
     println!("ERROR: {:?} at pc={:#x}", raw_code, last_instr);
     println!("{:?}", fault);
     println!("=================================================================");
-    
+
     std::process::exit(127);
 }
 
@@ -160,7 +162,7 @@ fn main() {
     let (prog, args) = parse_args();
     let search_paths = parse_library_path();
     let preloads = parse_preload();
-    
+
     // 1) Load and lift the target binary into our custom IR
     let mut compiler = Compiler::load_elf(prog.clone(), &search_paths, &preloads).unwrap();
 

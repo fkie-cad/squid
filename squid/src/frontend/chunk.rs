@@ -318,7 +318,13 @@ impl ChunkParser {
         assert_eq!(cursor, parent.last_addr() + 1);
     }
 
-    fn parse_plt(&mut self, parent: &Symbol, grandparent: &Section, content: &[u8], event_pool: &mut EventPool) -> Result<(), LoaderError> {
+    fn parse_plt(
+        &mut self,
+        parent: &Symbol,
+        grandparent: &Section,
+        content: &[u8],
+        event_pool: &mut EventPool,
+    ) -> Result<(), LoaderError> {
         if let Some(mut file_offset) = grandparent.offset() {
             assert!(self.chunks.is_empty());
 
@@ -339,7 +345,8 @@ impl ChunkParser {
                 i += 4;
             }
 
-            let func = Lifter::lift(parent.vaddr(), grandparent.last_addr() + 1, &instructions[0..i], None, event_pool)?;
+            let func =
+                Lifter::lift(parent.vaddr(), grandparent.last_addr() + 1, &instructions[0..i], None, event_pool)?;
             let content = ChunkContent::Code(func);
             self.chunks.push(Chunk::new_resolved(content, parent.vaddr(), i));
 
@@ -363,9 +370,19 @@ impl ChunkParser {
 
                 assert!(end_entry > start_entry);
 
-                let func = Lifter::lift(parent.vaddr() + start_entry as VAddr, grandparent.last_addr() + 1, &instructions[start_entry..end_entry], None, event_pool)?;
+                let func = Lifter::lift(
+                    parent.vaddr() + start_entry as VAddr,
+                    grandparent.last_addr() + 1,
+                    &instructions[start_entry..end_entry],
+                    None,
+                    event_pool,
+                )?;
                 let content = ChunkContent::Code(func);
-                self.chunks.push(Chunk::new_resolved(content, parent.vaddr() + start_entry as VAddr, end_entry - start_entry));
+                self.chunks.push(Chunk::new_resolved(
+                    content,
+                    parent.vaddr() + start_entry as VAddr,
+                    end_entry - start_entry,
+                ));
 
                 i = end_entry;
             }
@@ -388,7 +405,8 @@ impl ChunkParser {
         if grandparent.perms().is_executable() {
             let offset = grandparent.offset().unwrap() + (vaddr - grandparent.vaddr()) as usize;
             let func = listing.lookup_symbol(parent)?;
-            let func = Lifter::lift(vaddr, grandparent.last_addr() + 1, &content[offset..offset + size], func, event_pool)?;
+            let func =
+                Lifter::lift(vaddr, grandparent.last_addr() + 1, &content[offset..offset + size], func, event_pool)?;
             Ok(ChunkContent::Code(func))
         } else if let Some(mut offset) = grandparent.offset() {
             offset += (vaddr - grandparent.vaddr()) as usize;
@@ -404,7 +422,14 @@ impl ChunkParser {
         }
     }
 
-    fn fill_gaps(&mut self, parent: &Symbol, grandparent: &Section, content: &[u8], listing: &ListingManager, event_pool: &mut EventPool) -> Result<(), LoaderError> {
+    fn fill_gaps(
+        &mut self,
+        parent: &Symbol,
+        grandparent: &Section,
+        content: &[u8],
+        listing: &ListingManager,
+        event_pool: &mut EventPool,
+    ) -> Result<(), LoaderError> {
         if grandparent.perms().is_executable() && !self.chunks.is_empty() {
             return Err(LoaderError::InvalidELF("Binary has relocations in executable section".to_string()));
         }

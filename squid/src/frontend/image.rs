@@ -131,7 +131,13 @@ pub(crate) struct ProcessImageBuilder {
 }
 
 impl ProcessImageBuilder {
-    pub(crate) fn build<S>(binary: S, search_paths: &[S], preloads: &[S], event_pool: &mut EventPool, logger: &Logger) -> Result<ProcessImage, LoaderError>
+    pub(crate) fn build<S>(
+        binary: S,
+        search_paths: &[S],
+        preloads: &[S],
+        event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<ProcessImage, LoaderError>
     where
         S: AsRef<Path>,
     {
@@ -194,7 +200,10 @@ impl ProcessImageBuilder {
                                 definition = Some(pointer.clone());
                             },
                             _ => {
-                                return Err(LoaderError::LoadingError(format!("Constructor is not a function: {:?}", pointer)));
+                                return Err(LoaderError::LoadingError(format!(
+                                    "Constructor is not a function: {:?}",
+                                    pointer
+                                )));
                             },
                         }
                     }
@@ -212,14 +221,21 @@ impl ProcessImageBuilder {
             match ctor {
                 Constructor::Function(elf, addr) => {
                     let pointer = self.find_function(*elf, *addr)?;
-                    let pointer = pointer.ok_or_else(|| LoaderError::LoadingError(format!("Could not find constructor {:#x} in process image", addr)))?;
+                    let pointer = pointer.ok_or_else(|| {
+                        LoaderError::LoadingError(format!("Could not find constructor {:#x} in process image", addr))
+                    })?;
                     ret.push(pointer);
                 },
                 Constructor::Array(elf, array) => {
                     for i in 0..array.entries {
                         let addr = array.vaddr + i as VAddr * 8;
                         let pointer = self.find_code_pointer(*elf, addr)?;
-                        let pointer = pointer.ok_or_else(|| LoaderError::LoadingError(format!("Could not find constructor function {:#x} in process image", addr)))?;
+                        let pointer = pointer.ok_or_else(|| {
+                            LoaderError::LoadingError(format!(
+                                "Could not find constructor function {:#x} in process image",
+                                addr
+                            ))
+                        })?;
                         ret.push(pointer);
                     }
                 },
@@ -253,7 +269,10 @@ impl ProcessImageBuilder {
 
                             if func.cfg().basic_block(entry).unwrap().vaddr() == Some(vaddr) {
                                 if definition.is_some() {
-                                    return Err(LoaderError::LoadingError(format!("Multiple occurences of function {:#x}", vaddr)));
+                                    return Err(LoaderError::LoadingError(format!(
+                                        "Multiple occurences of function {:#x}",
+                                        vaddr
+                                    )));
                                 }
 
                                 definition = Some(FunctionPointer {
@@ -273,9 +292,12 @@ impl ProcessImageBuilder {
     }
 
     fn symbolize_entrypoint(&self) -> Result<FunctionPointer, LoaderError> {
-        let entrypoint = self.entrypoint.ok_or_else(|| LoaderError::InvalidELF("Could not find an entrypoint".to_string()))?;
+        let entrypoint =
+            self.entrypoint.ok_or_else(|| LoaderError::InvalidELF("Could not find an entrypoint".to_string()))?;
         let sym_entrypoint = self.find_function(0, entrypoint)?;
-        sym_entrypoint.ok_or_else(|| LoaderError::LoadingError(format!("Could not find entrypoint {:#x} in process image", entrypoint)))
+        sym_entrypoint.ok_or_else(|| {
+            LoaderError::LoadingError(format!("Could not find entrypoint {:#x} in process image", entrypoint))
+        })
     }
 
     fn symbolize(&mut self, logger: &Logger) -> Result<(), LoaderError> {
@@ -351,9 +373,15 @@ impl ProcessImageBuilder {
                 if let Some(symbol_addr) = symbol.public_name(name) {
                     for chunk in symbol.iter_chunks() {
                         if chunk.contains_address(symbol_addr) {
-                            if chunk.pending().is_some() || matches!(chunk.content(), ChunkContent::Data { .. } | ChunkContent::Pointer(_)) {
+                            if chunk.pending().is_some()
+                                || matches!(chunk.content(), ChunkContent::Data { .. } | ChunkContent::Pointer(_))
+                            {
                                 if definition.is_some() {
-                                    return Err(LoaderError::SymbolResolutionError(format!("{} has multiple exports of {}", self.elfs[elf].path().display(), name)));
+                                    return Err(LoaderError::SymbolResolutionError(format!(
+                                        "{} has multiple exports of {}",
+                                        self.elfs[elf].path().display(),
+                                        name
+                                    )));
                                 }
 
                                 definition = Some(Pointer::Global(GlobalPointer {
@@ -369,7 +397,11 @@ impl ProcessImageBuilder {
                                 for bb in func.cfg().iter_basic_blocks() {
                                     if bb.vaddr() == Some(symbol_addr) {
                                         if definition.is_some() {
-                                            return Err(LoaderError::SymbolResolutionError(format!("{} has multiple exports of {}", self.elfs[elf].path().display(), name)));
+                                            return Err(LoaderError::SymbolResolutionError(format!(
+                                                "{} has multiple exports of {}",
+                                                self.elfs[elf].path().display(),
+                                                name
+                                            )));
                                         }
 
                                         if bb.id() == func.cfg().entry() {
@@ -431,7 +463,11 @@ impl ProcessImageBuilder {
                 let pointer = if let Some(pointer) = definition {
                     pointer
                 } else if is_optional_import(&name) {
-                    logger.warning(format!("Ignoring unresolved symbol '{}' from {}", name, self.elfs[i].path().display()));
+                    logger.warning(format!(
+                        "Ignoring unresolved symbol '{}' from {}",
+                        name,
+                        self.elfs[i].path().display()
+                    ));
                     Pointer::Null
                 } else {
                     let msg = format!("Unable to resolve '{}' from {}", name, self.elfs[i].path().display());
@@ -439,7 +475,14 @@ impl ProcessImageBuilder {
                     return Err(LoaderError::SymbolResolutionError(msg));
                 };
 
-                self.elfs[i].section_mut(src_section).unwrap().symbol_mut(src_symbol).unwrap().chunk_mut(src_chunk).unwrap().resolve(pointer);
+                self.elfs[i]
+                    .section_mut(src_section)
+                    .unwrap()
+                    .symbol_mut(src_symbol)
+                    .unwrap()
+                    .chunk_mut(src_chunk)
+                    .unwrap()
+                    .resolve(pointer);
             }
         }
 
@@ -468,7 +511,11 @@ impl ProcessImageBuilder {
                             if func.perfect() {
                                 perfect += 1;
                             } else {
-                                logger.debug(format!("Function at {:#x} from {} has imperfect CFG", chunk.vaddr(), elf.path().display()));
+                                logger.debug(format!(
+                                    "Function at {:#x} from {} has imperfect CFG",
+                                    chunk.vaddr(),
+                                    elf.path().display()
+                                ));
                             }
 
                             total += 1;
@@ -481,7 +528,14 @@ impl ProcessImageBuilder {
         logger.info(format!("{} / {} functions have perfect CFG", perfect, total));
     }
 
-    fn lift_elfs<S>(&mut self, binary: S, search_paths: &[S], preloads: &[S], event_pool: &mut EventPool, logger: &Logger) -> Result<(), LoaderError>
+    fn lift_elfs<S>(
+        &mut self,
+        binary: S,
+        search_paths: &[S],
+        preloads: &[S],
+        event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<(), LoaderError>
     where
         S: AsRef<Path>,
     {

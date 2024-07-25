@@ -401,9 +401,9 @@ mod tests {
     use crate::{
         event::EventPool,
         frontend::ao::{
+            ArithmeticBehavior,
             BasicBlock,
             CFG,
-            ArithmeticBehavior,
         },
         riscv::register::GpRegister,
     };

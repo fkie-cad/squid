@@ -16,11 +16,11 @@ use crate::{
 pub enum ArithmeticBehavior {
     /// Wrap around zero
     Wrapping,
-    
+
     /// Clamp the result to the maximum of the data-type range. If the inner value is `true` use
     /// LONG_MAX as the limit, else ULONG_MAX is used.
     Saturating(bool),
-    
+
     /// Throw an error if an overflow occurs. If the inner value is `true` use LONG_MAX as the limit, else
     /// ULONG_MAX is used.
     Checked(bool),

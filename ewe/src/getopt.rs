@@ -195,7 +195,9 @@ impl<'a> GetoptParser<'a> {
                             match opt.val {
                                 OptVal::Required | OptVal::Optional => {},
                                 OptVal::None => {
-                                    return Err(format!("Supplied a value for argument {name} where none was expected"));
+                                    return Err(format!(
+                                        "Supplied a value for argument {name} where none was expected"
+                                    ));
                                 },
                             }
 
@@ -325,17 +327,46 @@ mod tests {
 
     #[test]
     fn test_parser1() {
-        let parser =
-            GetoptParser::new().long("long-value", OptVal::Required, None).long("long", OptVal::None, None).optstring("wxyzo:").short('p', OptVal::Optional, Some("p-value"));
+        let parser = GetoptParser::new()
+            .long("long-value", OptVal::Required, None)
+            .long("long", OptVal::None, None)
+            .optstring("wxyzo:")
+            .short('p', OptVal::Optional, Some("p-value"));
 
-        let args = parser.parse_long_only(&["progname", "-", "--long-value=value", "pos2", "-long", "pos3", "-xyzovalue", "-p", "pos4"]).unwrap();
+        let args = parser
+            .parse_long_only(&[
+                "progname",
+                "-",
+                "--long-value=value",
+                "pos2",
+                "-long",
+                "pos3",
+                "-xyzovalue",
+                "-p",
+                "pos4",
+            ])
+            .unwrap();
         println!("{:#?}", args);
         assert_eq!(args.arg_value("long-value"), Some("value"));
         assert!(args.arg_present("long"));
         assert!(args.arg_present('x'));
         assert!(!args.arg_present("w"));
 
-        let args = parser.parse_long_only(&["progname", "-long-value", "value", "-o", "value", "-x", "positional", "-pvalue", "--", "-y", "-z"]).unwrap();
+        let args = parser
+            .parse_long_only(&[
+                "progname",
+                "-long-value",
+                "value",
+                "-o",
+                "value",
+                "-x",
+                "positional",
+                "-pvalue",
+                "--",
+                "-y",
+                "-z",
+            ])
+            .unwrap();
         println!("{:#?}", args);
         assert!(!args.arg_present("long"));
     }

@@ -39,11 +39,20 @@ impl ImageDOTPass {
 
         writeln!(&mut output, "digraph ProcessImage {{")?;
         writeln!(&mut output, "graph [center=true];")?;
-        writeln!(&mut output, "node [shape=rectangle, style=filled, fillcolor=cornsilk, fontcolor=black, ordering=out];")?;
+        writeln!(
+            &mut output,
+            "node [shape=rectangle, style=filled, fillcolor=cornsilk, fontcolor=black, ordering=out];"
+        )?;
         writeln!(&mut output, "root [shape=point, id=\"root\"];")?;
 
         for elf in image.iter_elfs() {
-            writeln!(&mut output, "elf_{} [label=\"[{}] {}\"];", elf.id(), elf.id(), elf.path().file_name().unwrap().to_str().unwrap())?;
+            writeln!(
+                &mut output,
+                "elf_{} [label=\"[{}] {}\"];",
+                elf.id(),
+                elf.id(),
+                elf.path().file_name().unwrap().to_str().unwrap()
+            )?;
             writeln!(&mut output, "root -> elf_{};", elf.id())?;
 
             for section in elf.iter_sections() {
@@ -60,7 +69,14 @@ impl ImageDOTPass {
                 writeln!(&mut output, "elf_{} -> elf_{}_section_{};", elf.id(), elf.id(), section.id())?;
 
                 for symbol in section.iter_symbols() {
-                    write!(&mut output, "elf_{}_section_{}_symbol_{} [label=\"[{}]\\n", elf.id(), section.id(), symbol.id(), symbol.id())?;
+                    write!(
+                        &mut output,
+                        "elf_{}_section_{}_symbol_{} [label=\"[{}]\\n",
+                        elf.id(),
+                        section.id(),
+                        symbol.id(),
+                        symbol.id()
+                    )?;
 
                     for public_name in symbol.public_names() {
                         write!(&mut output, "{}\\n", public_name)?;
@@ -76,7 +92,15 @@ impl ImageDOTPass {
 
                     writeln!(&mut output, "\"];")?;
 
-                    writeln!(&mut output, "elf_{}_section_{} -> elf_{}_section_{}_symbol_{};", elf.id(), section.id(), elf.id(), section.id(), symbol.id())?;
+                    writeln!(
+                        &mut output,
+                        "elf_{}_section_{} -> elf_{}_section_{}_symbol_{};",
+                        elf.id(),
+                        section.id(),
+                        elf.id(),
+                        section.id(),
+                        symbol.id()
+                    )?;
 
                     for chunk in symbol.iter_chunks() {
                         writeln!(
@@ -135,7 +159,12 @@ impl Pass for ImageDOTPass {
         "ImageDOTPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        _event_pool: &mut EventPool,
+        _logger: &Logger,
+    ) -> Result<(), Self::Error> {
         self.create_dot(image)
     }
 }
@@ -222,15 +251,22 @@ impl Pass for FunctionDOTPass {
         "FunctionDOTPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        _event_pool: &mut EventPool,
+        _logger: &Logger,
+    ) -> Result<(), Self::Error> {
         for elf in image.iter_elfs() {
             for section in elf.iter_sections() {
                 for symbol in section.iter_symbols() {
                     let mut found = false;
 
-                    found |= if let Some(name) = &self.public_name { symbol.public_name(name).is_some() } else { false };
+                    found |=
+                        if let Some(name) = &self.public_name { symbol.public_name(name).is_some() } else { false };
 
-                    found |= if let Some(name) = &self.private_name { symbol.private_name(name).is_some() } else { false };
+                    found |=
+                        if let Some(name) = &self.private_name { symbol.private_name(name).is_some() } else { false };
 
                     for chunk in symbol.iter_chunks() {
                         found |= if let Some(addr) = &self.addr { chunk.contains_address(*addr) } else { false };

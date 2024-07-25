@@ -91,7 +91,12 @@ impl Pass for BreakpointPass {
         "BreakpointPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<(), Self::Error> {
         let mut count = 0;
 
         for elf in image.iter_elfs_mut() {

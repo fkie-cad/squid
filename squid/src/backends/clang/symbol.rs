@@ -1,8 +1,14 @@
 use std::collections::HashMap;
-use crate::backends::clang::{AddressSpace, address::POINTER_CODE_SHIFT};
-use crate::frontend::{
-    ProcessImage,
-    VAddr,
+
+use crate::{
+    backends::clang::{
+        address::POINTER_CODE_SHIFT,
+        AddressSpace,
+    },
+    frontend::{
+        ProcessImage,
+        VAddr,
+    },
 };
 
 /// The type of a symbol in the runtime's symbol store

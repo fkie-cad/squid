@@ -9,6 +9,7 @@ use crate::{
         ao::{
             error::AoError,
             ops::{
+                ArithmeticBehavior,
                 Comparison,
                 Half,
                 Op,
@@ -16,7 +17,6 @@ use crate::{
                 Signedness,
                 Var,
                 VarType,
-                ArithmeticBehavior,
             },
         },
         idmap::{
@@ -389,7 +389,9 @@ impl BasicBlock {
 
     pub fn store_gp_register(&mut self, reg: GpRegister, var: Var) -> Result<(), AoError> {
         if !var.is_number() {
-            return Err(AoError::InvalidVarType("Attempted to store a non-number into a general purpose register".to_string()));
+            return Err(AoError::InvalidVarType(
+                "Attempted to store a non-number into a general purpose register".to_string(),
+            ));
         }
 
         if reg != GpRegister::zero {
@@ -442,7 +444,11 @@ impl BasicBlock {
 
     pub fn add(&mut self, src1: Var, src2: Var, behavior: ArithmeticBehavior) -> Result<Var, AoError> {
         if src1.vartype() != src2.vartype() {
-            return Err(AoError::InvalidVarType(format!("Addition of variables with incompatible types: {:?} and {:?}", src1.vartype(), src2.vartype())));
+            return Err(AoError::InvalidVarType(format!(
+                "Addition of variables with incompatible types: {:?} and {:?}",
+                src1.vartype(),
+                src2.vartype()
+            )));
         }
         let dst = self.next_variable(src1.vartype());
         self.insert_op(Op::Add {
@@ -456,7 +462,11 @@ impl BasicBlock {
 
     pub fn compare(&mut self, lhs: Var, rhs: Var, comp: Comparison) -> Result<Var, AoError> {
         if lhs.vartype() != rhs.vartype() {
-            return Err(AoError::InvalidVarType(format!("Comparison of variables with incompatible types: {:?} and {:?}", lhs.vartype(), rhs.vartype())));
+            return Err(AoError::InvalidVarType(format!(
+                "Comparison of variables with incompatible types: {:?} and {:?}",
+                lhs.vartype(),
+                rhs.vartype()
+            )));
         }
         let dst = self.next_variable(VarType::Number);
         self.insert_op(Op::Compare {
@@ -885,7 +895,9 @@ impl BasicBlock {
 
     pub fn store_fp_register(&mut self, reg: FpRegister, var: Var) -> Result<(), AoError> {
         if !var.is_float64() {
-            return Err(AoError::InvalidVarType("Attempted to store a non-float64 into a floating point register".to_string()));
+            return Err(AoError::InvalidVarType(
+                "Attempted to store a non-float64 into a floating point register".to_string(),
+            ));
         }
         let reg = Register::Fp(reg);
         self.store_register(reg, var);

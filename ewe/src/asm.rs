@@ -33,7 +33,11 @@ pub fn is_digit_label(label: &[u8]) -> bool {
 }
 
 pub fn is_debug_label(label: &[u8]) -> bool {
-    label.starts_with(b"LFB") || label.starts_with(b"LFE") || label.starts_with(b"LBB") || label.starts_with(b"LBE") || label.starts_with(b"LVL")
+    label.starts_with(b"LFB")
+        || label.starts_with(b"LFE")
+        || label.starts_with(b"LBB")
+        || label.starts_with(b"LBE")
+        || label.starts_with(b"LVL")
 }
 
 //TODO: use directive struct
@@ -88,7 +92,13 @@ pub fn parse_section_directive(line: &[u8], has_sub: bool) -> (&str, Option<&str
     }
 
     if flags_start < line.len() {
-        assert_eq!(line[flags_start], b'"', "Failed to parse section directive (has_sub={}): {}", has_sub, std::str::from_utf8(line).unwrap());
+        assert_eq!(
+            line[flags_start],
+            b'"',
+            "Failed to parse section directive (has_sub={}): {}",
+            has_sub,
+            std::str::from_utf8(line).unwrap()
+        );
         flags_start += 1;
     }
 
@@ -100,7 +110,8 @@ pub fn parse_section_directive(line: &[u8], has_sub: bool) -> (&str, Option<&str
 
     /* Return substrings */
     let name = std::str::from_utf8(&line[name_start..name_end]).unwrap();
-    let flags = if flags_start < line.len() { Some(std::str::from_utf8(&line[flags_start..flags_end]).unwrap()) } else { None };
+    let flags =
+        if flags_start < line.len() { Some(std::str::from_utf8(&line[flags_start..flags_end]).unwrap()) } else { None };
 
     (name, flags)
 }
@@ -318,7 +329,9 @@ mod tests {
         let d = Directive::new::<b','>(b".section        .rodata.str1.8,\"aMS\",@progbits,1");
         println!("{:?}", d);
 
-        let d = Directive::new::<b','>(b".ascii  \", right (C) 2021 Free Software Foundation, Inc.\\nThis is \\\"free\\\" \"");
+        let d = Directive::new::<b','>(
+            b".ascii  \", right (C) 2021 Free Software Foundation, Inc.\\nThis is \\\"free\\\" \"",
+        );
         println!("{:?}", d);
     }
 }

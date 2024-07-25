@@ -159,7 +159,12 @@ pub(crate) struct SectionParser {
 }
 
 impl SectionParser {
-    pub(crate) fn parse(elf: &goblin::elf::Elf, content: &[u8], listing: &ListingManager, event_pool: &mut EventPool) -> Result<IdMap<Section>, LoaderError> {
+    pub(crate) fn parse(
+        elf: &goblin::elf::Elf,
+        content: &[u8],
+        listing: &ListingManager,
+        event_pool: &mut EventPool,
+    ) -> Result<IdMap<Section>, LoaderError> {
         /* Parse sections */
         let mut parser = Self::new();
         parser.parse_program_headers(elf)?;
@@ -223,7 +228,13 @@ impl SectionParser {
                 let uninit_size = ph.p_memsz - ph.p_filesz;
 
                 if ph.p_filesz > 0 {
-                    self.add_section(perms, ph.p_vaddr as VAddr, Some(ph.p_offset as usize), ph.p_filesz as usize, true)?;
+                    self.add_section(
+                        perms,
+                        ph.p_vaddr as VAddr,
+                        Some(ph.p_offset as usize),
+                        ph.p_filesz as usize,
+                        true,
+                    )?;
                 }
 
                 if uninit_size > 0 {
@@ -243,14 +254,27 @@ impl SectionParser {
                     _ => Some(sh.sh_offset as usize),
                 };
 
-                self.add_section(Perms::from_section_header(sh), sh.sh_addr as VAddr, offset, sh.sh_size as usize, false)?;
+                self.add_section(
+                    Perms::from_section_header(sh),
+                    sh.sh_addr as VAddr,
+                    offset,
+                    sh.sh_size as usize,
+                    false,
+                )?;
             }
         }
 
         Ok(())
     }
 
-    fn add_section(&mut self, perms: Perms, vaddr: VAddr, offset: Option<usize>, size: usize, from_segment: bool) -> Result<(), LoaderError> {
+    fn add_section(
+        &mut self,
+        perms: Perms,
+        vaddr: VAddr,
+        offset: Option<usize>,
+        size: usize,
+        from_segment: bool,
+    ) -> Result<(), LoaderError> {
         if size == 0 {
             return Ok(());
         } else if perms.is_writable() && perms.is_executable() {
@@ -291,7 +315,8 @@ impl SectionParser {
                     self.sections.insert(idx, old_section);
                     self.sections.insert(idx + 1, new_section);
                 } else {
-                    let mut left = Section::new(old_section.perms, old_section.vaddr, old_section.offset, old_section.size);
+                    let mut left =
+                        Section::new(old_section.perms, old_section.vaddr, old_section.offset, old_section.size);
                     let mut right = old_section;
 
                     left.size = (new_section.vaddr - left.vaddr) as usize;

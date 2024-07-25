@@ -31,7 +31,9 @@ const ANIMATION: &[&str; 2] = &["...", ""];
 impl Logger {
     pub(crate) fn spinner() -> Self {
         let bar = ProgressBar::new_spinner();
-        bar.set_style(ProgressStyle::with_template("{prefix:.magenta/red} {msg} {spinner}").unwrap().tick_strings(ANIMATION));
+        bar.set_style(
+            ProgressStyle::with_template("{prefix:.magenta/red} {msg} {spinner}").unwrap().tick_strings(ANIMATION),
+        );
         bar.set_prefix("[🦑]");
 
         Self {

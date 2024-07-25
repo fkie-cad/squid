@@ -39,6 +39,7 @@ use crate::{
     frontend::{
         ao::{
             engine,
+            ArithmeticBehavior,
             Comparison,
             Edge,
             Half,
@@ -48,7 +49,6 @@ use crate::{
             Var,
             VarType,
             CFG,
-            ArithmeticBehavior,
         },
         ChunkContent,
         HasId,
@@ -169,7 +169,8 @@ impl CLifter {
     }
 
     fn compile_code(&mut self, cc: &str, cflags: &[String], logger: &Logger) -> Result<(), CLifterError> {
-        let mut args = vec!["-o", self.out_binary.to_str().unwrap(), "-fPIC", "-shared", "-fvisibility=hidden", "-nostdlib"];
+        let mut args =
+            vec!["-o", self.out_binary.to_str().unwrap(), "-fPIC", "-shared", "-fvisibility=hidden", "-nostdlib"];
         for cflag in cflags {
             args.push(cflag.as_ref());
         }
@@ -196,7 +197,13 @@ impl CLifter {
         Ok(())
     }
 
-    fn generate_c_code(&mut self, image: &ProcessImage, memory: &Memory, varstore: &VariableStorage, logger: &Logger) -> Result<(), CLifterError> {
+    fn generate_c_code(
+        &mut self,
+        image: &ProcessImage,
+        memory: &Memory,
+        varstore: &VariableStorage,
+        logger: &Logger,
+    ) -> Result<(), CLifterError> {
         logger.info(format!("Generating {}", self.out_source.display()));
 
         /* First collect subgraphs */
@@ -284,7 +291,10 @@ impl CLifter {
         writeln!(out_file, "#define POINTER_IDX_MASK  {:#x}ULL", POINTER_CODE_MASK)?;
         writeln!(out_file, "#define POINTER_INDEX_SHIFT  {}", POINTER_CODE_SHIFT)?;
         writeln!(out_file, "#define POINTER_TAG_CODE {}ULL", POINTER_TAG_CODE >> POINTER_TAG_SHIFT)?;
-        writeln!(out_file, "#define TAG_BB_ADDRESS(address, func) (address | ( ((uint64_t)(void*) func) - ((uint64_t)(void*) run) ))")?;
+        writeln!(
+            out_file,
+            "#define TAG_BB_ADDRESS(address, func) (address | ( ((uint64_t)(void*) func) - ((uint64_t)(void*) run) ))"
+        )?;
 
         writeln!(out_file, "#define REGION_BITS {}", SNAPSHOT_REGION_SIZE.ilog2())?;
         writeln!(out_file, "#define REINTERPRET(T, x) ( *((T*)(&(x))) )")?;
@@ -297,14 +307,20 @@ impl CLifter {
         writeln!(out_file, "typedef __int128 int128_t;")?;
         writeln!(out_file, "typedef unsigned __int128 uint128_t;")?;
         writeln!(out_file, "typedef struct _Context Context;")?;
-        writeln!(out_file, "typedef void*(*BasicBlockFn)(Context* ctx, uint64_t* next_pc, uint64_t* num_instructions);")?;
+        writeln!(
+            out_file,
+            "typedef void*(*BasicBlockFn)(Context* ctx, uint64_t* next_pc, uint64_t* num_instructions);"
+        )?;
 
         Ok(())
     }
 
     fn emit_types(&mut self, out_file: &mut BufWriter<File>, memory: &Memory) -> Result<(), CLifterError> {
         /* Event channel */
-        writeln!(out_file, "typedef struct __attribute__((packed)) {{ uint64_t length; uint64_t data[]; }} EventChannel;")?;
+        writeln!(
+            out_file,
+            "typedef struct __attribute__((packed)) {{ uint64_t length; uint64_t data[]; }} EventChannel;"
+        )?;
 
         /* AOT return codes */
         writeln!(out_file, "enum AOTReturnCode {{")?;
@@ -322,7 +338,10 @@ impl CLifter {
         writeln!(out_file, "}};")?;
 
         /* Return buffer */
-        writeln!(out_file, "typedef struct {{ uint32_t code; uint64_t arg0; uint64_t arg1; uint64_t instr_count; }} ReturnBuffer;")?;
+        writeln!(
+            out_file,
+            "typedef struct {{ uint32_t code; uint64_t arg0; uint64_t arg1; uint64_t instr_count; }} ReturnBuffer;"
+        )?;
 
         /* Registers */
         writeln!(out_file, "typedef struct __attribute__((packed)) {{ uint64_t gp[32]; uint64_t pc; uint64_t current_addr; double fp[32]; uint64_t fcsr; }} Registers;")?;
@@ -340,7 +359,10 @@ impl CLifter {
         writeln!(out_file, "#pragma clang diagnostic ignored \"-Wflexible-array-extensions\"")?;
         writeln!(out_file, "#pragma clang diagnostic ignored \"-Wzero-length-array\"")?;
 
-        writeln!(out_file, "typedef struct __attribute__((packed)) {{ uint64_t size; uint64_t regions[]; }} SnapshotStack;")?;
+        writeln!(
+            out_file,
+            "typedef struct __attribute__((packed)) {{ uint64_t size; uint64_t regions[]; }} SnapshotStack;"
+        )?;
 
         let content_size = memory.offset_perms();
         let perms_size = memory.offset_dirty_bits() - memory.offset_perms();
@@ -361,7 +383,12 @@ impl CLifter {
         Ok(())
     }
 
-    fn emit_function_table(&mut self, out_file: &mut BufWriter<File>, image: &ProcessImage, subgraphs: &[Vec<SubGraph>]) -> Result<(), CLifterError> {
+    fn emit_function_table(
+        &mut self,
+        out_file: &mut BufWriter<File>,
+        image: &ProcessImage,
+        subgraphs: &[Vec<SubGraph>],
+    ) -> Result<(), CLifterError> {
         /* Forward declarations of basic block functions */
         let mut subgraphs_iter = subgraphs.iter();
 
@@ -374,7 +401,11 @@ impl CLifter {
 
                             for subgraph in subgraphs {
                                 let bb = func.cfg().basic_block(subgraph.entry()).unwrap();
-                                write!(out_file, "static void* basic_block_{:#x} (Context*, uint64_t*, uint64_t*);", bb.vaddr().unwrap())?;
+                                write!(
+                                    out_file,
+                                    "static void* basic_block_{:#x} (Context*, uint64_t*, uint64_t*);",
+                                    bb.vaddr().unwrap()
+                                )?;
                             }
                         }
                     }
@@ -914,7 +945,13 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
         Ok(())
     }
 
-    fn emit_subgraph(&mut self, out_file: &mut BufWriter<File>, cfg: &CFG, subgraph: &SubGraph, varstore: &VariableStorage) -> Result<(), CLifterError> {
+    fn emit_subgraph(
+        &mut self,
+        out_file: &mut BufWriter<File>,
+        cfg: &CFG,
+        subgraph: &SubGraph,
+        varstore: &VariableStorage,
+    ) -> Result<(), CLifterError> {
         /* Collect addresses belonging to SubGraph */
         let mut addrs = Vec::new();
         for id in subgraph.nodes() {
@@ -924,7 +961,11 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
 
         /* Emit SubGraph code */
         let addr = cfg.basic_block(subgraph.entry()).unwrap().vaddr().unwrap();
-        writeln!(out_file, "static void* basic_block_{:#x} (Context* ctx, uint64_t* next_pc, uint64_t* num_instructions) {{", addr)?;
+        writeln!(
+            out_file,
+            "static void* basic_block_{:#x} (Context* ctx, uint64_t* next_pc, uint64_t* num_instructions) {{",
+            addr
+        )?;
 
         for (i, id) in subgraph.nodes().iter().enumerate() {
             let next_bb = subgraph.nodes().get(i + 1).copied();
@@ -1028,7 +1069,12 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     vaddr,
                 } => {
                     if matches!(AddressSpace::decode(*vaddr), AddressSpace::Code(_)) && !addrs.contains(vaddr) {
-                        writeln!(out_file, "{0} = TAG_BB_ADDRESS({1:#x}ULL, basic_block_{1:#x});", var_type_and_name(dst), *vaddr)?;
+                        writeln!(
+                            out_file,
+                            "{0} = TAG_BB_ADDRESS({1:#x}ULL, basic_block_{1:#x});",
+                            var_type_and_name(dst),
+                            *vaddr
+                        )?;
                     } else {
                         writeln!(out_file, "{} = {:#x}ULL;", var_type_and_name(dst), *vaddr)?;
                     }
@@ -1039,12 +1085,19 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                 } => match reg {
                     Register::Gp(reg) => {
                         if self.uninit_stack && *reg == GpRegister::sp {
-                            writeln!(out_file, "mark_stack_uninit(ctx->memory, local_registers.gp[{}], {});", *reg as usize, var_name(var))?;
+                            writeln!(
+                                out_file,
+                                "mark_stack_uninit(ctx->memory, local_registers.gp[{}], {});",
+                                *reg as usize,
+                                var_name(var)
+                            )?;
                         }
 
                         writeln!(out_file, "local_registers.gp[{}] = {};", *reg as usize, var_name(var),)?;
                     },
-                    Register::Fp(reg) => writeln!(out_file, "ctx->registers->fp[{}] = {};", *reg as usize, var_name(var),)?,
+                    Register::Fp(reg) => {
+                        writeln!(out_file, "ctx->registers->fp[{}] = {};", *reg as usize, var_name(var),)?
+                    },
                     Register::Csr(_) => writeln!(out_file, "ctx->registers->fcsr = {};", var_name(var),)?,
                 },
                 Op::LoadImmediate {
@@ -1071,29 +1124,74 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     var,
                     reg,
                 } => match reg {
-                    Register::Gp(reg) => writeln!(out_file, "{} = local_registers.gp[{}];", var_type_and_name(var), *reg as usize,)?,
-                    Register::Fp(reg) => writeln!(out_file, "{} = ctx->registers->fp[{}];", var_type_and_name(var), *reg as usize,)?,
+                    Register::Gp(reg) => {
+                        writeln!(out_file, "{} = local_registers.gp[{}];", var_type_and_name(var), *reg as usize,)?
+                    },
+                    Register::Fp(reg) => {
+                        writeln!(out_file, "{} = ctx->registers->fp[{}];", var_type_and_name(var), *reg as usize,)?
+                    },
                     Register::Csr(_) => writeln!(out_file, "{} = ctx->registers->fcsr;", var_type_and_name(var),)?,
                 },
                 Op::Add {
                     dst,
                     src1,
                     src2,
-                    behavior
+                    behavior,
                 } => match dst.vartype() {
                     VarType::Number => match behavior {
-                        ArithmeticBehavior::Wrapping => writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
-                        ArithmeticBehavior::Saturating(signed) => if *signed {
-                            writeln!(out_file, "{} = saturating_add64_signed({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
-                         } else {
-                            writeln!(out_file, "{} = saturating_add64_unsigned({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
-                         },
-                        ArithmeticBehavior::Checked(signed) => if *signed {
-                            writeln!(out_file, "if ({0} > ULONG_MAX - {1}) {{ return fault_integer_overflow(ctx, {0}, {1}); }}", var_name(src1), var_name(src2))?;
-                            writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
-                         } else {
-                            writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
-                            writeln!(out_file, "if ({0} < {1}) {{ return fault_integer_overflow(ctx, {1}, {2}); }}", var_name(dst), var_name(src1), var_name(src2))?;
+                        ArithmeticBehavior::Wrapping => {
+                            writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?
+                        },
+                        ArithmeticBehavior::Saturating(signed) => {
+                            if *signed {
+                                writeln!(
+                                    out_file,
+                                    "{} = saturating_add64_signed({}, {});",
+                                    var_type_and_name(dst),
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                            } else {
+                                writeln!(
+                                    out_file,
+                                    "{} = saturating_add64_unsigned({}, {});",
+                                    var_type_and_name(dst),
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                            }
+                        },
+                        ArithmeticBehavior::Checked(signed) => {
+                            if *signed {
+                                writeln!(
+                                    out_file,
+                                    "if ({0} > ULONG_MAX - {1}) {{ return fault_integer_overflow(ctx, {0}, {1}); }}",
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                                writeln!(
+                                    out_file,
+                                    "{} = {} + {};",
+                                    var_type_and_name(dst),
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                            } else {
+                                writeln!(
+                                    out_file,
+                                    "{} = {} + {};",
+                                    var_type_and_name(dst),
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                                writeln!(
+                                    out_file,
+                                    "if ({0} < {1}) {{ return fault_integer_overflow(ctx, {1}, {2}); }}",
+                                    var_name(dst),
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
+                            }
                         },
                     },
                     _ => writeln!(out_file, "{} = {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
@@ -1104,22 +1202,50 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     rhs,
                     comp,
                 } => match comp {
-                    Comparison::Equal => writeln!(out_file, "{} = ({} == {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?,
-                    Comparison::NotEqual => writeln!(out_file, "{} = ({} != {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?,
+                    Comparison::Equal => {
+                        writeln!(out_file, "{} = ({} == {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?
+                    },
+                    Comparison::NotEqual => {
+                        writeln!(out_file, "{} = ({} != {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?
+                    },
                     Comparison::Less(signed) => {
                         if *signed {
                             assert_eq!(dst.vartype(), VarType::Number);
-                            writeln!(out_file, "{} = (CONVERT(int64_t, {}) < CONVERT(int64_t, {}));", var_type_and_name(dst), var_name(lhs), var_name(rhs))?;
+                            writeln!(
+                                out_file,
+                                "{} = (CONVERT(int64_t, {}) < CONVERT(int64_t, {}));",
+                                var_type_and_name(dst),
+                                var_name(lhs),
+                                var_name(rhs)
+                            )?;
                         } else {
-                            writeln!(out_file, "{} = ({} < {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?;
+                            writeln!(
+                                out_file,
+                                "{} = ({} < {});",
+                                var_type_and_name(dst),
+                                var_name(lhs),
+                                var_name(rhs)
+                            )?;
                         }
                     },
                     Comparison::LessEqual(signed) => {
                         if *signed {
                             assert_eq!(dst.vartype(), VarType::Number);
-                            writeln!(out_file, "{} = (CONVERT(int64_t, {}) <= CONVERT(int64_t, {}));", var_type_and_name(dst), var_name(lhs), var_name(rhs))?;
+                            writeln!(
+                                out_file,
+                                "{} = (CONVERT(int64_t, {}) <= CONVERT(int64_t, {}));",
+                                var_type_and_name(dst),
+                                var_name(lhs),
+                                var_name(rhs)
+                            )?;
                         } else {
-                            writeln!(out_file, "{} = ({} <= {});", var_type_and_name(dst), var_name(lhs), var_name(rhs))?;
+                            writeln!(
+                                out_file,
+                                "{} = ({} <= {});",
+                                var_type_and_name(dst),
+                                var_name(lhs),
+                                var_name(rhs)
+                            )?;
                         }
                     },
                 },
@@ -1131,10 +1257,20 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                         if addrs.contains(addr) {
                             writeln!(out_file, "if (UNLIKELY({})) goto bb_{:#x};", var_name(cond), *addr)?;
                         } else {
-                            writeln!(out_file, "if (UNLIKELY({})) return (void*) basic_block_{:#x};", var_name(cond), *addr)?;
+                            writeln!(
+                                out_file,
+                                "if (UNLIKELY({})) return (void*) basic_block_{:#x};",
+                                var_name(cond),
+                                *addr
+                            )?;
                         }
                     } else {
-                        writeln!(out_file, "if (UNLIKELY({})) return (void*) lookup_basic_block_table(ctx, {});", var_name(cond), var_name(dst))?;
+                        writeln!(
+                            out_file,
+                            "if (UNLIKELY({})) return (void*) lookup_basic_block_table(ctx, {});",
+                            var_name(cond),
+                            var_name(dst)
+                        )?;
                     }
                 },
                 Op::LoadMemory {
@@ -1163,7 +1299,14 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                             bb.id(),
                             op_size_suffix(*size)
                         )?;
-                        writeln!(out_file, "{} = REINTERPRET({}, bb_{}_tmp_{});", var_type_and_name(dst), var_type(dst), bb.id(), op_no)?;
+                        writeln!(
+                            out_file,
+                            "{} = REINTERPRET({}, bb_{}_tmp_{});",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            bb.id(),
+                            op_no
+                        )?;
                     }
                 },
                 Op::SignExtend {
@@ -1171,9 +1314,27 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     src,
                     size,
                 } => match *size {
-                    1 => writeln!(out_file, "{} = CONVERT({}, EXTEND(int8_t, int64_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?,
-                    2 => writeln!(out_file, "{} = CONVERT({}, EXTEND(int16_t, int64_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?,
-                    4 => writeln!(out_file, "{} = CONVERT({}, EXTEND(int32_t, int64_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?,
+                    1 => writeln!(
+                        out_file,
+                        "{} = CONVERT({}, EXTEND(int8_t, int64_t, {}));",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
+                    2 => writeln!(
+                        out_file,
+                        "{} = CONVERT({}, EXTEND(int16_t, int64_t, {}));",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
+                    4 => writeln!(
+                        out_file,
+                        "{} = CONVERT({}, EXTEND(int32_t, int64_t, {}));",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
                     _ => unreachable!(),
                 },
                 Op::StoreMemory {
@@ -1232,7 +1393,14 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     arithmetic,
                 } => {
                     if *arithmetic {
-                        writeln!(out_file, "{} = CONVERT({}, CONVERT(int64_t, {}) >> {});", var_type_and_name(dst), var_type(dst), var_name(src), var_name(amount))?;
+                        writeln!(
+                            out_file,
+                            "{} = CONVERT({}, CONVERT(int64_t, {}) >> {});",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            var_name(src),
+                            var_name(amount)
+                        )?;
                     } else {
                         writeln!(out_file, "{} = {} >> {};", var_type_and_name(dst), var_name(src), var_name(amount))?;
                     }
@@ -1243,7 +1411,12 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                 } => {
                     writeln!(out_file, "ctx->event_channel->length = {};", args.len())?;
                     for (i, arg) in args.iter().enumerate() {
-                        writeln!(out_file, "ctx->event_channel->data[{}] = REINTERPRET(uint64_t, {});", i, var_name(arg))?;
+                        writeln!(
+                            out_file,
+                            "ctx->event_channel->data[{}] = REINTERPRET(uint64_t, {});",
+                            i,
+                            var_name(arg)
+                        )?;
                     }
                 },
                 Op::FireEvent {
@@ -1278,9 +1451,27 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     src,
                     size,
                 } => match *size {
-                    1 => writeln!(out_file, "{} = EXTEND(uint8_t, {}, {});", var_type_and_name(dst), var_type(dst), var_name(src))?,
-                    2 => writeln!(out_file, "{} = EXTEND(uint16_t, {}, {});", var_type_and_name(dst), var_type(dst), var_name(src))?,
-                    4 => writeln!(out_file, "{} = EXTEND(uint32_t, {}, {});", var_type_and_name(dst), var_type(dst), var_name(src))?,
+                    1 => writeln!(
+                        out_file,
+                        "{} = EXTEND(uint8_t, {}, {});",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
+                    2 => writeln!(
+                        out_file,
+                        "{} = EXTEND(uint16_t, {}, {});",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
+                    4 => writeln!(
+                        out_file,
+                        "{} = EXTEND(uint32_t, {}, {});",
+                        var_type_and_name(dst),
+                        var_type(dst),
+                        var_name(src)
+                    )?,
                     _ => unreachable!(),
                 },
                 Op::Invert {
@@ -1296,7 +1487,13 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     signs,
                 } => match signs {
                     Signedness::Unsigned => {
-                        writeln!(out_file, "{} = MIN({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                        writeln!(
+                            out_file,
+                            "{} = MIN({}, {});",
+                            var_type_and_name(dst),
+                            var_name(src1),
+                            var_name(src2)
+                        )?;
                     },
                     _ => {
                         assert_eq!(dst.vartype(), VarType::Number);
@@ -1317,7 +1514,13 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     signs,
                 } => match signs {
                     Signedness::Unsigned => {
-                        writeln!(out_file, "{} = MAX({}, {});", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                        writeln!(
+                            out_file,
+                            "{} = MAX({}, {});",
+                            var_type_and_name(dst),
+                            var_name(src1),
+                            var_name(src2)
+                        )?;
                     },
                     _ => {
                         assert_eq!(dst.vartype(), VarType::Number);
@@ -1335,8 +1538,21 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     dst,
                     src,
                 } => {
-                    writeln!(out_file, "uint64_t bb_{}_tmp_{} = {:#x}ULL | CONVERT(uint64_t, REINTERPRET(uint32_t, {}));", bb.id(), op_no, NAN_BOX, var_name(src))?;
-                    writeln!(out_file, "{} = REINTERPRET(double, bb_{}_tmp_{});", var_type_and_name(dst), bb.id(), op_no)?;
+                    writeln!(
+                        out_file,
+                        "uint64_t bb_{}_tmp_{} = {:#x}ULL | CONVERT(uint64_t, REINTERPRET(uint32_t, {}));",
+                        bb.id(),
+                        op_no,
+                        NAN_BOX,
+                        var_name(src)
+                    )?;
+                    writeln!(
+                        out_file,
+                        "{} = REINTERPRET(double, bb_{}_tmp_{});",
+                        var_type_and_name(dst),
+                        bb.id(),
+                        op_no
+                    )?;
                 },
                 Op::ReinterpretAsFloat32 {
                     dst,
@@ -1356,7 +1572,14 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     src2,
                     src3,
                 } => {
-                    writeln!(out_file, "{} = {} * {} + {};", var_type_and_name(dst), var_name(src1), var_name(src2), var_name(src3))?;
+                    writeln!(
+                        out_file,
+                        "{} = {} * {} + {};",
+                        var_type_and_name(dst),
+                        var_name(src1),
+                        var_name(src2),
+                        var_name(src3)
+                    )?;
                 },
                 Op::NaNUnbox {
                     dst,
@@ -1381,7 +1604,14 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                         writeln!(out_file, "uint128_t bb_{}_tmp_{};", bb.id(), op_no)?;
                         match signs {
                             Signedness::Unsigned => {
-                                writeln!(out_file, "bb_{}_tmp_{} = CONVERT(uint128_t, {}) * CONVERT(uint128_t, {});", bb.id(), op_no, var_name(src1), var_name(src2))?;
+                                writeln!(
+                                    out_file,
+                                    "bb_{}_tmp_{} = CONVERT(uint128_t, {}) * CONVERT(uint128_t, {});",
+                                    bb.id(),
+                                    op_no,
+                                    var_name(src1),
+                                    var_name(src2)
+                                )?;
                             },
                             Signedness::Signed => {
                                 writeln!(
@@ -1405,8 +1635,22 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                             },
                         }
                         match half {
-                            Half::Lower => writeln!(out_file, "{} = CONVERT({}, bb_{}_tmp_{});", var_type_and_name(dst), var_type(dst), bb.id(), op_no)?,
-                            Half::Upper => writeln!(out_file, "{} = CONVERT({}, bb_{}_tmp_{} >> 64);", var_type_and_name(dst), var_type(dst), bb.id(), op_no)?,
+                            Half::Lower => writeln!(
+                                out_file,
+                                "{} = CONVERT({}, bb_{}_tmp_{});",
+                                var_type_and_name(dst),
+                                var_type(dst),
+                                bb.id(),
+                                op_no
+                            )?,
+                            Half::Upper => writeln!(
+                                out_file,
+                                "{} = CONVERT({}, bb_{}_tmp_{} >> 64);",
+                                var_type_and_name(dst),
+                                var_type(dst),
+                                bb.id(),
+                                op_no
+                            )?,
                         }
                     },
                     _ => writeln!(out_file, "{} = {} * {};", var_type_and_name(dst), var_name(src1), var_name(src2))?,
@@ -1421,10 +1665,26 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                         if self.allow_div_by_zero {
                             writeln!(out_file, "{};", var_type_and_name(dst))?;
                             writeln!(out_file, "if (UNLIKELY({} == 0)) {{ {} = 0; }}", var_name(src2), var_name(dst))?;
-                            writeln!(out_file, "else {{ {} = {} / {}; }}", var_name(dst), var_name(src1), var_name(src2))?;
+                            writeln!(
+                                out_file,
+                                "else {{ {} = {} / {}; }}",
+                                var_name(dst),
+                                var_name(src1),
+                                var_name(src2)
+                            )?;
                         } else {
-                            writeln!(out_file, "if (UNLIKELY({} == 0)) return (void*) fault_div_by_zero(ctx);", var_name(src2))?;
-                            writeln!(out_file, "{} = {} / {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
+                            writeln!(
+                                out_file,
+                                "if (UNLIKELY({} == 0)) return (void*) fault_div_by_zero(ctx);",
+                                var_name(src2)
+                            )?;
+                            writeln!(
+                                out_file,
+                                "{} = {} / {};",
+                                var_type_and_name(dst),
+                                var_name(src1),
+                                var_name(src2)
+                            )?;
                         }
                     } else {
                         writeln!(out_file, "{} = {} / {};", var_type_and_name(dst), var_name(src1), var_name(src2))?;
@@ -1448,8 +1708,12 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     src,
                 } => match src.vartype() {
                     VarType::Number => unreachable!(),
-                    VarType::Float32 => writeln!(out_file, "{} = classify32({});", var_type_and_name(dst), var_name(src))?,
-                    VarType::Float64 => writeln!(out_file, "{} = classify64({});", var_type_and_name(dst), var_name(src))?,
+                    VarType::Float32 => {
+                        writeln!(out_file, "{} = classify32({});", var_type_and_name(dst), var_name(src))?
+                    },
+                    VarType::Float64 => {
+                        writeln!(out_file, "{} = classify64({});", var_type_and_name(dst), var_name(src))?
+                    },
                 },
                 Op::ConvertToInteger32 {
                     dst,
@@ -1457,10 +1721,22 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     sign,
                 } => match sign {
                     Signedness::Unsigned => {
-                        writeln!(out_file, "{} = CONVERT({}, CONVERT(uint32_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?;
+                        writeln!(
+                            out_file,
+                            "{} = CONVERT({}, CONVERT(uint32_t, {}));",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            var_name(src)
+                        )?;
                     },
                     _ => {
-                        writeln!(out_file, "{} = CONVERT({}, CONVERT(int32_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?;
+                        writeln!(
+                            out_file,
+                            "{} = CONVERT({}, CONVERT(int32_t, {}));",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            var_name(src)
+                        )?;
                     },
                 },
                 Op::ConvertToInteger64 {
@@ -1479,10 +1755,22 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                     sign,
                 } => match sign {
                     Signedness::Unsigned => {
-                        writeln!(out_file, "{} = CONVERT({}, {});", var_type_and_name(dst), var_type(dst), var_name(src))?;
+                        writeln!(
+                            out_file,
+                            "{} = CONVERT({}, {});",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            var_name(src)
+                        )?;
                     },
                     _ => {
-                        writeln!(out_file, "{} = CONVERT({}, CONVERT(int64_t, {}));", var_type_and_name(dst), var_type(dst), var_name(src))?;
+                        writeln!(
+                            out_file,
+                            "{} = CONVERT({}, CONVERT(int64_t, {}));",
+                            var_type_and_name(dst),
+                            var_type(dst),
+                            var_name(src)
+                        )?;
                     },
                 },
                 Op::Remainder {

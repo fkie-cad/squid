@@ -383,7 +383,12 @@ impl Fs {
         Ok((handle, filename))
     }
 
-    pub fn mkdir<S: Into<OsString> + AsRef<OsStr>>(&mut self, parent: DirHandle, name: S, perms: u8) -> Result<DirHandle, FileSystemError> {
+    pub fn mkdir<S: Into<OsString> + AsRef<OsStr>>(
+        &mut self,
+        parent: DirHandle,
+        name: S,
+        perms: u8,
+    ) -> Result<DirHandle, FileSystemError> {
         self.check_handle(parent)?;
 
         if name.as_ref().is_empty() {
@@ -420,7 +425,12 @@ impl Fs {
         Ok(DirHandle(TreeIndex(tree_len)))
     }
 
-    pub fn touch<S: Into<OsString> + AsRef<OsStr>>(&mut self, parent: DirHandle, name: S, perms: u8) -> Result<FileHandle, FileSystemError> {
+    pub fn touch<S: Into<OsString> + AsRef<OsStr>>(
+        &mut self,
+        parent: DirHandle,
+        name: S,
+        perms: u8,
+    ) -> Result<FileHandle, FileSystemError> {
         self.check_handle(parent)?;
 
         if name.as_ref().is_empty() {
@@ -641,7 +651,12 @@ impl Fs {
         Ok(())
     }
 
-    fn link_node<S: Into<OsString> + AsRef<OsStr>>(&mut self, parent: DirHandle, name: S, target: TreeIndex) -> Result<(), FileSystemError> {
+    fn link_node<S: Into<OsString> + AsRef<OsStr>>(
+        &mut self,
+        parent: DirHandle,
+        name: S,
+        target: TreeIndex,
+    ) -> Result<(), FileSystemError> {
         self.check_handle(parent)?;
 
         if name.as_ref().is_empty() {
@@ -681,12 +696,22 @@ impl Fs {
         Ok(())
     }
 
-    pub fn link_file<S: Into<OsString> + AsRef<OsStr>>(&mut self, parent: DirHandle, name: S, target: FileHandle) -> Result<(), FileSystemError> {
+    pub fn link_file<S: Into<OsString> + AsRef<OsStr>>(
+        &mut self,
+        parent: DirHandle,
+        name: S,
+        target: FileHandle,
+    ) -> Result<(), FileSystemError> {
         self.check_handle(target)?;
         self.link_node(parent, name, target.0)
     }
 
-    pub fn link_directory<S: Into<OsString> + AsRef<OsStr>>(&mut self, parent: DirHandle, name: S, target: DirHandle) -> Result<(), FileSystemError> {
+    pub fn link_directory<S: Into<OsString> + AsRef<OsStr>>(
+        &mut self,
+        parent: DirHandle,
+        name: S,
+        target: DirHandle,
+    ) -> Result<(), FileSystemError> {
         self.check_handle(target)?;
         self.link_node(parent, name, target.0)
     }

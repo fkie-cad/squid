@@ -137,7 +137,10 @@ mod tests {
 
     #[test]
     fn test_assembly_preprocessing() {
-        let output = separate_statements(b".file \":;\\\"\\\\\"# single-line comment\n/* multi-line\ncomment */.L0:.directive;inst;\n", "<test>");
+        let output = separate_statements(
+            b".file \":;\\\"\\\\\"# single-line comment\n/* multi-line\ncomment */.L0:.directive;inst;\n",
+            "<test>",
+        );
         println!("{}", std::str::from_utf8(&output).unwrap());
     }
 

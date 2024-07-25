@@ -19,6 +19,7 @@ pub use cfg::{
 pub use error::AoError;
 pub use func::Function;
 pub use ops::{
+    ArithmeticBehavior,
     Comparison,
     Half,
     Op,
@@ -26,5 +27,4 @@ pub use ops::{
     Signedness,
     Var,
     VarType,
-    ArithmeticBehavior,
 };

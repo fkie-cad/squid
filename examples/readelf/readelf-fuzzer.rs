@@ -4,6 +4,7 @@ use std::{
     marker::PhantomData,
     path::PathBuf,
 };
+
 use clap::Parser;
 use libafl::prelude::{
     feedback_or,
@@ -91,10 +92,10 @@ use squid::{
     frontend::{
         ao::{
             events::*,
+            ArithmeticBehavior,
             BasicBlock,
             Edge,
             Op,
-            ArithmeticBehavior,
         },
         Chunk,
         ChunkContent,
@@ -117,10 +118,10 @@ use squid::{
         structs::Stat,
     },
     passes::{
-        BreakpointPass,
-        Pass,
-        NoPassError,
         AsanPass,
+        BreakpointPass,
+        NoPassError,
+        Pass,
     },
     riscv::{
         register::GpRegister,
@@ -148,7 +149,12 @@ impl Pass for CoveragePass {
         "CoveragePass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        _event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<(), Self::Error> {
         /* Find id of binary */
         let mut target_id = None;
 
@@ -184,7 +190,8 @@ impl Pass for CoveragePass {
 
         let chunk = Chunk::builder().uninitialized_data(coverage_map_size, perms).vaddr(0).build().unwrap();
 
-        let mut symbol = Symbol::builder().private_name("(coverage map)").vaddr(0).size(coverage_map_size).build().unwrap();
+        let mut symbol =
+            Symbol::builder().private_name("(coverage map)").vaddr(0).size(coverage_map_size).build().unwrap();
 
         let mut section = Section::builder().perms(perms).vaddr(0).size(coverage_map_size).build().unwrap();
 
@@ -250,7 +257,12 @@ impl Pass for SnapshotPass {
         "SnapshotPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, _logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        event_pool: &mut EventPool,
+        _logger: &Logger,
+    ) -> Result<(), Self::Error> {
         let event_take_snapshot = event_pool.add_event(Self::EVENT_NAME_TAKE_SNAPSHOT);
         let event_restore_snapshot = event_pool.add_event(Self::EVENT_NAME_RESTORE_SNAPSHOT);
 
@@ -338,16 +350,18 @@ fn create_runtime(binaries: &str, output: &str, debug_build: bool) -> ClangRunti
     assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_FREE).map(|x| x.id()), Some(EVENT_ID_FREE));
     assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_REALLOC).map(|x| x.id()), Some(EVENT_ID_REALLOC));
     assert_eq!(compiler.event_pool().get_event(AsanPass::EVENT_NAME_CALLOC).map(|x| x.id()), Some(EVENT_ID_CALLOC));
-    assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_TAKE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_TAKE_SNAPSHOT));
-    assert_eq!(compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()), Some(EVENT_ID_RESTORE_SNAPSHOT));
+    assert_eq!(
+        compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_TAKE_SNAPSHOT).map(|x| x.id()),
+        Some(EVENT_ID_TAKE_SNAPSHOT)
+    );
+    assert_eq!(
+        compiler.event_pool().get_event(SnapshotPass::EVENT_NAME_RESTORE_SNAPSHOT).map(|x| x.id()),
+        Some(EVENT_ID_RESTORE_SNAPSHOT)
+    );
     assert_eq!(compiler.event_pool().len(), 8);
 
-    let source_file = if debug_build {
-        format!("{}/jit_debug.c", output)
-    } else {
-        format!("{}/jit.c", output)
-    };
-    
+    let source_file = if debug_build { format!("{}/jit_debug.c", output) } else { format!("{}/jit.c", output) };
+
     let mut builder = ClangBackend::builder()
         .heap_size(8 * 1024 * 1024)
         .stack_size(2 * 1024 * 1024)
@@ -364,7 +378,14 @@ fn create_runtime(binaries: &str, output: &str, debug_build: bool) -> ClangRunti
     if debug_build {
         builder = builder.cflag("-O0").cflag("-g").cflag("-fno-omit-frame-pointer");
     } else {
-        builder = builder.cflag("-Ofast").cflag("-ffast-math").cflag("-flto").cflag("-s").cflag("-fno-stack-protector").cflag("-march=native").cflag("-fomit-frame-pointer");
+        builder = builder
+            .cflag("-Ofast")
+            .cflag("-ffast-math")
+            .cflag("-flto")
+            .cflag("-s")
+            .cflag("-fno-stack-protector")
+            .cflag("-march=native")
+            .cflag("-fomit-frame-pointer");
     }
 
     let backend = builder.build().unwrap();
@@ -495,7 +516,8 @@ where
                                 b"file" => {
                                     let stat = self.kernel.fstatat_fuzz_input(fuzz_input.len());
                                     let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
-                                    let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                    let contents =
+                                        unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
                                     runtime.store_slice(a2, contents)?;
                                     runtime.set_gp_register(GpRegister::a0, 0);
                                 },
@@ -503,14 +525,18 @@ where
                                     if let Ok(filename) = std::str::from_utf8(filename) {
                                         match self.kernel.fstatat(a0 as i32, filename, a3 as i32) {
                                             Ok(stat) => {
-                                                let charp = unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
-                                                let contents = unsafe { std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>()) };
+                                                let charp =
+                                                    unsafe { std::mem::transmute::<*const Stat, *const u8>(&stat) };
+                                                let contents = unsafe {
+                                                    std::slice::from_raw_parts(charp, std::mem::size_of::<Stat>())
+                                                };
                                                 runtime.store_slice(a2, contents)?;
                                                 runtime.set_gp_register(GpRegister::a0, 0);
                                             },
                                             Err(err) => match err {
                                                 LinuxError::FsError(_) => {
-                                                    runtime.set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
+                                                    runtime
+                                                        .set_gp_register(GpRegister::a0, -libc::ENOENT as i64 as u64);
                                                 },
                                                 _ => {
                                                     return Err(err.into());
@@ -674,7 +700,9 @@ where
                 EVENT_ID_CALLOC => {
                     let a = runtime.get_gp_register(GpRegister::a0) as usize;
                     let b = runtime.get_gp_register(GpRegister::a1) as usize;
-                    let size = a.checked_mul(b).ok_or_else(|| ClangRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
+                    let size = a
+                        .checked_mul(b)
+                        .ok_or_else(|| ClangRuntimeFault::InternalError(format!("calloc overflow: {} * {}", a, b)))?;
                     let addr = match runtime.dynstore_allocate(size) {
                         Ok(addr) => addr,
                         Err(ClangRuntimeFault::HeapError(HeapError::OutOfMemory(_))) => 0,
@@ -725,7 +753,13 @@ where
     EM: UsesState<State = Self::State>,
     Z: UsesState<State = Self::State>,
 {
-    fn run_target(&mut self, _fuzzer: &mut Z, state: &mut Self::State, _mgr: &mut EM, input: &BytesInput) -> Result<ExitKind, Error> {
+    fn run_target(
+        &mut self,
+        _fuzzer: &mut Z,
+        state: &mut Self::State,
+        _mgr: &mut EM,
+        input: &BytesInput,
+    ) -> Result<ExitKind, Error> {
         *state.executions_mut() += 1;
 
         self.kernel.restore_snapshot(0);
@@ -826,7 +860,12 @@ where
         Ok(())
     }
 
-    fn post_exec(&mut self, _state: &mut S, _input: &<S as UsesInput>::Input, _exit_kind: &ExitKind) -> Result<(), Error> {
+    fn post_exec(
+        &mut self,
+        _state: &mut S,
+        _input: &<S as UsesInput>::Input,
+        _exit_kind: &ExitKind,
+    ) -> Result<(), Error> {
         Ok(())
     }
 
@@ -834,7 +873,12 @@ where
         Ok(())
     }
 
-    fn post_exec_child(&mut self, _state: &mut S, _input: &<S as UsesInput>::Input, _exit_kind: &ExitKind) -> Result<(), Error> {
+    fn post_exec_child(
+        &mut self,
+        _state: &mut S,
+        _input: &<S as UsesInput>::Input,
+        _exit_kind: &ExitKind,
+    ) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -869,7 +913,14 @@ impl<S> Feedback<S> for SquidFeedback
 where
     S: State,
 {
-    fn is_interesting<EM, OT>(&mut self, state: &mut S, mgr: &mut EM, _input: &<S>::Input, observers: &OT, _exit_kind: &ExitKind) -> Result<bool, Error>
+    fn is_interesting<EM, OT>(
+        &mut self,
+        state: &mut S,
+        mgr: &mut EM,
+        _input: &<S>::Input,
+        observers: &OT,
+        _exit_kind: &ExitKind,
+    ) -> Result<bool, Error>
     where
         EM: EventFirer<State = S>,
         OT: ObserversTuple<S>,
@@ -892,7 +943,13 @@ where
         Ok(false)
     }
 
-    fn append_metadata<EM, OT>(&mut self, _state: &mut S, _mgr: &mut EM, observers: &OT, testcase: &mut Testcase<S::Input>) -> Result<(), Error>
+    fn append_metadata<EM, OT>(
+        &mut self,
+        _state: &mut S,
+        _mgr: &mut EM,
+        observers: &OT,
+        testcase: &mut Testcase<S::Input>,
+    ) -> Result<(), Error>
     where
         OT: ObserversTuple<S>,
         EM: EventFirer<State = S>,
@@ -971,10 +1028,21 @@ fn pick_explore_powerschedule(core: usize) -> PowerSchedule {
     }
 }
 
-fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, num_exploitation: usize, corpus: String, output: String) -> Result<(), Error> {
+fn fuzz(
+    riscv_binaries: String,
+    native_binary: Option<String>,
+    cores: String,
+    num_exploitation: usize,
+    corpus: String,
+    output: String,
+) -> Result<(), Error> {
     let cores = Cores::from_cmdline(&cores).unwrap();
     let exploitation_cores = assign_cores(&cores.ids, num_exploitation);
-    let native_binary = if exploitation_cores.len() < cores.ids.len() { native_binary.expect("Must supply native binary for that") } else { String::new() };
+    let native_binary = if exploitation_cores.len() < cores.ids.len() {
+        native_binary.expect("Must supply native binary for that")
+    } else {
+        String::new()
+    };
 
     let _ = std::fs::create_dir_all(&output);
     let mut runtime = create_runtime(&riscv_binaries, &output, false);
@@ -984,7 +1052,8 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         println!("Running exploit instance on core #{} with powerschedule {:?}", core_id.0, powerschedule);
 
         let coverage_map = get_coverage_map(&mut runtime);
-        let map_observer = HitcountsMapObserver::new(StdMapObserver::from_mut_slice("hitcounters", coverage_map)).track_indices();
+        let map_observer =
+            HitcountsMapObserver::new(StdMapObserver::from_mut_slice("hitcounters", coverage_map)).track_indices();
         let squid_observer = SquidObserver::new("instructions");
 
         let map_feedback = MaxMapFeedback::new(&map_observer);
@@ -1015,11 +1084,15 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
         //let mutational_stage = libafl::prelude::StdMutationalStage::new(mutator);
 
-        let scheduler = IndexesLenTimeMinimizerScheduler::new(&map_observer, StdWeightedScheduler::with_schedule(&mut state, &map_observer, Some(powerschedule)));
+        let scheduler = IndexesLenTimeMinimizerScheduler::new(
+            &map_observer,
+            StdWeightedScheduler::with_schedule(&mut state, &map_observer, Some(powerschedule)),
+        );
 
         let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
-        let mut executor = SquidExecutor::new(squid_observer.handle(), tuple_list!(squid_observer, map_observer), &mut runtime);
+        let mut executor =
+            SquidExecutor::new(squid_observer.handle(), tuple_list!(squid_observer, map_observer), &mut runtime);
 
         let mut stages = tuple_list!(calibration_stage, mutational_stage);
 
@@ -1042,7 +1115,8 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         let shmem_buf = shmem.as_slice_mut();
         std::env::set_var("AFL_MAP_SIZE", format!("{}", MAP_SIZE));
 
-        let edges_observer = unsafe { HitcountsMapObserver::new(StdMapObserver::new("shared_mem", shmem_buf)).track_indices() };
+        let edges_observer =
+            unsafe { HitcountsMapObserver::new(StdMapObserver::new("shared_mem", shmem_buf)).track_indices() };
         let time_observer = TimeObserver::new("time");
 
         let map_feedback = MaxMapFeedback::new(&edges_observer);
@@ -1071,7 +1145,10 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         //let mutator = libafl::prelude::NopMutator::new(libafl::prelude::MutationResult::Mutated);
         //let power = libafl::prelude::StdMutationalStage::new(mutator);
 
-        let scheduler = IndexesLenTimeMinimizerScheduler::new(&edges_observer, StdWeightedScheduler::with_schedule(&mut state, &edges_observer, Some(powerschedule)));
+        let scheduler = IndexesLenTimeMinimizerScheduler::new(
+            &edges_observer,
+            StdWeightedScheduler::with_schedule(&mut state, &edges_observer, Some(powerschedule)),
+        );
 
         let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
         let mut executor = ForkserverExecutor::builder()
@@ -1103,18 +1180,30 @@ fn fuzz(riscv_binaries: String, native_binary: Option<String>, cores: String, nu
         }
     };
     let mut last_update = current_time();
-    let monitor = OnDiskJSONMonitor::new(format!("{}/stats.jsonl", &output), MultiMonitor::new(|s| println!("{}", s)), move |_| {
-        let now = current_time();
-        if (now - last_update).as_secs() >= 60 {
-            last_update = now;
-            true
-        } else {
-            false
-        }
-    });
+    let monitor = OnDiskJSONMonitor::new(
+        format!("{}/stats.jsonl", &output),
+        MultiMonitor::new(|s| println!("{}", s)),
+        move |_| {
+            let now = current_time();
+            if (now - last_update).as_secs() >= 60 {
+                last_update = now;
+                true
+            } else {
+                false
+            }
+        },
+    );
     let shmem_provider = StdShMemProvider::new()?;
 
-    match Launcher::builder().shmem_provider(shmem_provider).configuration(EventConfig::AlwaysUnique).monitor(monitor).run_client(&mut run_client).cores(&cores).build().launch() {
+    match Launcher::builder()
+        .shmem_provider(shmem_provider)
+        .configuration(EventConfig::AlwaysUnique)
+        .monitor(monitor)
+        .run_client(&mut run_client)
+        .cores(&cores)
+        .build()
+        .launch()
+    {
         Err(Error::ShuttingDown) | Ok(()) => Ok(()),
         e => e,
     }
@@ -1131,7 +1220,13 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
     let mut feedback = SquidFeedback::new(&squid_observer);
     let mut objective = feedback_or!(CrashFeedback::new(), TimeoutFeedback::new());
 
-    let mut state = StdState::new(StdRand::with_seed(current_nanos()), InMemoryCorpus::<BytesInput>::new(), InMemoryCorpus::<BytesInput>::new(), &mut feedback, &mut objective)?;
+    let mut state = StdState::new(
+        StdRand::with_seed(current_nanos()),
+        InMemoryCorpus::<BytesInput>::new(),
+        InMemoryCorpus::<BytesInput>::new(),
+        &mut feedback,
+        &mut objective,
+    )?;
 
     let scheduler = StdScheduler::new();
 
@@ -1142,7 +1237,7 @@ fn replay(binaries: String, file: String, breakpoints: bool) -> Result<(), Error
 
     let status = executor.run_target(&mut fuzzer, &mut state, &mut mgr, &input)?;
     println!("{:?}", status);
-    
+
     Ok(())
 }
 

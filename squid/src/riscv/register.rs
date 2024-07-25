@@ -198,6 +198,7 @@ impl CsrRegister {
 /// The general purpose register that holds the syscall number
 pub const syscall_number: GpRegister = GpRegister::a7;
 /// The general purpose registers that hold the syscall arguments
-pub const syscall_args: [GpRegister; 6] = [GpRegister::a0, GpRegister::a1, GpRegister::a2, GpRegister::a3, GpRegister::a4, GpRegister::a5];
+pub const syscall_args: [GpRegister; 6] =
+    [GpRegister::a0, GpRegister::a1, GpRegister::a2, GpRegister::a3, GpRegister::a4, GpRegister::a5];
 /// The general purpose register that holds the return value of a syscall
 pub const syscall_ret: GpRegister = GpRegister::a0;

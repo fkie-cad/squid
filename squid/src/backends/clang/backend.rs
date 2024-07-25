@@ -286,7 +286,12 @@ impl Backend for ClangBackend {
         "ClangBackend".to_string()
     }
 
-    fn create_runtime(&mut self, mut image: ProcessImage, event_pool: EventPool, logger: &Logger) -> Result<Self::Runtime, Self::Error> {
+    fn create_runtime(
+        &mut self,
+        mut image: ProcessImage,
+        event_pool: EventPool,
+        logger: &Logger,
+    ) -> Result<Self::Runtime, Self::Error> {
         /* Add missing things to progam image */
         insert_entrypoint(&mut image, &event_pool);
         insert_guard_pages(&mut image);
@@ -342,6 +347,14 @@ impl Backend for ClangBackend {
         /* Create the symbol store */
         let symbols = if self.symbol_store { create_symbol_store(&image) } else { HashMap::default() };
 
-        Ok(ClangRuntime::new(memory, event_channel, registers, executor, entrypoint, symbols, vec![0; varstore.num_variables()]))
+        Ok(ClangRuntime::new(
+            memory,
+            event_channel,
+            registers,
+            executor,
+            entrypoint,
+            symbols,
+            vec![0; varstore.num_variables()],
+        ))
     }
 }

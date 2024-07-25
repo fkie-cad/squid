@@ -57,7 +57,12 @@ pub(crate) struct Memory {
 }
 
 impl Memory {
-    pub(crate) fn new(image: &ProcessImage, org_globals_size: usize, org_heap_size: usize, org_stack_size: usize) -> Self {
+    pub(crate) fn new(
+        image: &ProcessImage,
+        org_globals_size: usize,
+        org_heap_size: usize,
+        org_stack_size: usize,
+    ) -> Self {
         let globals_size = round_up::<PAGE_SIZE>(org_globals_size);
         let heap_size = round_up::<PAGE_SIZE>(org_heap_size);
         let stack_size = PAGE_SIZE + round_up::<PAGE_SIZE>(org_stack_size) + PAGE_SIZE;
@@ -140,7 +145,9 @@ impl Memory {
             if *byte & mask == 0 {
                 *byte |= mask;
 
-                let stack = unsafe { std::mem::transmute::<*mut u8, *mut usize>(self.data.as_mut_ptr().add(self.offset_dirty_stack)) };
+                let stack = unsafe {
+                    std::mem::transmute::<*mut u8, *mut usize>(self.data.as_mut_ptr().add(self.offset_dirty_stack))
+                };
                 let stack_size = unsafe { *stack } + 1;
 
                 unsafe {
@@ -204,7 +211,9 @@ impl Memory {
 
         if self.last_snapshot == id {
             /* Do a fast reset with dirty bit mechanics */
-            let stack = unsafe { std::mem::transmute::<*const u8, *const usize>(self.data.as_ptr().add(self.offset_dirty_stack)) };
+            let stack = unsafe {
+                std::mem::transmute::<*const u8, *const usize>(self.data.as_ptr().add(self.offset_dirty_stack))
+            };
             let stack_size = unsafe { *stack };
 
             for i in 0..stack_size {

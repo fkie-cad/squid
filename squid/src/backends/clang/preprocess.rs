@@ -84,7 +84,17 @@ pub(crate) fn insert_entrypoint(image: &mut ProcessImage, event_pool: &EventPool
     let elf = image.insert_elf(elf);
 
     /* Continue building the function */
-    let ChunkContent::Code(func) = image.elf_mut(elf).unwrap().section_mut(section).unwrap().symbol_mut(symbol).unwrap().chunk_mut(chunk).unwrap().content_mut() else {
+    let ChunkContent::Code(func) = image
+        .elf_mut(elf)
+        .unwrap()
+        .section_mut(section)
+        .unwrap()
+        .symbol_mut(symbol)
+        .unwrap()
+        .chunk_mut(chunk)
+        .unwrap()
+        .content_mut()
+    else {
         unreachable!()
     };
 

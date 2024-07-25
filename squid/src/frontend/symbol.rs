@@ -48,7 +48,12 @@ pub struct Symbol {
 }
 
 impl Symbol {
-    fn new(public_names: BTreeMap<String, VAddr>, private_names: BTreeMap<String, VAddr>, vaddr: VAddr, size: usize) -> Self {
+    fn new(
+        public_names: BTreeMap<String, VAddr>,
+        private_names: BTreeMap<String, VAddr>,
+        vaddr: VAddr,
+        size: usize,
+    ) -> Self {
         Self {
             id: Id::default(),
             public_names,
@@ -280,7 +285,13 @@ pub(crate) struct SymbolParser {
 }
 
 impl SymbolParser {
-    pub(crate) fn parse(elf: &goblin::elf::Elf, parent: &Section, content: &[u8], listing: &ListingManager, event_pool: &mut EventPool) -> Result<IdMap<Symbol>, LoaderError> {
+    pub(crate) fn parse(
+        elf: &goblin::elf::Elf,
+        parent: &Section,
+        content: &[u8],
+        listing: &ListingManager,
+        event_pool: &mut EventPool,
+    ) -> Result<IdMap<Symbol>, LoaderError> {
         /* Parse symbol tables */
         let mut parser = Self::new();
         parser.find_candidate_symbols(elf, parent)?;
@@ -379,7 +390,10 @@ impl SymbolParser {
         for i in 1..self.symbols.len() {
             let sym = &self.symbols[i];
 
-            if sym.public_names.is_empty() && sym.private_names.len() == 1 && sym.private_name("_PROCEDURE_LINKAGE_TABLE_").is_some() {
+            if sym.public_names.is_empty()
+                && sym.private_names.len() == 1
+                && sym.private_name("_PROCEDURE_LINKAGE_TABLE_").is_some()
+            {
                 self.merge_symbols(i - 1);
                 break;
             }
@@ -455,7 +469,13 @@ impl SymbolParser {
     }
 
     fn split_symbol(&mut self, vaddr: VAddr, globals: Vec<String>, locals: Vec<String>) {
-        let result = self.symbols.binary_search_by(|x| if x.contains_address(vaddr) { Ordering::Equal } else { x.vaddr.cmp(&vaddr) });
+        let result = self.symbols.binary_search_by(|x| {
+            if x.contains_address(vaddr) {
+                Ordering::Equal
+            } else {
+                x.vaddr.cmp(&vaddr)
+            }
+        });
 
         match result {
             Ok(idx) => {
@@ -554,7 +574,8 @@ impl SymbolParser {
             let sym = &self.symbols[i];
 
             if cursor < sym.vaddr {
-                self.symbols.insert(i, Symbol::new(BTreeMap::new(), BTreeMap::new(), cursor, (sym.vaddr - cursor) as usize));
+                self.symbols
+                    .insert(i, Symbol::new(BTreeMap::new(), BTreeMap::new(), cursor, (sym.vaddr - cursor) as usize));
             }
 
             cursor += self.symbols[i].size as VAddr;
@@ -588,7 +609,10 @@ impl SymbolParser {
 
             if sym.vaddr < cursor {
                 if parent.perms().is_executable() {
-                    return Err(LoaderError::InvalidELF(format!("Executable section {:#x} has overlapping symbols", parent.vaddr())));
+                    return Err(LoaderError::InvalidELF(format!(
+                        "Executable section {:#x} has overlapping symbols",
+                        parent.vaddr()
+                    )));
                 } else {
                     overlaps.push(self.symbols.remove(i));
                 }
@@ -667,7 +691,11 @@ impl SymbolParser {
                 (true, true) => {},
                 (false, false) => continue,
                 _ => {
-                    return Err(LoaderError::InvalidELF(format!("Symbol {:#x} partially out-of-bounds in section {:#x}", start, parent.vaddr())));
+                    return Err(LoaderError::InvalidELF(format!(
+                        "Symbol {:#x} partially out-of-bounds in section {:#x}",
+                        start,
+                        parent.vaddr()
+                    )));
                 },
             }
 
@@ -695,7 +723,11 @@ impl SymbolParser {
                 (true, true) => {},
                 (false, false) => continue,
                 _ => {
-                    return Err(LoaderError::InvalidELF(format!("Symbol {:#x} partially out-of-bounds in section {:#x}", start, parent.vaddr())));
+                    return Err(LoaderError::InvalidELF(format!(
+                        "Symbol {:#x} partially out-of-bounds in section {:#x}",
+                        start,
+                        parent.vaddr()
+                    )));
                 },
             }
 

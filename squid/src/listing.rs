@@ -50,7 +50,10 @@ impl ListingManager {
             match funcs.len() {
                 0 => Ok(None),
                 1 => Ok(Some(funcs[0])),
-                _ => Err(LoaderError::EweError(format!("Multiple functions in listing for symbol {:#x}", symbol.vaddr()))),
+                _ => Err(LoaderError::EweError(format!(
+                    "Multiple functions in listing for symbol {:#x}",
+                    symbol.vaddr()
+                ))),
             }
         } else {
             Ok(None)

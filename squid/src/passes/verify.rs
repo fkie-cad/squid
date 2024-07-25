@@ -192,19 +192,45 @@ fn verify_pointer(image: &ProcessImage, pointer: &Pointer) {
     match pointer {
         Pointer::Null => {},
         Pointer::Global(pointer) => {
-            let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+            let chunk = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap();
             assert!(pointer.offset < chunk.size());
             assert!(matches!(chunk.content(), ChunkContent::Data { .. } | ChunkContent::Pointer(_)));
         },
         Pointer::BasicBlock(pointer) => {
-            let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+            let chunk = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap();
 
-            let ChunkContent::Code(func) = chunk.content() else { panic!("Code pointer does not point to a code chunk") };
+            let ChunkContent::Code(func) = chunk.content() else {
+                panic!("Code pointer does not point to a code chunk")
+            };
 
             let _ = func.cfg().basic_block(pointer.bb).unwrap();
         },
         Pointer::Function(pointer) => {
-            let chunk = image.elf(pointer.elf).unwrap().section(pointer.section).unwrap().symbol(pointer.symbol).unwrap().chunk(pointer.chunk).unwrap();
+            let chunk = image
+                .elf(pointer.elf)
+                .unwrap()
+                .section(pointer.section)
+                .unwrap()
+                .symbol(pointer.symbol)
+                .unwrap()
+                .chunk(pointer.chunk)
+                .unwrap();
 
             assert!(matches!(chunk.content(), ChunkContent::Code(_)));
         },
@@ -238,7 +264,12 @@ impl Pass for VerifyerPass {
         "VerifyerPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, _event_pool: &mut EventPool, logger: &Logger) -> Result<(), VerifyerPassError> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        _event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<(), VerifyerPassError> {
         verify_pointer(image, &Pointer::Function(image.entrypoint().clone()));
 
         for constructor in image.constructors() {
@@ -275,7 +306,9 @@ impl Pass for VerifyerPass {
                                             },
                                             Op::LoadVirtAddr {
                                                 ..
-                                            } => panic!("Encountered a virtual address. ProcessImage must be fully symbolized"),
+                                            } => panic!(
+                                                "Encountered a virtual address. ProcessImage must be fully symbolized"
+                                            ),
                                             _ => {},
                                         }
                                     }

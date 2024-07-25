@@ -1,14 +1,27 @@
-use crate::{
-    frontend::{Symbol, Chunk, Perms, ProcessImage,
-        ChunkContent,
-        ao::{Function, BasicBlock, Edge, AoError},
-    },
-    event::{EventPool, EventId},
-    riscv::register::GpRegister,
-    passes::Pass,
-    logger::Logger,
-};
 use std::collections::HashSet;
+
+use crate::{
+    event::{
+        EventId,
+        EventPool,
+    },
+    frontend::{
+        ao::{
+            AoError,
+            BasicBlock,
+            Edge,
+            Function,
+        },
+        Chunk,
+        ChunkContent,
+        Perms,
+        ProcessImage,
+        Symbol,
+    },
+    logger::Logger,
+    passes::Pass,
+    riscv::register::GpRegister,
+};
 
 fn build_redzone(size: usize) -> Symbol {
     let mut redzone = Symbol::builder().private_name("(redzone)").size(size).vaddr(0).build().unwrap();
@@ -38,18 +51,18 @@ fn replace_function(func: &mut Function, event_pool: &mut EventPool, event_name:
 }
 
 /// The `AsanPass` implements instrumentation similar to LLVM's AddressSanitizer.
-/// 
+///
 /// It surrounds global variables with redzones and hooks the heap functions
 /// - malloc
 /// - free
 /// - realloc
 /// - calloc
-/// 
+///
 /// Whenever one of the hooked functions is called, a corresponding event is thrown (`AsanPass::EVENT_NAME_*`) that
 /// must be handled by the user. The user is responsible for extracting the arguments for
 /// the specific function call, realize its implementation and set the return value before
 /// continuing with the execution.
-/// 
+///
 /// Note that it only hooks heap function that are inside libc.so.6. If the heap functions are defined
 /// in some other object, you have to manually hook them.
 pub struct AsanPass {
@@ -70,7 +83,7 @@ impl AsanPass {
     pub const EVENT_NAME_REALLOC: &'static str = "asan::realloc";
     /// This event gets thrown on a call to `calloc()`
     pub const EVENT_NAME_CALLOC: &'static str = "asan::calloc";
-    
+
     /// Create a new AsanPass
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -98,7 +111,11 @@ impl AsanPass {
                 self.num_redzones += 1;
 
                 /* Calculate redzone sizes */
-                let left_redzone_size = if let Some(last_size) = last_size { symbol.size().saturating_sub(last_size) } else { symbol.size() };
+                let left_redzone_size = if let Some(last_size) = last_size {
+                    symbol.size().saturating_sub(last_size)
+                } else {
+                    symbol.size()
+                };
                 let right_redzone_size = symbol.size();
 
                 /* Left redzone */
@@ -165,25 +182,25 @@ impl AsanPass {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Return the event id for `malloc()`, if it was hooked
     pub fn malloc_event(&self) -> Option<EventId> {
         self.malloc
     }
-    
+
     /// Return the event id for `free()`, if it was hooked
     pub fn free_event(&self) -> Option<EventId> {
         self.free
     }
-    
+
     /// Return the event id for `realloc()`, if it was hooked
     pub fn realloc_event(&self) -> Option<EventId> {
         self.realloc
     }
-    
+
     /// Return the event id for `calloc()`, if it was hooked
     pub fn calloc_event(&self) -> Option<EventId> {
         self.calloc
@@ -197,10 +214,19 @@ impl Pass for AsanPass {
         "AsanPass".to_string()
     }
 
-    fn run(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool, logger: &Logger) -> Result<(), Self::Error> {
+    fn run(
+        &mut self,
+        image: &mut ProcessImage,
+        event_pool: &mut EventPool,
+        logger: &Logger,
+    ) -> Result<(), Self::Error> {
         self.insert_redzones(image);
         self.hook_heap_functions(image, event_pool)?;
-        logger.info(format!("Surrounded {} symbols with redzones and hooked functions: {}", self.num_redzones, self.hooked_functions.iter().copied().collect::<Vec<_>>().join(", ")));
+        logger.info(format!(
+            "Surrounded {} symbols with redzones and hooked functions: {}",
+            self.num_redzones,
+            self.hooked_functions.iter().copied().collect::<Vec<_>>().join(", ")
+        ));
         Ok(())
     }
 }
