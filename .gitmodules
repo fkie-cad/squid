@@ -6,3 +6,7 @@
 	path = examples/readelf/binutils-gdb
 	url = git://sourceware.org/git/binutils-gdb.git
     ignore = dirty
+[submodule "examples/exim/Exim"]
+	path = examples/exim/Exim
+	url = https://github.com/Exim/exim
+    ignore = dirty
