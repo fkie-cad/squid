@@ -103,7 +103,7 @@ fn main() {
 }
 ```
 
-Then we can detect both crashes:  
+Then, we can detect both crashes:  
 ![](./demo-uninit.svg)  
 ![](./demo-oob.svg)
 

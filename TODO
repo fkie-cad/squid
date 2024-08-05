@@ -7,4 +7,3 @@
     - focus on partial part of code using snapshot-based fuzzing
     - how has exim been fuzzed already, how about other MTAs (postfix, ...), SMTP generell
     - LLM corpus generation and mutation (https://mengrj.github.io/files/chatafl-slides.pdf)
-- CoveragePass from readme-demo example into crate ?

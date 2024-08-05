@@ -63,7 +63,8 @@ cargo run --release --example readelf_fuzzer -- fuzz \
 ```
 
 ## Performance measurements
-The following stats were collected executing `readelf -a` over and over again with the same input from the corpus.
+The following stats were collected executing `readelf -a` over and over again with the same input from the corpus
+on an `Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz` cpu.
 
 Empty file (1 byte):
 - squid: 31k exec/s with ~700M instr/s
