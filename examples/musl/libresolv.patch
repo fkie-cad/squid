@@ -1,3 +1,22 @@
+diff --git a/src/include/resolv.h b/src/include/resolv.h
+index 945e89e6..a66669b2 100644
+--- a/src/include/resolv.h
++++ b/src/include/resolv.h
+@@ -3,10 +3,10 @@
+ 
+ #include "../../include/resolv.h"
+ 
+-hidden int __dn_expand(const unsigned char *, const unsigned char *, const unsigned char *, char *, int);
++int __dn_expand(const unsigned char *, const unsigned char *, const unsigned char *, char *, int);
+ 
+-hidden int __res_mkquery(int, const char *, int, int, const unsigned char *, int, const unsigned char*, unsigned char *, int);
+-hidden int __res_send(const unsigned char *, int, unsigned char *, int);
+-hidden int __res_msend(int, const unsigned char *const *, const int *, unsigned char *const *, int *, int);
++int __res_mkquery(int, const char *, int, int, const unsigned char *, int, const unsigned char*, unsigned char *, int);
++int __res_send(const unsigned char *, int, unsigned char *, int);
++int __res_msend(int, const unsigned char *const *, const int *, unsigned char *const *, int *, int);
+ 
+ #endif
 diff --git a/src/network/res_init.c b/src/network/res_init.c
 index 5dba9dfc..2355b5f0 100644
 --- a/src/network/res_init.c
