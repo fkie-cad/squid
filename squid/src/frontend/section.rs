@@ -99,7 +99,7 @@ impl Section {
     pub fn builder() -> SectionBuilder {
         SectionBuilder {
             perms: None,
-            vaddr: None,
+            vaddr: 0,
             size: None,
         }
     }
@@ -122,7 +122,7 @@ impl HasIdMut for Section {
 /// The SectionBuilder can be used to build a [`Section`] from scratch
 pub struct SectionBuilder {
     perms: Option<Perms>,
-    vaddr: Option<VAddr>,
+    vaddr: VAddr,
     size: Option<usize>,
 }
 
@@ -135,7 +135,7 @@ impl SectionBuilder {
 
     /// Set the virtual address of this section
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
-        self.vaddr = Some(vaddr);
+        self.vaddr = vaddr;
         self
     }
 
@@ -148,9 +148,8 @@ impl SectionBuilder {
     /// Finally, create the [`Section`]
     pub fn build(self) -> Result<Section, &'static str> {
         let perms = self.perms.ok_or("Section permissions were not set")?;
-        let vaddr = self.vaddr.ok_or("Section address was not set")?;
         let size = self.size.ok_or("Section size was not set")?;
-        Ok(Section::new(perms, vaddr, None, size))
+        Ok(Section::new(perms, self.vaddr, None, size))
     }
 }
 

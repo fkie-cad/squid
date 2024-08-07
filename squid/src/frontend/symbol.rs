@@ -183,7 +183,7 @@ impl Symbol {
         SymbolBuilder {
             public_names: HashSet::new(),
             private_names: HashSet::new(),
-            vaddr: None,
+            vaddr: 0,
             size: None,
         }
     }
@@ -207,7 +207,7 @@ impl HasIdMut for Symbol {
 pub struct SymbolBuilder {
     public_names: HashSet<String>,
     private_names: HashSet<String>,
-    vaddr: Option<VAddr>,
+    vaddr: VAddr,
     size: Option<usize>,
 }
 
@@ -226,7 +226,7 @@ impl SymbolBuilder {
 
     /// Set the virtual address of this symbol
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
-        self.vaddr = Some(vaddr);
+        self.vaddr = vaddr;
         self
     }
 
@@ -238,7 +238,6 @@ impl SymbolBuilder {
 
     /// Create the [`Symbol`]
     pub fn build(self) -> Result<Symbol, &'static str> {
-        let vaddr = self.vaddr.ok_or("Symbol address was not set")?;
         let size = self.size.ok_or("Symbol size was not set")?;
         let mut public_names = BTreeMap::new();
         let mut private_names = BTreeMap::new();
@@ -254,7 +253,7 @@ impl SymbolBuilder {
             id: Id::default(),
             public_names,
             private_names,
-            vaddr,
+            vaddr: self.vaddr,
             size,
             file: None,
             idmap: IdMap::new(),

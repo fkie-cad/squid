@@ -180,7 +180,7 @@ impl Chunk {
         ChunkBuilder {
             content: None,
             size: None,
-            vaddr: None,
+            vaddr: 0,
         }
     }
 }
@@ -201,7 +201,7 @@ impl HasIdMut for Chunk {
 pub struct ChunkBuilder {
     content: Option<ChunkContent>,
     size: Option<usize>,
-    vaddr: Option<VAddr>,
+    vaddr: VAddr,
 }
 
 impl ChunkBuilder {
@@ -215,7 +215,11 @@ impl ChunkBuilder {
     /// Set the content of the chunk to be data
     pub fn initialized_data<D: Into<Vec<u8>>, P: Into<Vec<Perms>>>(mut self, data: D, perms: P) -> Self {
         let bytes = FixedVec::lock(data);
-        self.size = Some(bytes.len());
+        
+        if self.size.is_none() {
+            self.size = Some(bytes.len());
+        }
+        
         self.content = Some(ChunkContent::Data {
             bytes,
             perms: FixedVec::lock(perms),
@@ -226,7 +230,10 @@ impl ChunkBuilder {
     /// Set the content of the chunk to be uninitialized data.
     /// Uninitialized means that the bytes will be zero.
     pub fn uninitialized_data(mut self, size: usize, perms: Perms) -> Self {
-        self.size = Some(size);
+        if self.size.is_none() {
+            self.size = Some(size);
+        }
+        
         self.content = Some(ChunkContent::Data {
             bytes: FixedVec::lock(vec![0; size]),
             perms: FixedVec::lock(vec![perms; size]),
@@ -243,7 +250,7 @@ impl ChunkBuilder {
 
     /// Set the virtual address of this chunk
     pub fn vaddr(mut self, vaddr: VAddr) -> Self {
-        self.vaddr = Some(vaddr);
+        self.vaddr = vaddr;
         self
     }
 
@@ -257,8 +264,7 @@ impl ChunkBuilder {
     pub fn build(self) -> Result<Chunk, &'static str> {
         let content = self.content.ok_or("Chunk content was not set")?;
         let size = self.size.ok_or("Chunk size was not set")?;
-        let vaddr = self.vaddr.ok_or("Chunk address was not set")?;
-        Ok(Chunk::new_resolved(content, vaddr, size))
+        Ok(Chunk::new_resolved(content, self.vaddr, size))
     }
 }
 
