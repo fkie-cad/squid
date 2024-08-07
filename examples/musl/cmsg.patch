@@ -1,0 +1,13 @@
+diff --git a/src/network/recvmsg.c b/src/network/recvmsg.c
+index 03641625..d9512f64 100644
+--- a/src/network/recvmsg.c
++++ b/src/network/recvmsg.c
+@@ -66,3 +66,8 @@ ssize_t recvmsg(int fd, struct msghdr *msg, int flags)
+ #endif
+ 	return r;
+ }
++
++
++struct cmsghdr *__cmsg_nxthdr (struct msghdr *mhdr, struct cmsghdr *cmsg) {
++    return CMSG_NXTHDR(mhdr, cmsg);
++}
