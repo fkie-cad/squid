@@ -1,0 +1,13 @@
+diff --git a/src/src/exim.c b/src/src/exim.c
+index 0d0396e..d4b3f9f 100644
+--- a/src/src/exim.c
++++ b/src/src/exim.c
+@@ -1274,7 +1274,7 @@ DEBUG(D_any)
+ 	       	__GLIBC__, __GLIBC_MINOR__);
+   if (__GLIBC_PREREQ(2, 1))
+     g = string_fmt_append(g, "                        Runtime: %s\n",
+-	       	gnu_get_libc_version());
++	       	"musl");
+ #endif
+ 
+ g = show_db_version(g);

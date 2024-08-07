@@ -44,3 +44,7 @@ path = "../examples/helloworld/run-helloworld.rs"
 [[example]]
 name = "readme-demo"
 path = "../examples/readme-demo/demo.rs"
+
+[[example]]
+name = "exim_fuzzer"
+path = "../examples/exim/exim-fuzzer.rs"

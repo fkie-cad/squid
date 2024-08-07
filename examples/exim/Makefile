@@ -1543,5 +1543,5 @@ HOSTCFLAGS=
 
 CC=riscv64-unknown-linux-gnu-gcc
 LNCC=riscv64-unknown-linux-gnu-gcc
-CFLAGS=-O0 -g -fno-jump-tables -mno-relax -D__thread= -L/io/dist/lib
-LDFLAGS=-L/io/dist/lib
+CFLAGS=-fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread= -L/io/dist/lib -DNO_EXECINFO
+LDFLAGS=-L/io/dist/lib -pie
