@@ -8,7 +8,7 @@ but also is patched to support emulators with byte-level permissions.
 ```
 git submodule update --init ./musl
 cd musl
-git apply ../tls.patch ../glibc-exports.patch
+git apply ../tls.patch ../glibc-exports.patch ../libresolv.patch
 git apply ../byte-level-permissions/*.patch
 cd ..
 ```
@@ -21,7 +21,6 @@ docker run --rm -it -v "$PWD:/io" squid-toolchain
 
 Inside the container execute:
 ```
-pacman -S make
 cd /io
 bash build.sh
 ```

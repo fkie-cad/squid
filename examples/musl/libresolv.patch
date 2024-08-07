@@ -1,0 +1,19 @@
+diff --git a/src/network/res_init.c b/src/network/res_init.c
+index 5dba9dfc..2355b5f0 100644
+--- a/src/network/res_init.c
++++ b/src/network/res_init.c
+@@ -4,3 +4,5 @@ int res_init()
+ {
+ 	return 0;
+ }
++
++weak_alias(res_init, __res_init);
+diff --git a/src/network/res_query.c b/src/network/res_query.c
+index 506dc231..21d98307 100644
+--- a/src/network/res_query.c
++++ b/src/network/res_query.c
+@@ -24,3 +24,4 @@ int res_query(const char *name, int class, int type, unsigned char *dest, int le
+ }
+ 
+ weak_alias(res_query, res_search);
++weak_alias(res_query, __res_search);
