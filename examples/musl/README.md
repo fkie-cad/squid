@@ -8,7 +8,7 @@ but also is patched to support emulators with byte-level permissions.
 ```
 git submodule update --init ./musl
 cd musl
-git apply ../tls.patch ../glibc-exports.patch ../libresolv.patch ../cmsg.patch
+git apply ../tls.patch ../glibc-exports.patch ../libresolv.patch ../cmsg.patch ../libpthread.patch
 git apply ../byte-level-permissions/*.patch
 cd ..
 ```

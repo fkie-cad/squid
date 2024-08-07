@@ -1,0 +1,10 @@
+diff --git a/src/sched/sched_yield.c b/src/sched/sched_yield.c
+index ee6f0e7f..7c6842d4 100644
+--- a/src/sched/sched_yield.c
++++ b/src/sched/sched_yield.c
+@@ -5,3 +5,5 @@ int sched_yield()
+ {
+ 	return syscall(SYS_sched_yield);
+ }
++
++weak_alias(sched_yield, pthread_yield);
