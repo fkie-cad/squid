@@ -27,20 +27,16 @@ invalidating references or offsets.
 
 Load your binary like so:
 ```rs
-let mut compiler = Compiler::load_elf(
+let mut compiler = Compiler::loader()
     // The binary that we want to emulate
-    "/path/to/binary",
-    
+    .binary("/path/to/binary")
     // Directories that contain the dependencies of the binary similar to LD_LIBRARY_PATH
-    &[
-        "/path/with/deps",
-    ],
-    
+    .search_path("/path/with/deps")
     // List of shared objects to preload similar to LD_PRELOAD
-    &[
-        "/path/to/library.so",
-    ]
-).expect("Loading binary failed");
+    .preload("/path/to/library.so")
+    // Start the ELF-loading process
+    .load()
+    .expect("Loading binary failed");
 ```
 
 For more information about the process image, see [PROCESS\_IMAGE](./PROCESS_IMAGE/).
@@ -81,7 +77,6 @@ let backend = ClangBackend::builder()
     .stack_size(1 * 1024 * 1024)            // Size of the stack region
     .progname("my-fuzz-target")             // argv[0]
     .arg("--with-bugs-pls")                 // argv[1]
-    .source_file("./aot-code.c")
     .build()
     .expect("Could not configure backend");
 

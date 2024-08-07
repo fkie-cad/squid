@@ -66,11 +66,10 @@ use squid::*;
 
 fn main() {
     // 1) Load and lift the target binary into our custom IR
-    let mut compiler = Compiler::load_elf(
-        "./test", // The target binary
-        &["."], // LD_LIBRARY_PATH
-        &[]
-    );
+    let mut compiler Compiler::loader()
+        .binary("./test")  // The target binary
+        .search_path(".")  // LD_LIBRARY_PATH
+        .load();
 
     // 2) Run the ASAN pass over the binary to insert redzones
     //    and interceptors for the heap functions

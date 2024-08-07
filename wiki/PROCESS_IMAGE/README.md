@@ -7,22 +7,18 @@ The only difference to traditional dynamic linking is that a process image is a 
 This hierachical approach enables us to modify the ELF files' content without messing up its overall structure.
 Its primary purpose is to make manipulations of global variables and functions easy.
 
-Creating a process image is the first step in using `squid` and can be done with `Compiler::load_elf`:
+Creating a process image is the first step in using `squid` and can be done with `Compiler::loader`:
 ```rs
-let mut compiler = Compiler::load_elf(
-    // The executable that we want to load
-    "/path/to/binary",
-    
-    // Directories that contain the dependencies of the executable similar to LD_LIBRARY_PATH
-    &[
-        "/path/with/deps",
-    ],
-    
+let mut compiler = Compiler::loader()
+    // The binary that we want to emulate
+    .binary("/path/to/binary")
+    // Directories that contain the dependencies of the binary similar to LD_LIBRARY_PATH
+    .search_path("/path/with/deps")
     // List of shared objects to preload similar to LD_PRELOAD
-    &[
-        "/path/to/library.so",
-    ]
-).expect("Loading binary failed");
+    .preload("/path/to/library.so")
+    // Start the ELF-loading process
+    .load()
+    .expect("Loading binary failed");
 ```
 
 This produces a process image that looks something like this (excerpt, the full graph can be found [here](./symimg.svg)):
@@ -81,14 +77,12 @@ fn build_coverage_map(image: &mut ProcessImage, map_size: usize) {
     // The chunk holds the actual data and permission bits
     let chunk = Chunk::builder()
         .uninitialized_data(map_size, perms)
-        .vaddr(0)
         .build()
         .unwrap();
 
     // Create a symbol named "coverage_map" that contains the chunk
     let mut symbol = Symbol::builder()
         .public_name("coverage_map")
-        .vaddr(0)
         .size(map_size)
         .build()
         .unwrap();
@@ -96,7 +90,6 @@ fn build_coverage_map(image: &mut ProcessImage, map_size: usize) {
     // Create a section that can hold the symbol
     let mut section = Section::builder()
         .perms(perms)
-        .vaddr(0)
         .size(map_size)
         .build()
         .unwrap();
