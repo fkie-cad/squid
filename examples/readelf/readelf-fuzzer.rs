@@ -334,7 +334,11 @@ const EVENT_ID_TAKE_SNAPSHOT: usize = 6;
 const EVENT_ID_RESTORE_SNAPSHOT: usize = 7;
 
 fn create_runtime(binaries: &str, output: &str, debug_build: bool) -> ClangRuntime {
-    let mut compiler = Compiler::load_elf(format!("{}/readelf", &binaries), &[binaries.to_string()], &[]).unwrap();
+    let mut compiler = Compiler::loader()
+        .binary(format!("{}/readelf", binaries))
+        .search_path(binaries)
+        .load()
+        .unwrap();
 
     compiler.run_pass(&mut AsanPass::new()).unwrap();
     compiler.run_pass(&mut CoveragePass::new()).unwrap();

@@ -73,10 +73,36 @@ impl Loader {
         self
     }
     
+    /// Add multiple directories to the search paths of the ELF loader.
+    /// Does the same as [`Loader::search_path`].
+    pub fn search_paths<I, P>(mut self, search_paths: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PathBuf>,
+    {
+        for search_path in search_paths {
+            self.library_paths.push(search_path.into());
+        }
+        self
+    }
+    
     /// Preload this library (similar to LD_PRELOAD).
     /// You can specify this option multiple times.
     pub fn preload<P: Into<PathBuf>>(mut self, library: P) -> Self {
         self.preloads.push(library.into());
+        self
+    }
+    
+    /// Preload multiple libraries.
+    /// Does the same as [`Loader::preload`].
+    pub fn preloads<I, P>(mut self, preloads: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PathBuf>,
+    {
+        for preload in preloads {
+            self.preloads.push(preload.into());
+        }
         self
     }
     

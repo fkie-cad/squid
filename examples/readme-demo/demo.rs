@@ -164,7 +164,12 @@ fn main() {
     let preloads = parse_preload();
 
     // 1) Load and lift the target binary into our custom IR
-    let mut compiler = Compiler::load_elf(prog.clone(), &search_paths, &preloads).unwrap();
+    let mut compiler = Compiler::loader()
+        .binary(&prog)
+        .search_paths(search_paths)
+        .preloads(preloads)
+        .load()
+        .unwrap();
 
     // 2) Run the ASAN pass over the binary to insert redzones and interceptors for the heap functions
     let mut asan_pass = AsanPass::new();

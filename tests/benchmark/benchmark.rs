@@ -7,7 +7,10 @@ use squid::{
 
 #[test]
 fn benchmark_emulator() {
-    let compiler = Compiler::load_elf("../tests/benchmark/bench", &[], &[]).unwrap();
+    let compiler = Compiler::loader()
+        .binary("../tests/benchmark/bench")
+        .load()
+        .unwrap();
     let backend = ClangBackend::builder()
         .stack_size(1024 * 1024)
         .progname("bench")

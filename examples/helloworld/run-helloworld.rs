@@ -52,7 +52,10 @@ fn execute(mut runtime: ClangRuntime) -> Result<(), ClangRuntimeFault> {
 
 fn main() {
     // 1) Load the target binary
-    let mut compiler = Compiler::load_elf("./helloworld", &[], &[]).unwrap();
+    let mut compiler = Compiler::loader()
+        .binary("./helloworld")
+        .load()
+        .unwrap();
 
     // 2) Run passes over binary
     compiler.run_pass(&mut ImageDOTPass::new("process_image.dot")).unwrap();
