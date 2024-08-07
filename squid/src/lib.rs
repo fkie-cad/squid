@@ -38,5 +38,5 @@ pub mod passes;
 pub mod riscv;
 pub mod runtime;
 
-pub use compiler::Compiler;
+pub use compiler::{Loader, Compiler};
 pub use logger::Logger;

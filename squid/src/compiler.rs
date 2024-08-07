@@ -1,7 +1,4 @@
-use std::{
-    convert::AsRef,
-    path::Path,
-};
+use std::path::PathBuf;
 
 use thiserror::Error;
 
@@ -26,18 +23,98 @@ use crate::{
 };
 
 #[derive(Error, Debug)]
-pub enum CompilationError<E: std::error::Error> {
+pub enum CompilerError<'a> {
+    #[error("Loader has not been configured correctly: {0}")]
+    LoaderOptionNotSet(&'static str),
+    
+    #[error("The frontend had an error: {0}")]
+    LoaderError(#[from] LoaderError),
+    
     #[error("The backend had an error: {0}")]
-    BackendError(E),
+    BackendError(Box<dyn std::error::Error + 'a>),
 
     #[error("Verification failed: {0}")]
     VerificationError(#[from] VerifyerPassError),
 }
 
+/// The `Loader` is a helper struct that creates a [`Compiler`] by
+/// - Loading an ELF file
+/// - collecting its shared dependencies
+/// - lifting all RISC-V code into an IR
+/// - making code and data available in a [`ProcessImage`]
+pub struct Loader {
+    binary: Option<PathBuf>,
+    library_paths: Vec<PathBuf>,
+    preloads: Vec<PathBuf>,
+    ignore_missing_deps: bool,
+}
+
+impl Loader {
+    pub(crate) fn new() -> Self {
+        Self {
+            binary: None,
+            library_paths: Vec::new(),
+            preloads: Vec::new(),
+            ignore_missing_deps: false,
+        }
+    }
+    
+    /// Set the target binary that is going to be emulated
+    pub fn binary<P: Into<PathBuf>>(mut self, binary: P) -> Self {
+        self.binary = Some(binary.into());
+        self
+    }
+    
+    /// Add the given directory to the search paths of the ELF loader. 
+    /// The shared dependencies of the binary will be searched here (similar to LD_LIBRARY_PATH).
+    /// You can specify this option multiple times.
+    pub fn search_path<P: Into<PathBuf>>(mut self, search_path: P) -> Self {
+        self.library_paths.push(search_path.into());
+        self
+    }
+    
+    /// Preload this library (similar to LD_PRELOAD).
+    /// You can specify this option multiple times.
+    pub fn preload<P: Into<PathBuf>>(mut self, library: P) -> Self {
+        self.preloads.push(library.into());
+        self
+    }
+    
+    /// If `flag` is set to `true`, the ELF loader will not throw an error when it cannot
+    /// find a dependency in the provided search paths.
+    pub fn ignore_missing_dependencies(mut self, flag: bool) -> Self {
+        self.ignore_missing_deps = flag;
+        self
+    }
+    
+    /// Create a [`Compiler`] by loading the target binary
+    pub fn load(self) -> Result<Compiler, CompilerError<'static>> {
+        let binary = self.binary.ok_or(CompilerError::LoaderOptionNotSet("binary has not been set"))?;
+        
+        let mut logger = Logger::spinner();
+        logger.set_title("Building process image");
+
+        let mut event_pool = EventPool::new();
+        event_pool.add_event(EVENT_SYSCALL);
+        event_pool.add_event(EVENT_BREAKPOINT);
+
+        let image = ProcessImageBuilder::build(binary, &self.library_paths, &self.preloads, self.ignore_missing_deps, &mut event_pool, &logger)?;
+        let mut compiler = Compiler {
+            image,
+            event_pool,
+            modified: false,
+        };
+        drop(logger);
+
+        compiler.verify()?;
+        Ok(compiler)
+    }
+}
+
 /// The Compiler is the center piece of `squid`. It loads ELF files, runs passes and launches a backend
 /// to obtain a [Runtime](crate::runtime::Runtime).
 ///
-/// To obtain a `Compiler` instance, call [`Compiler::load_elf`]. Then you can run one or more passes
+/// To obtain a `Compiler` instance, call [`Compiler::loader`]. Then you can run one or more passes
 /// with [`Compiler::run_pass`] before compiling the process image with [`Compiler::compile`].
 #[derive(Debug)]
 pub struct Compiler {
@@ -47,35 +124,10 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    /// Symbolically load an ELF file and create a process image.
-    ///
-    /// # Arguments
-    /// 1. `binary`: Path to the ELF binary that is being run by `squid`
-    /// 2. `search_paths`: Similar to LD_LIBRARY_PATH, a list of directory names where the binaries' dependencies
-    ///    are searched
-    /// 3. `preloads`: Similar to LD_PRELOAD, a list of shared objects that are to be preloaded into the process image
-    ///     before all other dependencies
-    pub fn load_elf<S>(binary: S, search_paths: &[S], preloads: &[S]) -> Result<Self, LoaderError>
-    where
-        S: AsRef<Path>,
-    {
-        let mut logger = Logger::spinner();
-        logger.set_title("Building process image");
-
-        let mut event_pool = EventPool::new();
-        event_pool.add_event(EVENT_SYSCALL);
-        event_pool.add_event(EVENT_BREAKPOINT);
-
-        let image = ProcessImageBuilder::build(binary, search_paths, preloads, &mut event_pool, &logger)?;
-        let mut compiler = Self {
-            image,
-            event_pool,
-            modified: false,
-        };
-        drop(logger);
-
-        compiler.verify()?;
-        Ok(compiler)
+    /// Create a new `Compiler` by symbolically loading an ELF file and creating a process image.
+    /// See the [`Loader`] for details about how the ELF-loader can be configured.
+    pub fn loader() -> Loader {
+        Loader::new()
     }
 
     /// Run a pass to inspect or modify the process image.
@@ -110,7 +162,10 @@ impl Compiler {
     ///
     /// # Arguments
     /// 1. `backend`: Anything that implements the [`Backend`] trait
-    pub fn compile<B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, CompilationError<B::Error>> {
+    pub fn compile<'a, B: Backend>(mut self, mut backend: B) -> Result<B::Runtime, CompilerError<'a>>
+    where
+        <B as Backend>::Error: 'a,
+    {
         if self.modified {
             self.verify()?;
         }
@@ -121,7 +176,7 @@ impl Compiler {
 
         let ret = match backend.create_runtime(self.image, self.event_pool, &logger) {
             Ok(runtime) => runtime,
-            Err(err) => return Err(CompilationError::BackendError(err)),
+            Err(err) => return Err(CompilerError::BackendError(Box::new(err))),
         };
 
         logger.clear_prefix();

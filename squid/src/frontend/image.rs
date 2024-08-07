@@ -135,6 +135,7 @@ impl ProcessImageBuilder {
         binary: S,
         search_paths: &[S],
         preloads: &[S],
+        ignore_missing_deps: bool,
         event_pool: &mut EventPool,
         logger: &Logger,
     ) -> Result<ProcessImage, LoaderError>
@@ -142,7 +143,7 @@ impl ProcessImageBuilder {
         S: AsRef<Path>,
     {
         let mut builder = Self::new();
-        builder.lift_elfs(binary, search_paths, preloads, event_pool, logger)?;
+        builder.lift_elfs(binary, search_paths, preloads, ignore_missing_deps, event_pool, logger)?;
         builder.log_functions(logger);
         builder.resolve_symbols(logger)?;
         builder.symbolize(logger)?;
@@ -533,6 +534,7 @@ impl ProcessImageBuilder {
         binary: S,
         search_paths: &[S],
         preloads: &[S],
+        ignore_missing_deps: bool,
         event_pool: &mut EventPool,
         logger: &Logger,
     ) -> Result<(), LoaderError>
@@ -586,6 +588,8 @@ impl ProcessImageBuilder {
                 if let Some(path) = path {
                     let target = self.graph.add_node(path);
                     self.graph.add_edge(node, target);
+                } else if ignore_missing_deps {
+                    logger.warning(format!("Could not locate dependency: {} (ignoring)", dep));
                 } else {
                     return Err(LoaderError::DependencyNotFound(dep.clone()));
                 }
