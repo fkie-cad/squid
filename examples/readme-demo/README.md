@@ -19,6 +19,5 @@ Also, you need a `libc.so.6`, preferably [musl](../musl).
 ## Running the demo
 Execute
 ```
-LIBRARY_PATH="/path/to/libc/" cargo run --example readme-demo --release -- ./test <INDEX>
+cargo run --example readme-demo --release -- <INDEX>
 ```
-

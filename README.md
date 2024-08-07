@@ -62,8 +62,6 @@ riscv64-unknown-linux-gnu-gcc -o test -fPIE -pie -O0 -g -fno-jump-tables -mno-re
 
 And create a harness that employs ASAN and MSAN instrumentation:
 ```rs
-use squid::*;
-
 fn main() {
     // 1) Load and lift the target binary into our custom IR
     let mut compiler Compiler::loader()
@@ -76,9 +74,9 @@ fn main() {
     let mut asan_pass = AsanPass::new();
     compiler.run_pass(&mut asan_pass);
 
-    // 3) AOT compile functions in IR down to native machine code
-    //    by generating C code that we compile with clang
-    let arg = std::env::args().skip(1).next();
+    // 3) AOT compile functions in IR down to native machine code by
+    //    translating the IR to C code that we can compile with clang
+    let arg = std::env::args().nth(1);
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
         .heap_size(16 * 1024 * 1024)
@@ -90,6 +88,8 @@ fn main() {
     let mut runtime = compiler.compile(backend);
 
     // 4) Emulate the binary, forward syscalls and handle interceptors
+    println!("Running...");
+    
     loop {
         match runtime.run() {
             Ok(event) => match event {
@@ -103,8 +103,7 @@ fn main() {
 ```
 
 Then, we can detect both crashes:  
-![](./demo-uninit.svg)  
-![](./demo-oob.svg)
+![](./demo.svg)
 
 ## Getting Started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   

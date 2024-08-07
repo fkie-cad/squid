@@ -119,55 +119,19 @@ fn display_crash_report(fault: ClangRuntimeFault, runtime: ClangRuntime) -> ! {
     let raw_code = runtime.raw_return_code();
     let last_instr = runtime.get_last_instruction();
 
-    println!("=================================================================");
+    println!("====================== CRASH REPORT ================================");
     println!("ERROR: {:?} at pc={:#x}", raw_code, last_instr);
     println!("{:?}", fault);
-    println!("=================================================================");
+    println!("====================================================================");
 
     std::process::exit(127);
 }
 
-fn parse_args() -> (String, Vec<String>) {
-    let args = std::env::args();
-    let mut args = args.skip(1);
-
-    let prog = args.next().expect("No program supplied on command line");
-    let args: Vec<String> = args.collect();
-
-    (prog, args)
-}
-
-fn parse_library_path() -> Vec<String> {
-    let mut ret = Vec::new();
-
-    if let Ok(value) = std::env::var("LIBRARY_PATH") {
-        ret = value.split(':').map(|x| x.to_string()).collect();
-    }
-
-    ret
-}
-
-fn parse_preload() -> Vec<String> {
-    let mut ret = Vec::new();
-
-    if let Ok(value) = std::env::var("PRELOAD") {
-        ret = value.split(':').map(|x| x.to_string()).collect();
-    }
-
-    ret
-}
-
 fn main() {
-    // 0) Collect arguments and environment variables
-    let (prog, args) = parse_args();
-    let search_paths = parse_library_path();
-    let preloads = parse_preload();
-
     // 1) Load and lift the target binary into our custom IR
     let mut compiler = Compiler::loader()
-        .binary(&prog)
-        .search_paths(search_paths)
-        .preloads(preloads)
+        .binary("./test")
+        .search_path(".")
         .load()
         .unwrap();
 
@@ -176,19 +140,22 @@ fn main() {
     compiler.run_pass(&mut asan_pass).unwrap();
 
     // 3) AOT compile functions in IR down to native machine code by generating C code that we compile with clang
+    let arg = std::env::args().nth(1).unwrap();
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
         .heap_size(16 * 1024 * 1024)
         .enable_uninit_stack(true) // MemorySanitizer
-        .progname(prog) // argv[0]
-        .args(args) // argv[1..]
+        .progname("test") // argv[0]
+        .arg(arg) // argv[1]
         .source_file("./aot.c") // The AOT code goes into this file
         .update_last_instruction(true)
         .build()
         .unwrap();
     let mut runtime = compiler.compile(backend).unwrap();
-
+    
     // 4) Emulate the binary and handle all runtime events
+    println!("Running...");
+    
     loop {
         match runtime.run() {
             Ok(event) => match event {
