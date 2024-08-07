@@ -251,9 +251,7 @@ impl ElfParser {
         let listing = ListingManager::new(path);
 
         if listing.have_metadata() {
-            logger.info("  -> Using metadata file");
-        } else {
-            logger.info("  -> No metadata");
+            logger.info("  -> Found .ewe file");
         }
 
         let sections = SectionParser::parse(&elf, &file[..], &listing, event_pool)?;
