@@ -1034,17 +1034,26 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
             writeln!(out_file, "local_registers.pc = {:#x}ULL;", bb.vaddr().unwrap())?;
         }
 
-        if self.count_instructions {
-            let mut num_instructions = 0;
-
-            for op in bb.ops() {
-                if matches!(op, Op::NextInstruction { .. }) {
-                    num_instructions += 1;
+        let mut num_instructions = 0;
+        let mut first_addr = None;
+        
+        for op in bb.ops() {
+            if let Op::NextInstruction { vaddr } = op {
+                num_instructions += 1;
+                
+                if first_addr.is_none() {
+                    first_addr = Some(*vaddr);
                 }
             }
-
-            if num_instructions != 0 {
-                writeln!(out_file, "*num_instructions += {}ULL;", num_instructions)?;
+        }
+        
+        if self.count_instructions && num_instructions != 0 {
+            writeln!(out_file, "*num_instructions += {}ULL;", num_instructions)?;
+        }
+        
+        if self.update_last_instr {
+            if let Some(first_addr) = first_addr {
+                writeln!(out_file, "local_registers.current_addr = {:#x};", first_addr)?;
             }
         }
 
@@ -1060,7 +1069,7 @@ uint64_t run (void* memory, void* event_channel, void* registers, void* return_b
                 } => {
                     writeln!(out_file, "// new instr @ {:#x}", *vaddr)?;
 
-                    if self.update_last_instr {
+                    if self.update_last_instr && op_no > 0 {
                         writeln!(out_file, "local_registers.current_addr = {:#x};", *vaddr)?;
                     }
                 },

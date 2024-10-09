@@ -10,6 +10,7 @@ use crate::{
             BasicBlock,
             Edge,
             Function,
+            Op,
         },
         ChunkContent,
         ProcessImage,
@@ -71,16 +72,35 @@ impl BreakpointPass {
     fn instrument(&self, func: &mut Function, event_pool: &EventPool) {
         let breakpoint = event_pool.get_event(EVENT_BREAKPOINT).unwrap();
 
+        let old_entry = func.cfg().entry();
+        let entry_vaddr = func.cfg().basic_block(old_entry).unwrap().vaddr();
+        let mut entry_instr = None;
+        
+        for op in func.cfg().basic_block(old_entry).unwrap().ops() {
+            if let Op::NextInstruction { vaddr } = op {
+                entry_instr = Some(*vaddr);
+                break;
+            }
+        }
+        
         let mut bb = BasicBlock::new();
+        
+        if let Some(entry_vaddr) = entry_vaddr {
+            bb.set_vaddr(entry_vaddr);
+        }
+        
+        if let Some(entry_instr) = entry_instr {
+            bb.next_instruction(entry_instr);
+        }
+        
         bb.fire_event(breakpoint);
 
-        let entry = func.cfg().entry();
-        bb.add_edge(Edge::Next(entry));
+        bb.add_edge(Edge::Next(old_entry));
 
         let id = func.cfg_mut().add_basic_block(bb);
         func.cfg_mut().set_entry(id);
 
-        assert_ne!(entry, id);
+        assert_ne!(old_entry, id);
     }
 }
 
