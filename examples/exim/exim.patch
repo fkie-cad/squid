@@ -11,3 +11,20 @@ index 0d0396e..d4b3f9f 100644
  #endif
  
  g = show_db_version(g);
+diff --git a/src/src/store.c b/src/src/store.c
+index 181e7fd..e51c9ee 100644
+--- a/src/src/store.c
++++ b/src/src/store.c
+@@ -230,8 +230,10 @@ static initialisers. */
+ void
+ store_init(void)
+ {
+-for (pooldesc * pp = paired_pools; pp < paired_pools + N_PAIRED_POOLS; pp++)
+-  pool_init(pp);
++//for (pooldesc * pp = paired_pools; pp < paired_pools + N_PAIRED_POOLS; pp++)
++//  pool_init(pp);
++// FIX:
++for (int i = 0; i < N_PAIRED_POOLS; ++i) pool_init(&paired_pools[i]);
+ }
+ 
+ /******************************************************************************/

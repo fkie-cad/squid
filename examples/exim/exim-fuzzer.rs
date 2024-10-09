@@ -36,6 +36,11 @@ fn run(runtime: &mut ClangRuntime) -> Result<(), ClangRuntimeFault> {
                 let addr = runtime.get_gp_register(GpRegister::a0);
                 runtime.dynstore_deallocate(addr)?;
             },
+            EVENT_MALLOC => {
+                let size = runtime.get_gp_register(GpRegister::a0) as usize;
+                let addr = runtime.dynstore_allocate(size)?;
+                runtime.set_gp_register(GpRegister::a0, addr);
+            },
             event => todo!("event: {}", event),
         }
     }
@@ -82,13 +87,7 @@ fn main() {
 
     let mut runtime = compiler.compile(backend).unwrap();
     
-    let sym = runtime.lookup_symbol_from_address(1436827);
-    println!("err: {:?}", sym);
-    let sym = runtime.lookup_symbol_from_address(1436827 - 1);
-    println!("prev: {:?}", sym);
-    
     let err = run(&mut runtime);
-    
     println!("last instr: {:#x}", runtime.get_last_instruction());
     println!("last pc: {:#x}", runtime.get_pc());
     err.unwrap();
