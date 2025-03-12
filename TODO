@@ -1,9 +1,0 @@
-- for blog post, fuzz a real target
-    - exim ?
-    - higher-level vulns
-        - directory traversal and invalid file write in attachment (CVE-2006-5487)
-        - auth bypass ?
-        - ACL bypass (https://bugs.exim.org/show_bug.cgi?id=3099#c4)
-    - focus on partial part of code using snapshot-based fuzzing
-    - how has exim been fuzzed already, how about other MTAs (postfix, ...), SMTP generell
-    - LLM corpus generation and mutation (https://mengrj.github.io/files/chatafl-slides.pdf)
