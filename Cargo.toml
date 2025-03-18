@@ -10,7 +10,7 @@ panic = "abort"
 debug = true
 
 [workspace.package]
-version = "2.0.0"
+version = "2.0.1"
 authors = ["Patrick D."]
 edition = "2021"
 license = "MIT"
