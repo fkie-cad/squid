@@ -1,5 +1,7 @@
 [package]
 name = "ewe"
+readme = "README.md"
+description = "A helper tool for squid"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
