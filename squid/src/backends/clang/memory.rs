@@ -203,6 +203,13 @@ impl Memory {
 
     pub(crate) fn take_snapshot(&mut self, id: SnapshotId) {
         self.snapshots.insert(id, self.data[0..self.offset_dirty_bits].to_vec());
+
+        /* Clear dirty bitmap and stack */
+        for byte in unsafe { self.data.get_unchecked_mut(self.offset_dirty_bits..self.offset_dirty_stack + 8) } {
+            *byte = 0;
+        }
+
+        self.last_snapshot = id;
     }
 
     pub(crate) fn restore_snapshot_unchecked(&mut self, id: SnapshotId) {
