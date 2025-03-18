@@ -68,8 +68,6 @@ fn main() {
     let mut runtime = compiler.compile(backend);
 
     // 4) Run the binary, forward syscalls and handle interceptors
-    println!("Running...");
-    
     loop {
         match runtime.run() {
             Ok(event) => match event {
