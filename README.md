@@ -1,6 +1,6 @@
 <h1 align="center">
     <a href="">
-        <img src="./logo.png" width="128" height="auto">
+        <img src="https://raw.githubusercontent.com/fkie-cad/squid/refs/heads/main/logo.png" width="128" height="auto">
     </a>
     <br/>
     squid 
@@ -88,9 +88,9 @@ And then, we could go even further and combine even more sanitizers to catch a b
 memory corruptions.
 
 ## Getting Started
-You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
-For a gentle introduction, see the [hello world](./examples/helloworld) example.   
-For an example how to combine native and emulation-based fuzzing for maximum effectiveness, see our [readelf fuzzer](./examples/readelf).  
+You can find detailed explanations how to harness `squid` in our [wiki](https://github.com/fkie-cad/squid/tree/main/wiki).   
+For a gentle introduction, see the [hello world](https://github.com/fkie-cad/squid/tree/main/examples/helloworld) example.   
+For an example how to combine native and emulation-based fuzzing for maximum effectiveness, see our [readelf fuzzer](https://github.com/fkie-cad/squid/tree/main/examples/readelf).  
 
 If you find that something is not properly documented / explained or you have any other questions, please
 do not hesitate to [create an issue](https://github.com/fkie-cad/squid/issues/new).
