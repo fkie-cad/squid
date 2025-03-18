@@ -17,11 +17,14 @@ This makes it easy to create and combine new sanitizers and test programs for al
 - Fast snapshots
 - Byte-level permissions on memory
 - Rewriting binaries before emulation
-- Integration with LibAFL
+- Integration into LibAFL
 
 However, it can run only single-threaded Linux user-space applications that are written in C.  
 The source of the target _must_ be available because `squid` supports only binaries that have been compiled
-with a specific set of flags.
+with this specific set of flags:
+```
+-fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
+```
 This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to augment traditional greybox fuzzing.
 It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
 
@@ -39,12 +42,7 @@ clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize
 ```
 
 However, since `squid` allows us to do binary rewriting, we can recreate ASAN and MSAN instrumentation ourselves.
-We just have to compile our target with this specific set of flags:
-```
--fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
-```
-
-And then we can use `squid` for instrumentation and emulation:
+We just have to compile our target with the flags mentioned above and then we can instrument and emulate it like this:
 ```rs
 fn main() {
     // 1) Load and lift the target binary into our custom IR
@@ -67,7 +65,7 @@ fn main() {
         .build();
     let mut runtime = compiler.compile(backend);
 
-    // 4) Run the binary, forward syscalls and handle interceptors
+    // 4) Run the binary, handle syscalls and interceptors
     loop {
         match runtime.run() {
             Ok(event) => match event {
@@ -84,9 +82,9 @@ This gives us support for
 - __ASAN__: Because the `AsanPass` inserts redzones around global variables and registers interceptors
   that must be handled in `runtime.run()`
 - __MSAN__: Because we tell the backend to mark newly created stackframes as uninitialized with `enable_uninit_stack(true)`.
-  New heap memory returned by `malloc()` is always marked as uninitialized per default.
+  New heap memory returned to `malloc()` is always marked as uninitialized per default.
 
-And we could go even further and combine even more sanitizers to catch a broader range of vulnerabilities, not just
+And then, we could go even further and combine even more sanitizers to catch a broader range of vulnerabilities, not just
 memory corruptions.
 
 ## Getting Started
