@@ -1,5 +1,5 @@
 [workspace]
-members = ["ewe", "squid", "tests"]
+members = ["squid_ewe", "squid", "tests"]
 default-members = ["squid"]
 resolver = "2"
 

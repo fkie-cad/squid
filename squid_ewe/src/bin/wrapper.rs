@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-use ewe::{
+use squid_ewe::{
     container::RISCV_PREFIX,
     toolchain::{
         ArWrapper,

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ewe::{
+use squid_ewe::{
     Listing,
     ListingFunction,
 };
@@ -16,7 +16,7 @@ pub(crate) struct ListingManager {
 
 impl ListingManager {
     pub(crate) fn new<P: AsRef<Path>>(path: P) -> Self {
-        let path = format!("{}.{}", path.as_ref().display(), ewe::EXTENSION);
+        let path = format!("{}.{}", path.as_ref().display(), squid_ewe::EXTENSION);
         let path = Path::new(&path);
         Self {
             listing: if path.exists() { Some(Listing::from_file(path)) } else { None },

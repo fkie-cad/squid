@@ -4,7 +4,7 @@ edition.workspace = true
 publish = false
 
 [dev-dependencies]
-ewe = { path = "../ewe" }
+squid_ewe = { path = "../squid_ewe" }
 squid = { path = "../squid" }
 libafl = "0.13"
 libafl_bolts = "0.13"

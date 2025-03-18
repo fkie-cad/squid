@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use ewe::{
+use squid_ewe::{
     container::*,
     env::*,
 };

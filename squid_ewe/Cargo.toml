@@ -1,7 +1,7 @@
 [package]
-name = "ewe"
+name = "squid_ewe"
 readme = "README.md"
-description = "A helper tool for squid"
+description = "A helper tool for squid that extracts CFG metadata from C code"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

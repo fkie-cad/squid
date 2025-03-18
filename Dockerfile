@@ -1,7 +1,7 @@
 FROM rust:latest AS ewe-builder
 WORKDIR ewe
 COPY . ./
-RUN cargo build -p ewe --release --bins
+RUN cargo build -p squid_ewe --release --bins
 
 FROM archlinux:latest AS toolchain-builder
 ARG jobs="1"

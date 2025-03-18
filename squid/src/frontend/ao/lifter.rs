@@ -3,7 +3,7 @@ use std::collections::{
     HashSet,
 };
 
-use ewe::ListingFunction;
+use squid_ewe::ListingFunction;
 
 use crate::{
     event::EventPool,
