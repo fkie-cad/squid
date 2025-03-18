@@ -17,16 +17,16 @@ This makes it easy to create and combine new sanitizers and test programs for al
 - Fast snapshots
 - Byte-level permissions on memory
 - Rewriting binaries before emulation
-- Good integration into LibAFL
+- Integration with LibAFL
 
-However, it can only run single-threaded Linux user-space applications that are written in C.  
-The source of the target _must_ be available because `squid` only supports binaries that have been compiled
+However, it can run only single-threaded Linux user-space applications that are written in C.  
+The source of the target _must_ be available because `squid` supports only binaries that have been compiled
 with a specific set of flags.
 This makes `squid` unsuitable for blackbox fuzzing. Instead, it was built to augment traditional greybox fuzzing.
 It is encouraged to combine `squid` with native fuzzers to achieve both, high throughput and enhanced bug detection.
 
 ## Demo
-As a quick appetizer let's have a look at how we can overcome common restrictions of native sanitizers with `squid`.
+As a quick appetizer let's have a look at how we can overcome common restrictions of LLVM's sanitizers with `squid`.
 
 One of the biggest restrictions is that multiple sanitizers cannot be combined in a single build.
 Trying to invoke a compiler like this:
@@ -38,13 +38,13 @@ results in
 clang: error: invalid argument '-fsanitize=address' not allowed with '-fsanitize=memory'
 ```
 
-However, since `squid` allows us to do binary rewriting, we can recreate ASAN + MSAN ourselves.
+However, since `squid` allows us to do binary rewriting, we can recreate ASAN and MSAN instrumentation ourselves.
 We just have to compile our target with this specific set of flags:
 ```
 -fPIE -pie -O0 -g -fno-jump-tables -mno-relax -D__thread=
 ```
 
-And then we can use `squid` to build for emulation with ASAN and MSAN:
+And then we can use `squid` for instrumentation and emulation:
 ```rs
 fn main() {
     // 1) Load and lift the target binary into our custom IR
@@ -53,35 +53,43 @@ fn main() {
         .load();
 
     // 2) Run the ASAN pass over the binary to insert redzones
-    //    and interceptors for the heap functions
+    //    and interceptors for the heap functions similar to LLVM's
+    //    ASAN.
     let mut asan_pass = AsanPass::new();
     compiler.run_pass(&mut asan_pass);
 
-    // 3) AOT compile functions in IR down to native machine code by
-    //    translating the IR to C code that we can compile with clang
+    // 3) AOT compile functions in IR to native machine code by
+    //    translating the IR to C code that is then compiled with clang
     let backend = ClangBackend::builder()
         .stack_size(2 * 1024 * 1024)
         .heap_size(16 * 1024 * 1024)
-        .enable_uninit_stack(true) // MemorySanitizer
+        .enable_uninit_stack(true) // MSAN !
         .build();
     let mut runtime = compiler.compile(backend);
 
-    // 4) Emulate the binary, forward syscalls and handle interceptors
+    // 4) Run the binary, forward syscalls and handle interceptors
     println!("Running...");
     
     loop {
         match runtime.run() {
             Ok(event) => match event {
                 EVENT_SYSCALL => /* we have to emulate system calls ourselves here... */,
+                EVENT_ASAN => /* ASAN's interceptors have fired */
             },
-            Err(fault) => /* Some kind of fault occured (e.g. segfault) */,
+            Err(fault) => /* Some kind of fault occured, e.g. a segfault */,
         }
     }
 }
 ```
 
-And then, we could go even further and write more custom sanitizers to catch a broader range
-of vulnerabilities.
+This gives us support for
+- __ASAN__: Because the `AsanPass` inserts redzones around global variables and registers interceptors
+  that must be handled in `runtime.run()`
+- __MSAN__: Because we tell the backend to mark newly created stackframes as uninitialized with `enable_uninit_stack(true)`.
+  New heap memory returned by `malloc()` is always marked as uninitialized per default.
+
+And we could go even further and combine even more sanitizers to catch a broader range of vulnerabilities, not just
+memory corruptions.
 
 ## Getting Started
 You can find detailed explanations how to harness `squid` in our [wiki](./wiki).   
