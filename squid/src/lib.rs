@@ -1,4 +1,4 @@
-//! <h1 align="center"> 🌊 🦑 🌊 </h1>
+//! <h1 align="center"> <img src="https://raw.githubusercontent.com/fkie-cad/squid/refs/heads/main/logo.png" width="100" height="auto"> </h1>
 //!
 //! `squid` is a RISC-V emulation library with features that make it a powerful tool for vulnerability research and fuzzing.
 //!

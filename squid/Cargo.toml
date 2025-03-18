@@ -1,9 +1,13 @@
 [package]
 name = "squid"
+description = "A RISC-V emulator with AOT compilation for fuzzing"
+readme = "README.md"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+keywords.workspace = true
 
 [dependencies]
 ewe = { path = "../ewe" }
