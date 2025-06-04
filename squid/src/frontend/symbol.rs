@@ -500,11 +500,11 @@ impl SymbolParser {
                     let mut global_names = BTreeMap::new();
                     let mut local_names = BTreeMap::new();
 
-                    for (name, offset) in symbol.public_names.extract_if(|_, v| *v >= new_size) {
+                    for (name, offset) in symbol.public_names.extract_if(.., |_, v| *v >= new_size) {
                         global_names.insert(name, offset - new_size);
                     }
 
-                    for (name, offset) in symbol.private_names.extract_if(|_, v| *v >= new_size) {
+                    for (name, offset) in symbol.private_names.extract_if(.., |_, v| *v >= new_size) {
                         local_names.insert(name, offset - new_size);
                     }
 
