@@ -148,10 +148,6 @@ impl AsanPass {
 
     fn hook_heap_functions(&mut self, image: &mut ProcessImage, event_pool: &mut EventPool) -> Result<(), AoError> {
         for elf in image.iter_elfs_mut() {
-            if !elf.path().ends_with("libc.so.6") {
-                continue;
-            }
-
             for section in elf.iter_sections_mut() {
                 for symbol in section.iter_symbols_mut() {
                     if symbol.name("__libc_malloc_impl").is_some() || symbol.name("__libc_malloc").is_some() {
